@@ -1,0 +1,139 @@
+<UserControl x:Class="ShopManager.Views.ShopSettings.ShopSettingPage"
+         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+    <ScrollViewer Padding="24">
+        <StackPanel MaxWidth="640" HorizontalAlignment="Left">
+
+            <ui:TextBlock Text="店舖設定" FontTypography="Title" Margin="0,0,0,24"/>
+
+            <!-- ════════════════════════════════════════════════ -->
+            <!-- 店鋪設定區塊                                     -->
+            <!-- ════════════════════════════════════════════════ -->
+            <ui:TextBlock Text="店鋪設定" FontTypography="Subtitle" Margin="0,0,0,12"/>
+            <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                    CornerRadius="8" Padding="16" Margin="0,0,0,24">
+                <StackPanel>
+                    <!-- 店鋪名稱 -->
+                    <ui:TextBlock Text="店鋪名稱 *" FontTypography="BodyStrong" Margin="0,0,0,4"/>
+                    <ui:TextBox PlaceholderText="請輸入店鋪名稱"
+                                Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                                Margin="0,0,0,16"/>
+
+                    <!-- 地址 -->
+                    <ui:TextBlock Text="地址" FontTypography="BodyStrong" Margin="0,0,0,4"/>
+                    <ui:TextBox PlaceholderText="請輸入店鋪地址"
+                                Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}"
+                                Margin="0,0,0,16"/>
+
+                    <!-- 電話 -->
+                    <ui:TextBlock Text="聯繫電話" FontTypography="BodyStrong" Margin="0,0,0,4"/>
+                    <ui:TextBox PlaceholderText="請輸入聯繫電話"
+                                Text="{Binding Phone, UpdateSourceTrigger=PropertyChanged}"
+                                Margin="0,0,0,16"/>
+
+                    <!-- 其他聯絡方式 -->
+                    <DockPanel Margin="0,0,0,8">
+                        <ui:TextBlock Text="其他聯絡方式" FontTypography="BodyStrong"
+                                      DockPanel.Dock="Left" VerticalAlignment="Center"/>
+                        <ui:Button Content="新增" Icon="{ui:SymbolIcon Symbol=Add24}"
+                                   Command="{Binding AddContactCommand}"
+                                   HorizontalAlignment="Right"/>
+                    </DockPanel>
+
+                    <ItemsControl ItemsSource="{Binding ContactInfos}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                                        CornerRadius="6" Padding="12" Margin="0,0,0,8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="150"/>
+                                            <ColumnDefinition Width="150"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox Grid.Column="0" Margin="0,0,8,0"
+                                                  ItemsSource="{Binding DataContext.ContactTypes,
+                                                      RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                  SelectedItem="{Binding Type}"/>
+                                        <ui:TextBox Grid.Column="1" Margin="0,0,8,0"
+                                                    PlaceholderText="顯示名稱"
+                                                    Text="{Binding Label, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <ui:TextBox Grid.Column="2" Margin="0,0,8,0"
+                                                    PlaceholderText="帳號 / 網址 / 電話"
+                                                    Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <ui:Button Grid.Column="3"
+                                                   Icon="{ui:SymbolIcon Symbol=Delete24}"
+                                                   Appearance="Secondary"
+                                                   Command="{Binding DataContext.RemoveContactCommand,
+                                                       RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                   CommandParameter="{Binding}"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- ════════════════════════════════════════════════ -->
+            <!-- 行事曆設定區塊                                   -->
+            <!-- ════════════════════════════════════════════════ -->
+            <ui:TextBlock Text="行事曆設定" FontTypography="Subtitle" Margin="0,0,0,12"/>
+            <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                    CornerRadius="8" Padding="16" Margin="0,0,0,24">
+                <StackPanel>
+                    <!-- 一周起始日 -->
+                    <ui:TextBlock Text="預設一周起始日" FontTypography="BodyStrong" Margin="0,0,0,4"/>
+                    <ComboBox ItemsSource="{Binding WeekStartOptions}"
+                              DisplayMemberPath="Label"
+                              SelectedValuePath="Value"
+                              SelectedValue="{Binding WeekStartDay}"
+                              Margin="0,0,0,16"
+                              Width="200" HorizontalAlignment="Left"/>
+
+                    <!-- 每周固定店休日 -->
+                    <ui:TextBlock Text="預設每周固定店休日" FontTypography="BodyStrong" Margin="0,0,0,8"/>
+                    <ItemsControl ItemsSource="{Binding ClosedDayOptions}" Margin="0,0,0,16">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <CheckBox Content="{Binding Label}"
+                                          IsChecked="{Binding IsChecked}"
+                                          Margin="0,0,16,4"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- 國定假日是否休假 -->
+                    <ui:TextBlock Text="國定假日是否休假" FontTypography="BodyStrong" Margin="0,0,0,4"/>
+                    <ui:ToggleSwitch Content="{Binding NationalHolidaysOff, Converter={StaticResource BoolToToggleTextConverter}}"
+                                     IsChecked="{Binding NationalHolidaysOff}"
+                                     Margin="0,0,0,8"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 儲存 -->
+            <ui:Button Content="儲存設定" Icon="{ui:SymbolIcon Symbol=Save24}"
+                        Appearance="Primary" Margin="0,0,0,48"
+                        Command="{Binding SaveCommand}"/>
+
+            <!-- ════════════════════════════════════════════════ -->
+            <!-- 危險區域                                         -->
+            <!-- ════════════════════════════════════════════════ -->
+            <Separator Margin="0,0,0,16"/>
+            <ui:Button Content="關閉此店鋪"
+                       Icon="{ui:SymbolIcon Symbol=Delete24}"
+                       Appearance="Secondary"
+                       Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                       Margin="0,0,0,32"
+                       Command="{Binding CloseShopCommand}"/>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

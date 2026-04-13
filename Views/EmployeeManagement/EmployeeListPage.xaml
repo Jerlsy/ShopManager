@@ -1,0 +1,481 @@
+<UserControl x:Class="ShopManager.Views.EmployeeManagement.EmployeeListPage"
+         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+         xmlns:vm="clr-namespace:ShopManager.ViewModels">
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 標題列 -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,16">
+            <ui:TextBlock Text="員工資料管理" FontTypography="Title"
+                          DockPanel.Dock="Left" VerticalAlignment="Center"/>
+            <ui:Button Content="新增員工" Icon="{ui:SymbolIcon Symbol=PersonAdd24}"
+                        Appearance="Primary" HorizontalAlignment="Right"
+                        Command="{Binding StartNewCommand}"
+                        Visibility="{Binding IsEditing,
+                            Converter={StaticResource BoolToVisibilityConverter},
+                            ConverterParameter=Inverse}"/>
+        </DockPanel>
+
+        <!-- 主區域 -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="{Binding IsEditing,
+                    Converter={StaticResource BoolToGridLengthConverter},
+                    ConverterParameter=520|0}"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ══════════════════════════════════════════ -->
+            <!-- 卡片清單                                     -->
+            <!-- ══════════════════════════════════════════ -->
+            <ScrollViewer Grid.Column="0" Padding="0,0,8,0">
+                <StackPanel>
+                    <!-- 空狀態 -->
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                                Margin="0,60,0,0"
+                                Visibility="{Binding Employees.Count,
+                                    Converter={StaticResource ZeroToVisibilityConverter}}">
+                        <ui:SymbolIcon Symbol="People24" FontSize="56"
+                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                       HorizontalAlignment="Center"/>
+                        <ui:TextBlock Text="尚無員工資料，點選右上角「新增員工」開始建立"
+                                      FontTypography="Body"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                      HorizontalAlignment="Center" Margin="0,12,0,0"/>
+                    </StackPanel>
+
+                    <ItemsControl ItemsSource="{Binding Employees}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <!-- 員工卡片 -->
+                                <Border Width="230" Margin="0,0,12,12"
+                                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                        CornerRadius="10" Padding="16">
+                                    <StackPanel>
+                                        <!-- 頭像 + 姓名 -->
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0"
+                                                    Width="44" Height="44" CornerRadius="22"
+                                                    Background="{DynamicResource AccentFillColorDefaultBrush}"
+                                                    Margin="0,0,10,0">
+                                                <TextBlock
+                                                    Text="{Binding Name, Converter={StaticResource NameInitialConverter}}"
+                                                    Foreground="White"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    FontSize="20" FontWeight="SemiBold"/>
+                                            </Border>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontWeight="SemiBold" FontSize="15"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <ui:Badge Content="已離職" Appearance="Danger"
+                                                          Margin="0,2,0,0"
+                                                          Visibility="{Binding IsResigned,
+                                                              Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <Separator Margin="0,0,0,8"/>
+
+                                        <!-- 資訊列 -->
+                                        <Grid Margin="0,0,0,3">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="18"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <ui:SymbolIcon Grid.Column="0" Symbol="Phone24" FontSize="12"
+                                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding Phone, FallbackValue='—'}"
+                                                       FontSize="12" TextTrimming="CharacterEllipsis"
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                        </Grid>
+                                        <Grid Margin="0,0,0,3">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="18"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <ui:SymbolIcon Grid.Column="0" Symbol="Clock24" FontSize="12"
+                                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding DefaultShift.Alias, FallbackValue='未設定班別'}"
+                                                       FontSize="12"
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                        </Grid>
+                                        <Grid Margin="0,0,0,3">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="18"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <ui:SymbolIcon Grid.Column="0" Symbol="Money24" FontSize="12"
+                                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding DefaultSalary.Alias, FallbackValue='未設定薪資'}"
+                                                       FontSize="12"
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                        </Grid>
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="18"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <ui:SymbolIcon Grid.Column="0" Symbol="CalendarClock24" FontSize="12"
+                                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding HireDate, StringFormat=到職：{0:yyyy/MM/dd}}"
+                                                       FontSize="12"
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                        </Grid>
+
+                                        <!-- 操作按鈕 -->
+                                        <StackPanel Orientation="Horizontal">
+                                            <ui:Button Content="編輯"
+                                                        Icon="{ui:SymbolIcon Symbol=Edit24}"
+                                                        Appearance="Secondary" Margin="0,0,8,0"
+                                                        Command="{Binding DataContext.StartEditCommand,
+                                                            RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                        CommandParameter="{Binding}"/>
+                                            <ui:Button Icon="{ui:SymbolIcon Symbol=Delete24}"
+                                                        Appearance="Danger"
+                                                        Command="{Binding DataContext.DeleteCommand,
+                                                            RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                        CommandParameter="{Binding}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- ══════════════════════════════════════════ -->
+            <!-- 編輯側欄                                     -->
+            <!-- ══════════════════════════════════════════ -->
+            <ScrollViewer Grid.Column="1"
+                          Visibility="{Binding IsEditing,
+                              Converter={StaticResource BoolToVisibilityConverter}}">
+                <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        CornerRadius="8" Padding="24" Margin="8,0,0,0">
+                    <StackPanel>
+
+                        <!-- 標題 -->
+                        <DockPanel Margin="0,0,0,20">
+                            <ui:TextBlock Text="{Binding SelectedEmployee,
+                                              Converter={StaticResource NullToStringConverter},
+                                              ConverterParameter='新增員工|編輯員工資料'}"
+                                          FontTypography="Subtitle" DockPanel.Dock="Left"
+                                          VerticalAlignment="Center"/>
+                            <ui:Button Icon="{ui:SymbolIcon Symbol=Dismiss24}"
+                                        HorizontalAlignment="Right"
+                                        Command="{Binding CancelCommand}"/>
+                        </DockPanel>
+
+                        <!-- ╔════════════════════════════╗ -->
+                        <!-- ║ 1. 基本資料                  ║ -->
+                        <!-- ╚════════════════════════════╝ -->
+                        <ui:TextBlock Text="基本資料"
+                                      FontTypography="BodyStrong"
+                                      Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                                      Margin="0,0,0,10"/>
+
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                <ui:TextBlock Text="姓名 *" FontTypography="BodyStrong" Margin="0,0,0,4"/>
+                                <ui:TextBox PlaceholderText="請輸入姓名"
+                                            Text="{Binding EditName, UpdateSourceTrigger=PropertyChanged}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                                <ui:TextBlock Text="身分證字號" FontTypography="BodyStrong" Margin="0,0,0,4"/>
+                                <ui:TextBox PlaceholderText="A123456789"
+                                            Text="{Binding EditIdNumber, UpdateSourceTrigger=PropertyChanged}"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <ui:TextBlock Text="聯絡地址" FontTypography="BodyStrong" Margin="0,0,0,4"/>
+                        <ui:TextBox PlaceholderText="請輸入聯絡地址"
+                                    Text="{Binding EditAddress, UpdateSourceTrigger=PropertyChanged}"
+                                    Margin="0,0,0,10"/>
+
+                        <ui:TextBlock Text="聯繫電話" FontTypography="BodyStrong" Margin="0,0,0,4"/>
+                        <ui:TextBox PlaceholderText="請輸入聯繫電話"
+                                    Text="{Binding EditPhone, UpdateSourceTrigger=PropertyChanged}"
+                                    Margin="0,0,0,10"/>
+
+                        <!-- 通訊軟體（限一組） -->
+                        <ui:TextBlock Text="通訊軟體（限一組）" FontTypography="BodyStrong" Margin="0,0,0,4"/>
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <ComboBox Grid.Column="0" Margin="0,0,6,0"
+                                      ItemsSource="{Binding MessengerTypes}"
+                                      SelectedItem="{Binding EditMessengerType}"/>
+                            <ui:TextBox Grid.Column="1"
+                                        PlaceholderText="帳號 / ID"
+                                        Text="{Binding EditMessengerValue, UpdateSourceTrigger=PropertyChanged}"/>
+                        </Grid>
+
+                        <!-- 自訂聯絡方式 -->
+                        <DockPanel Margin="0,0,0,6">
+                            <ui:TextBlock Text="自訂聯絡方式"
+                                          FontTypography="BodyStrong"
+                                          DockPanel.Dock="Left" VerticalAlignment="Center"/>
+                            <ui:Button Content="新增" Icon="{ui:SymbolIcon Symbol=Add24}"
+                                        HorizontalAlignment="Right"
+                                        Command="{Binding AddCustomContactCommand}"/>
+                        </DockPanel>
+                        <ItemsControl ItemsSource="{Binding EditCustomContacts}" Margin="0,0,0,16">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ui:TextBox Grid.Column="0" Margin="0,0,6,0"
+                                                    PlaceholderText="名稱（自訂）"
+                                                    Text="{Binding Label, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <ui:TextBox Grid.Column="1" Margin="0,0,6,0"
+                                                    PlaceholderText="值"
+                                                    Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <ui:Button Grid.Column="2"
+                                                   Icon="{ui:SymbolIcon Symbol=Delete24}"
+                                                   Appearance="Danger"
+                                                   Command="{Binding DataContext.RemoveCustomContactCommand,
+                                                       RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                   CommandParameter="{Binding}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Separator Margin="0,0,0,16"/>
+
+                        <!-- ╔════════════════════════════╗ -->
+                        <!-- ║ 2. 排班設定                  ║ -->
+                        <!-- ╚════════════════════════════╝ -->
+                        <ui:TextBlock Text="排班設定"
+                                      FontTypography="BodyStrong"
+                                      Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                                      Margin="0,0,0,10"/>
+
+                        <!-- 預設班別 + 薪資 -->
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                <ui:TextBlock Text="預設班別" FontTypography="BodyStrong" Margin="0,0,0,4"/>
+                                <ComboBox ItemsSource="{Binding AvailableShifts}"
+                                          SelectedItem="{Binding EditDefaultShift}"
+                                          DisplayMemberPath="Alias"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                                <ui:TextBlock Text="薪資類型" FontTypography="BodyStrong" Margin="0,0,0,4"/>
+                                <ComboBox ItemsSource="{Binding AvailableSalaries}"
+                                          SelectedItem="{Binding EditDefaultSalary}"
+                                          DisplayMemberPath="Alias"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <ui:InfoBar IsOpen="True" IsClosable="False" Severity="Informational"
+                                     Title="預設班別與薪資僅作為預設值，排班與計薪時可個別調整。"
+                                     Margin="0,0,0,16"/>
+
+                        <!-- ── 排班規則 ── -->
+                        <ui:CardExpander Header="排班規則（選填）" IsExpanded="False" Margin="0,0,0,16">
+                            <StackPanel Margin="0,12,0,4">
+
+                                <!-- 固定休假 -->
+                                <ui:TextBlock Text="固定休假日" FontTypography="BodyStrong" Margin="0,0,0,8"/>
+                                <WrapPanel Margin="0,0,0,16">
+                                    <ItemsControl ItemsSource="{Binding FixedOffDayItems}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type vm:DayOfWeekItem}">
+                                                <CheckBox Content="{Binding Label}"
+                                                          IsChecked="{Binding IsChecked}"
+                                                          Margin="0,0,12,6"/>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </WrapPanel>
+
+                                <!-- 排除班別 -->
+                                <ui:TextBlock Text="排除班別" FontTypography="BodyStrong" Margin="0,0,0,4"/>
+                                <ui:TextBlock Text="排班時不排入以下班別"
+                                              FontSize="12"
+                                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                              Margin="0,0,0,8"/>
+                                <ItemsControl ItemsSource="{Binding ExcludeShiftItems}" Margin="0,0,0,16">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:ShiftCheckItem}">
+                                            <CheckBox Content="{Binding Alias}"
+                                                      IsChecked="{Binding IsChecked}"
+                                                      Margin="0,0,12,6"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <!-- 不與共事 -->
+                                <ui:TextBlock Text="不與共事" FontTypography="BodyStrong" Margin="0,0,0,4"/>
+                                <ui:TextBlock Text="同一班次中避免與以下員工同時排班"
+                                              FontSize="12"
+                                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                              Margin="0,0,0,8"/>
+                                <!-- 無在職員工提示 -->
+                                <TextBlock Text="（目前無其他在職員工）"
+                                           FontSize="12" FontStyle="Italic"
+                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                           Margin="0,0,0,8"
+                                           Visibility="{Binding NotWithItems.Count,
+                                               Converter={StaticResource ZeroToVisibilityConverter}}"/>
+                                <ItemsControl ItemsSource="{Binding NotWithItems}" Margin="0,0,0,4">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:ColleagueCheckItem}">
+                                            <CheckBox Content="{Binding Name}"
+                                                      IsChecked="{Binding IsChecked}"
+                                                      Margin="0,0,12,6"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                            </StackPanel>
+                        </ui:CardExpander>
+
+                        <!-- 預設獎金 -->
+                        <DockPanel Margin="0,0,0,6">
+                            <ui:TextBlock Text="預設獎金（選填）"
+                                          FontTypography="BodyStrong"
+                                          DockPanel.Dock="Left" VerticalAlignment="Center"/>
+                            <ui:Button Content="新增" Icon="{ui:SymbolIcon Symbol=Add24}"
+                                        HorizontalAlignment="Right"
+                                        Command="{Binding AddBonusCommand}"/>
+                        </DockPanel>
+                        <ItemsControl ItemsSource="{Binding EditDefaultBonuses}" Margin="0,0,0,16">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ui:TextBox Grid.Column="0" Margin="0,0,6,0"
+                                                    PlaceholderText="獎金名稱"
+                                                    Text="{Binding Label, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <ui:NumberBox Grid.Column="1" Margin="0,0,6,0"
+                                                      Value="{Binding Amount}" Minimum="0"
+                                                      PlaceholderText="金額（元）"/>
+                                        <ui:Button Grid.Column="2"
+                                                   Icon="{ui:SymbolIcon Symbol=Delete24}"
+                                                   Appearance="Danger"
+                                                   Command="{Binding DataContext.RemoveBonusCommand,
+                                                       RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                   CommandParameter="{Binding}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Separator Margin="0,0,0,16"/>
+
+                        <!-- ╔════════════════════════════╗ -->
+                        <!-- ║ 3. 任職資料                  ║ -->
+                        <!-- ╚════════════════════════════╝ -->
+                        <ui:TextBlock Text="任職資料"
+                                      FontTypography="BodyStrong"
+                                      Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                                      Margin="0,0,0,10"/>
+
+                        <Grid Margin="0,0,0,20">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                <ui:TextBlock Text="到職日 *" FontTypography="BodyStrong" Margin="0,0,0,4"/>
+                                <DatePicker SelectedDate="{Binding EditHireDate,
+                                                Converter={StaticResource DateOnlyConverter}}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                                <ui:TextBlock Text="離職日（留空 = 在職）" FontTypography="BodyStrong" Margin="0,0,0,4"/>
+                                <DatePicker SelectedDate="{Binding EditResignDate,
+                                                Converter={StaticResource NullableDateOnlyConverter}}"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- 排班衝突警告 -->
+                        <ui:InfoBar IsOpen="{Binding HasConflicts}"
+                                     Severity="Error" IsClosable="False"
+                                     Title="離職日之後仍有排班資料，請重新編輯以下月份的班表："
+                                     Margin="0,0,0,12">
+                            <ItemsControl ItemsSource="{Binding ConflictMonths}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}"
+                                                   FontWeight="SemiBold" Margin="0,2,0,2"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ui:InfoBar>
+
+                        <!-- 操作按鈕 -->
+                        <StackPanel Orientation="Horizontal">
+                            <ui:Button Content="儲存" Icon="{ui:SymbolIcon Symbol=Save24}"
+                                        Appearance="Primary" Margin="0,0,8,0"
+                                        Command="{Binding SaveCommand}"/>
+                            <ui:Button Content="取消" Margin="0,0,8,0"
+                                        Command="{Binding CancelCommand}"/>
+                            <ui:Button Content="強制儲存"
+                                        Appearance="Danger"
+                                        Visibility="{Binding HasConflicts,
+                                            Converter={StaticResource BoolToVisibilityConverter}}"
+                                        Command="{Binding ForceSaveCommand}"
+                                        ToolTip="忽略排班衝突，強制儲存離職日"/>
+                        </StackPanel>
+
+                    </StackPanel>
+                </Border>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>

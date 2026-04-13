@@ -1,0 +1,151 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using ShopManager.Models;
+using ShopManager.Services;
+using Wpf.Ui;
+using Wpf.Ui.Controls;
+using Wpf.Ui.Extensions;
+
+namespace ShopManager.ViewModels;
+
+public partial class SalarySettingViewModel(
+    SalarySettingService service,
+    ISnackbarService snackbarService,
+    IContentDialogService contentDialogService) : ObservableObject
+{
+    // 子頁面切換
+    [ObservableProperty] private bool _showLaborLaw;
+
+    // 勞基法設定
+    [ObservableProperty] private LaborLawSetting _laborLaw = new();
+
+    // 薪資清單
+    [ObservableProperty] private List<SalarySetting> _salaries = new();
+    [ObservableProperty] private SalarySetting? _selectedSalary;
+    [ObservableProperty] private bool _isEditing;
+
+    // 編輯暫存
+    [ObservableProperty] private string _editAlias = string.Empty;
+    [ObservableProperty] private string _editDescription = string.Empty;
+    [ObservableProperty] private SalaryType _editType = SalaryType.Hourly;
+    [ObservableProperty] private decimal? _editHourlyRate;
+    [ObservableProperty] private decimal? _editMonthlyBase;
+    [ObservableProperty] private decimal? _editContractAmount;
+    [ObservableProperty] private string _editContractCycle = string.Empty;
+    [ObservableProperty] private decimal? _editOT1Rate;
+    [ObservableProperty] private decimal? _editOT2Rate;
+    [ObservableProperty] private decimal? _editHolidayRate;
+    [ObservableProperty] private double? _editDailyMaxHours;
+    [ObservableProperty] private double? _editWeeklyMaxHours;
+
+    public static List<SalaryType> SalaryTypes { get; } =
+        Enum.GetValues<SalaryType>().ToList();
+
+    public async Task LoadAsync()
+    {
+        LaborLaw = await service.GetLaborLawAsync() ?? new LaborLawSetting();
+        Salaries = await service.GetAllAsync();
+    }
+
+    [RelayCommand]
+    public void OpenLaborLaw() => ShowLaborLaw = true;
+
+    [RelayCommand]
+    public void CloseLaborLaw() => ShowLaborLaw = false;
+
+    [RelayCommand]
+    public async Task SaveLaborLawAsync()
+    {
+        await service.SaveLaborLawAsync(LaborLaw);
+        ShowLaborLaw = false;
+        snackbarService.Show("儲存成功", "勞基法設定已更新",
+            ControlAppearance.Success, null, TimeSpan.FromSeconds(3));
+    }
+
+    /// <summary>新增時按類型帶入勞基法預設值</summary>
+    partial void OnEditTypeChanged(SalaryType value)
+    {
+        EditOT1Rate = value == SalaryType.Hourly ? LaborLaw.HourlyOT1Rate : LaborLaw.MonthlyOT1Rate;
+        EditOT2Rate = value == SalaryType.Hourly ? LaborLaw.HourlyOT2Rate : LaborLaw.MonthlyOT2Rate;
+        EditHolidayRate = LaborLaw.HolidayOTRate;
+        EditDailyMaxHours = value == SalaryType.Hourly ? LaborLaw.HourlyDailyMaxHours : LaborLaw.MonthlyDailyMaxHours;
+        EditWeeklyMaxHours = value == SalaryType.Hourly ? LaborLaw.HourlyWeeklyMaxHours : LaborLaw.MonthlyWeeklyMaxHours;
+    }
+
+    [RelayCommand]
+    public void StartNew()
+    {
+        SelectedSalary = null;
+        EditAlias = string.Empty;
+        EditDescription = string.Empty;
+        EditType = SalaryType.Hourly;
+        IsEditing = true;
+    }
+
+    [RelayCommand]
+    public void StartEdit(SalarySetting s)
+    {
+        SelectedSalary = s;
+        EditAlias = s.Alias;
+        EditDescription = s.Description;
+        EditType = s.Type;
+        EditHourlyRate = s.HourlyRate;
+        EditMonthlyBase = s.MonthlyBase;
+        EditContractAmount = s.ContractAmount;
+        EditContractCycle = s.ContractCycle;
+        EditOT1Rate = s.OT1Rate;
+        EditOT2Rate = s.OT2Rate;
+        EditHolidayRate = s.HolidayRate;
+        EditDailyMaxHours = s.DailyMaxHours;
+        EditWeeklyMaxHours = s.WeeklyMaxHours;
+        IsEditing = true;
+    }
+
+    [RelayCommand]
+    public async Task SaveAsync()
+    {
+        var salary = SelectedSalary ?? new SalarySetting();
+        salary.Alias = EditAlias;
+        salary.Description = EditDescription;
+        salary.Type = EditType;
+        salary.HourlyRate = EditHourlyRate;
+        salary.MonthlyBase = EditMonthlyBase;
+        salary.ContractAmount = EditContractAmount;
+        salary.ContractCycle = EditContractCycle;
+        salary.OT1Rate = EditOT1Rate;
+        salary.OT2Rate = EditOT2Rate;
+        salary.HolidayRate = EditHolidayRate;
+        salary.DailyMaxHours = EditDailyMaxHours;
+        salary.WeeklyMaxHours = EditWeeklyMaxHours;
+
+        if (SelectedSalary is null) await service.AddAsync(salary);
+        else await service.UpdateAsync(salary);
+
+        IsEditing = false;
+        await LoadAsync();
+        snackbarService.Show("儲存成功", "薪資設定已更新",
+            ControlAppearance.Success, null, TimeSpan.FromSeconds(3));
+    }
+
+    [RelayCommand]
+    public async Task DeleteAsync(SalarySetting s)
+    {
+        var result = await contentDialogService.ShowSimpleDialogAsync(
+            new SimpleContentDialogCreateOptions
+            {
+                Title = "確認刪除",
+                Content = $"確定要刪除薪資方案「{s.Alias}」嗎？此操作無法復原。",
+                PrimaryButtonText = "刪除",
+                CloseButtonText = "取消",
+            });
+
+        if (result != ContentDialogResult.Primary)
+            return;
+
+        await service.DeleteAsync(s.Id);
+        await LoadAsync();
+    }
+
+    [RelayCommand]
+    public void Cancel() => IsEditing = false;
+}

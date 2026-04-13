@@ -1,0 +1,31 @@
+<Application x:Class="ShopManager.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:helpers="clr-namespace:ShopManager.Helpers">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ui:ThemesDictionary Theme="Dark" />
+                <ui:ControlsDictionary />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Value Converters -->
+            <helpers:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+            <helpers:NullToStringConverter x:Key="NullToStringConverter"/>
+            <helpers:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+            <helpers:ZeroToVisibilityConverter x:Key="ZeroToVisibilityConverter"/>
+            <helpers:SalaryTypeDisplayConverter x:Key="SalaryTypeDisplayConverter"/>
+            <helpers:SalaryTypeVisibilityConverter x:Key="SalaryTypeVisibilityConverter"/>
+            <helpers:DateOnlyConverter x:Key="DateOnlyConverter"/>
+            <helpers:NullableDateOnlyConverter x:Key="NullableDateOnlyConverter"/>
+            <helpers:NameInitialConverter x:Key="NameInitialConverter"/>
+            <helpers:BoolToGridLengthConverter x:Key="BoolToGridLengthConverter"/>
+            <helpers:BoolToToggleTextConverter x:Key="BoolToToggleTextConverter"/>
+            <helpers:HexToBrushConverter x:Key="HexToBrushConverter"/>
+            <helpers:ColorMatchConverter x:Key="ColorMatchConverter"/>
+            <helpers:BoolToOpacityConverter x:Key="BoolToOpacityConverter"/>
+            <helpers:ViewModeVisibilityConverter x:Key="ViewModeVisibilityConverter"/>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
