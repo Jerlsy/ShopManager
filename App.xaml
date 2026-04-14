@@ -8,6 +8,8 @@
             <ResourceDictionary.MergedDictionaries>
                 <ui:ThemesDictionary Theme="Dark" />
                 <ui:ControlsDictionary />
+                <!-- 全域統一控件高度與圓角，須置於 ControlsDictionary 之後以正確覆蓋 -->
+                <ResourceDictionary Source="Resources/ControlStyles.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 
             <!-- Value Converters -->

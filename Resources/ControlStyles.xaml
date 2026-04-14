@@ -1,0 +1,44 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+
+    <!--
+        ControlStyles.xaml
+        全域表單控件統一樣式
+
+        設計規範：
+          - 所有輸入控件統一高度：MinHeight = 36
+          - 圓角統一：CornerRadius = 4
+          - 依賴 WPF-UI ControlsDictionary 提供的基礎模板（需在 App.xaml 中於其後合併）
+    -->
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- ui:TextBox — 加上圓角（WPF-UI 預設 CornerRadius=0）         -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <Style TargetType="ui:TextBox" BasedOn="{StaticResource {x:Type ui:TextBox}}">
+        <Setter Property="MinHeight" Value="36"/>
+        <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- ui:NumberBox — 統一高度                                     -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <Style TargetType="ui:NumberBox" BasedOn="{StaticResource {x:Type ui:NumberBox}}">
+        <Setter Property="MinHeight" Value="36"/>
+    </Style>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- ComboBox — 統一高度（WPF-UI ControlsDictionary 已提供圓角）  -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+        <Setter Property="MinHeight" Value="36"/>
+    </Style>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- DatePicker — 統一高度（WPF-UI ControlsDictionary 已提供樣式）-->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <Style TargetType="DatePicker" BasedOn="{StaticResource {x:Type DatePicker}}">
+        <Setter Property="MinHeight" Value="36"/>
+    </Style>
+
+</ResourceDictionary>
