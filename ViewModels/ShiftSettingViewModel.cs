@@ -2,16 +2,13 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ShopManager.Models;
 using ShopManager.Services;
-using Wpf.Ui;
-using Wpf.Ui.Controls;
-using Wpf.Ui.Extensions;
 
 namespace ShopManager.ViewModels;
 
 public partial class ShiftSettingViewModel(
     ShiftSettingService service,
-    ISnackbarService snackbarService,
-    IContentDialogService contentDialogService) : ObservableObject
+    IAppSnackbarService snackbarService,
+    IAppDialogService dialogService) : ObservableObject
 {
     [ObservableProperty] private List<ShiftSetting> _shifts = new();
     [ObservableProperty] private ShiftSetting? _selectedShift;
@@ -106,13 +103,9 @@ public partial class ShiftSettingViewModel(
     [RelayCommand]
     public async Task SaveAsync()
     {
-        // 驗證時間格式
         if (!TryParseTime(EditStartTimeText, out var startTime) ||
             !TryParseTime(EditEndTimeText, out var endTime))
-        {
-            // 驗證訊息已透過 Property 顯示，不重複彈窗
             return;
-        }
 
         if (SelectedShift is null)
         {
@@ -136,24 +129,18 @@ public partial class ShiftSettingViewModel(
         }
         IsEditing = false;
         await LoadAsync();
-        snackbarService.Show("儲存成功", "班別設定已更新",
-            ControlAppearance.Success, null, TimeSpan.FromSeconds(3));
+        snackbarService.ShowSuccess("班別設定已儲存");
     }
 
     [RelayCommand]
     public async Task DeleteAsync(ShiftSetting shift)
     {
-        var result = await contentDialogService.ShowSimpleDialogAsync(
-            new SimpleContentDialogCreateOptions
-            {
-                Title = "確認刪除",
-                Content = $"確定要刪除班別「{shift.Alias}」嗎？此操作無法復原。",
-                PrimaryButtonText = "刪除",
-                CloseButtonText = "取消",
-            });
+        var confirmed = await dialogService.ShowConfirmAsync(
+            "確認刪除",
+            $"確定要刪除班別「{shift.Alias}」嗎？此操作無法復原。",
+            "刪除", "取消");
 
-        if (result != ContentDialogResult.Primary)
-            return;
+        if (!confirmed) return;
 
         await service.DeleteAsync(shift.Id);
         await LoadAsync();

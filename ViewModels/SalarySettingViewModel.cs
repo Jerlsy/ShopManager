@@ -2,16 +2,13 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ShopManager.Models;
 using ShopManager.Services;
-using Wpf.Ui;
-using Wpf.Ui.Controls;
-using Wpf.Ui.Extensions;
 
 namespace ShopManager.ViewModels;
 
 public partial class SalarySettingViewModel(
     SalarySettingService service,
-    ISnackbarService snackbarService,
-    IContentDialogService contentDialogService) : ObservableObject
+    IAppSnackbarService snackbarService,
+    IAppDialogService dialogService) : ObservableObject
 {
     // 子頁面切換
     [ObservableProperty] private bool _showLaborLaw;
@@ -58,8 +55,7 @@ public partial class SalarySettingViewModel(
     {
         await service.SaveLaborLawAsync(LaborLaw);
         ShowLaborLaw = false;
-        snackbarService.Show("儲存成功", "勞基法設定已更新",
-            ControlAppearance.Success, null, TimeSpan.FromSeconds(3));
+        snackbarService.ShowSuccess("勞基法設定已儲存");
     }
 
     /// <summary>新增時按類型帶入勞基法預設值</summary>
@@ -123,24 +119,18 @@ public partial class SalarySettingViewModel(
 
         IsEditing = false;
         await LoadAsync();
-        snackbarService.Show("儲存成功", "薪資設定已更新",
-            ControlAppearance.Success, null, TimeSpan.FromSeconds(3));
+        snackbarService.ShowSuccess("薪資設定已儲存");
     }
 
     [RelayCommand]
     public async Task DeleteAsync(SalarySetting s)
     {
-        var result = await contentDialogService.ShowSimpleDialogAsync(
-            new SimpleContentDialogCreateOptions
-            {
-                Title = "確認刪除",
-                Content = $"確定要刪除薪資方案「{s.Alias}」嗎？此操作無法復原。",
-                PrimaryButtonText = "刪除",
-                CloseButtonText = "取消",
-            });
+        var confirmed = await dialogService.ShowConfirmAsync(
+            "確認刪除",
+            $"確定要刪除薪資方案「{s.Alias}」嗎？此操作無法復原。",
+            "刪除", "取消");
 
-        if (result != ContentDialogResult.Primary)
-            return;
+        if (!confirmed) return;
 
         await service.DeleteAsync(s.Id);
         await LoadAsync();

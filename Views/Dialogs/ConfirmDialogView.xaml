@@ -1,0 +1,43 @@
+<UserControl x:Class="ShopManager.Views.Dialogs.ConfirmDialogView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
+             MinWidth="320" MaxWidth="480">
+
+    <Border Background="{DynamicResource AppSurfaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="24" Padding="24,20,24,12">
+        <StackPanel>
+
+            <!-- 標題 -->
+            <TextBlock x:Name="TitleText"
+                       FontSize="24" FontWeight="SemiBold"
+                       Margin="0,0,0,12"/>
+
+            <!-- 內容 -->
+            <TextBlock x:Name="ContentText"
+                       FontSize="14" Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                       TextWrapping="Wrap"
+                       Opacity="0.87"
+                       Margin="0,0,0,20"/>
+
+            <!-- 按鈕列 -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <!-- 取消 -->
+                <Button x:Name="CancelBtn"
+                        Style="{StaticResource MaterialDesignFlatButton}"
+                        Margin="0,0,8,0"
+                        Command="{x:Static md:DialogHost.CloseDialogCommand}"
+                        CommandParameter="{x:Static sys:Boolean.FalseString}"/>
+
+                <!-- 確認 -->
+                <Button x:Name="ConfirmBtn"
+                        Style="{StaticResource MaterialDesignFlatButton}"
+                        Foreground="{DynamicResource PrimaryHueMidBrush}"
+                        Command="{x:Static md:DialogHost.CloseDialogCommand}"
+                        CommandParameter="{x:Static sys:Boolean.TrueString}"/>
+            </StackPanel>
+
+        </StackPanel>
+    </Border>
+</UserControl>
+

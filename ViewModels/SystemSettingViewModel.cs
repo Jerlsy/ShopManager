@@ -1,24 +1,21 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using ShopManager.Data;
 using ShopManager.Models;
 using ShopManager.Services;
 using System.Collections.ObjectModel;
-using Wpf.Ui;
-using Wpf.Ui.Controls;
-using Wpf.Ui.Extensions;
 
 namespace ShopManager.ViewModels;
 
 public partial class SystemSettingViewModel(
     ShopSettingService service,
-    ISnackbarService snackbarService,
-    IContentDialogService contentDialogService,
+    IAppSnackbarService snackbarService,
+    IAppDialogService dialogService,
     AppDbContext db,
-    ShopContext shopContext) : ObservableObject
+    ShopContext shopContext,
+    ThemeService themeService) : ObservableObject
 {
-    // ── 店鋪設定 ──────────────────────────────
     [ObservableProperty] private string _name = string.Empty;
     [ObservableProperty] private string _address = string.Empty;
     [ObservableProperty] private string _phone = string.Empty;
@@ -31,26 +28,31 @@ public partial class SystemSettingViewModel(
         "官方網站", "其他"
     };
 
-    // ── 行事曆設定 ────────────────────────────
     [ObservableProperty] private int _weekStartDay = 1;
     [ObservableProperty] private bool _nationalHolidaysOff = true;
+    [ObservableProperty] private string _customPrimaryHex = "#546E7A";
+    [ObservableProperty] private string _customSecondaryHex = "#29B6F6";
 
     public ObservableCollection<DayOfWeekOption> ClosedDayOptions { get; } = new()
     {
-        new(DayOfWeek.Monday, "周一"),
-        new(DayOfWeek.Tuesday, "周二"),
-        new(DayOfWeek.Wednesday, "周三"),
-        new(DayOfWeek.Thursday, "周四"),
-        new(DayOfWeek.Friday, "周五"),
-        new(DayOfWeek.Saturday, "周六"),
-        new(DayOfWeek.Sunday, "周日"),
+        new(DayOfWeek.Monday, "週一"),
+        new(DayOfWeek.Tuesday, "週二"),
+        new(DayOfWeek.Wednesday, "週三"),
+        new(DayOfWeek.Thursday, "週四"),
+        new(DayOfWeek.Friday, "週五"),
+        new(DayOfWeek.Saturday, "週六"),
+        new(DayOfWeek.Sunday, "週日"),
     };
 
     public static List<WeekStartOption> WeekStartOptions { get; } = new()
     {
-        new(0, "周日"),
-        new(1, "周一"),
+        new(0, "週日"),
+        new(1, "週一"),
     };
+
+    public IReadOnlyList<ThemePreset> ThemePresets => themeService.Presets;
+    public string CurrentThemeName => themeService.CurrentThemeName;
+    public AppThemeAccent CurrentThemeAccent => themeService.CurrentTheme;
 
     public async Task LoadAsync()
     {
@@ -67,6 +69,10 @@ public partial class SystemSettingViewModel(
             foreach (var option in ClosedDayOptions)
                 option.IsChecked = setting.ClosedDaysOfWeek.Contains((int)option.Day);
         }
+
+        CustomPrimaryHex = themeService.CustomPrimaryHex;
+        CustomSecondaryHex = themeService.CustomSecondaryHex;
+        NotifyThemeChanged();
     }
 
     [RelayCommand]
@@ -87,10 +93,10 @@ public partial class SystemSettingViewModel(
             ClosedDaysOfWeek = closedDays,
             NationalHolidaysOff = NationalHolidaysOff,
         };
+
         await service.SaveAsync(setting);
         WeakReferenceMessenger.Default.Send(new SystemConfiguredMessage { ShopName = Name });
-        snackbarService.Show("儲存成功", "店舖設定已更新",
-            ControlAppearance.Success, null, TimeSpan.FromSeconds(3));
+        snackbarService.ShowSuccess("店舖設定已儲存");
     }
 
     [RelayCommand]
@@ -112,33 +118,75 @@ public partial class SystemSettingViewModel(
     {
         var shopName = shopContext.ShopName;
 
-        var result = await contentDialogService.ShowSimpleDialogAsync(
-            new SimpleContentDialogCreateOptions
-            {
-                Title = "關閉店鋪",
-                Content = $"確定要關閉「{shopName}」嗎？\n\n" +
-                          "此操作將永久刪除該店鋪的所有資料，包含：\n" +
-                          "  • 班別設定\n" +
-                          "  • 薪資設定\n" +
-                          "  • 員工資料\n" +
-                          "  • 排班記錄\n\n" +
-                          "此操作無法復原，請謹慎確認。",
-                PrimaryButtonText = "確認關閉",
-                CloseButtonText = "取消",
-            });
+        var confirmed = await dialogService.ShowConfirmAsync(
+            "關閉店鋪",
+            $"確定要關閉「{shopName}」嗎？\n\n" +
+            "此操作將永久刪除該店鋪的所有資料，包含：\n" +
+            "  • 班別設定\n  • 薪資設定\n  • 員工資料\n  • 排班記錄\n\n" +
+            "此操作無法復原，請謹慎確認。",
+            "確認關閉", "取消");
 
-        if (result != ContentDialogResult.Primary) return;
+        if (!confirmed) return;
 
         await db.DeleteShopDataAsync(shopContext.ShopId);
-
         WeakReferenceMessenger.Default.Send(new ShopClosedMessage());
+    }
+
+    [RelayCommand]
+    public void SetSkyBlueAccent() => ApplyTheme(AppThemeAccent.SkyBlue);
+
+    [RelayCommand]
+    public void SetMintGreenAccent() => ApplyTheme(AppThemeAccent.MintGreen);
+
+    [RelayCommand]
+    public void SetAmberOrangeAccent() => ApplyTheme(AppThemeAccent.AmberOrange);
+
+    [RelayCommand]
+    public void SetRoyalPurpleAccent() => ApplyTheme(AppThemeAccent.RoyalPurple);
+
+    [RelayCommand]
+    public void SetSoftPinkAccent() => ApplyTheme(AppThemeAccent.SoftPink);
+
+    [RelayCommand]
+    public void SetVibrantRedAccent() => ApplyTheme(AppThemeAccent.VibrantRed);
+
+    [RelayCommand]
+    public void SetOceanBlueAccent() => ApplyTheme(AppThemeAccent.OceanBlue);
+
+    [RelayCommand]
+    public void SetMidnightCyanAccent() => ApplyTheme(AppThemeAccent.MidnightCyan);
+
+    [RelayCommand]
+    public void ApplyCustomAccent()
+    {
+        if (!themeService.TrySetCustomAccent(CustomPrimaryHex, CustomSecondaryHex))
+        {
+            snackbarService.ShowError("自訂色碼格式錯誤，請輸入像 #1976D2 這樣的 HEX 色碼。");
+            return;
+        }
+
+        CustomPrimaryHex = themeService.CustomPrimaryHex;
+        CustomSecondaryHex = themeService.CustomSecondaryHex;
+        NotifyThemeChanged();
+        snackbarService.ShowSuccess("已套用新的介面配色。");
+    }
+
+    private void ApplyTheme(AppThemeAccent accent)
+    {
+        themeService.SetAccent(accent);
+        NotifyThemeChanged();
+        snackbarService.ShowSuccess($"已切換為「{themeService.CurrentThemeName}」。");
+    }
+
+    private void NotifyThemeChanged()
+    {
+        OnPropertyChanged(nameof(CurrentThemeName));
+        OnPropertyChanged(nameof(CurrentThemeAccent));
     }
 }
 
-/// <summary>一周起始日選項</summary>
 public record WeekStartOption(int Value, string Label);
 
-/// <summary>店休日勾選項目</summary>
 public partial class DayOfWeekOption : ObservableObject
 {
     public DayOfWeek Day { get; }

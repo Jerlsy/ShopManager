@@ -3,9 +3,6 @@ using CommunityToolkit.Mvvm.Input;
 using ShopManager.Models;
 using ShopManager.Services;
 using System.Collections.ObjectModel;
-using Wpf.Ui;
-using Wpf.Ui.Controls;
-using Wpf.Ui.Extensions;
 
 namespace ShopManager.ViewModels;
 
@@ -16,8 +13,7 @@ public partial class ScheduleViewModel : ObservableObject
     private readonly ShiftSettingService _shiftService;
     private readonly EmployeeService _employeeService;
     private readonly ShopSettingService _shopSettingService;
-    private readonly ISnackbarService _snackbarService;
-    private readonly IContentDialogService _contentDialogService;
+    private readonly IAppSnackbarService _snackbarService;
 
     public ScheduleViewModel(
         MonthlyScheduleService scheduleService,
@@ -25,8 +21,7 @@ public partial class ScheduleViewModel : ObservableObject
         ShiftSettingService shiftService,
         EmployeeService employeeService,
         ShopSettingService shopSettingService,
-        ISnackbarService snackbarService,
-        IContentDialogService contentDialogService)
+        IAppSnackbarService snackbarService)
     {
         _scheduleService = scheduleService;
         _entryService = entryService;
@@ -34,7 +29,6 @@ public partial class ScheduleViewModel : ObservableObject
         _employeeService = employeeService;
         _shopSettingService = shopSettingService;
         _snackbarService = snackbarService;
-        _contentDialogService = contentDialogService;
     }
 
     // ── 狀態 ──────────────────────────────────
@@ -43,8 +37,8 @@ public partial class ScheduleViewModel : ObservableObject
     [ObservableProperty] private int _selectedMonth = DateTime.Today.Month;
     [ObservableProperty] private CalendarViewMode _viewMode = CalendarViewMode.Month;
     [ObservableProperty] private DateOnly _selectedDate = DateOnly.FromDateTime(DateTime.Today);
-    [ObservableProperty] private bool _isCreating; // 建立班表流程中
-    [ObservableProperty] private bool _hasSchedule; // 當前月是否已有班表
+    [ObservableProperty] private bool _isCreating;
+    [ObservableProperty] private bool _hasSchedule;
     [ObservableProperty] private Employee? _selectedEmployee;
 
     // ── 建立班表用的暫存設定 ────────────────────
@@ -61,6 +55,301 @@ public partial class ScheduleViewModel : ObservableObject
         new(DayOfWeek.Saturday, "周六"),
         new(DayOfWeek.Sunday, "周日"),
     };
+
+    // ══════════════════════════════════════════
+    // 功能一：快速新增（點擊格子）
+    // ══════════════════════════════════════════
+    [ObservableProperty] private bool _isQuickAdding;
+    [ObservableProperty] private DateOnly _quickAddDate;
+    [ObservableProperty] private Employee? _quickAddEmployee;
+    [ObservableProperty] private ShiftSetting? _quickAddShift;
+
+    [RelayCommand]
+    public void OpenQuickAdd(CalendarDay day)
+    {
+        if (day.IsPlaceholder || day.IsClosed) return;
+        if (CurrentSchedule is null) return;
+
+        QuickAddDate = day.Date;
+        QuickAddEmployee = ActiveEmployees.FirstOrDefault();
+        QuickAddShift = EnabledShifts.FirstOrDefault();
+        IsCreating = false;
+        IsBatchMode = false;
+        IsQuickAdding = true;
+    }
+
+    [RelayCommand]
+    public void CancelQuickAdd() => IsQuickAdding = false;
+
+    [RelayCommand]
+    public async Task ConfirmQuickAddAsync()
+    {
+        if (CurrentSchedule is null || QuickAddEmployee is null || QuickAddShift is null) return;
+
+        var existing = CurrentSchedule.Entries.Any(e =>
+            e.EmployeeId == QuickAddEmployee.Id &&
+            e.Date == QuickAddDate &&
+            e.ShiftSettingId == QuickAddShift.Id);
+
+        if (existing)
+        {
+            _snackbarService.ShowError("該日期已有相同排班");
+            return;
+        }
+
+        await _entryService.AddEntryAsync(new ScheduleEntry
+        {
+            MonthlyScheduleId = CurrentSchedule.Id,
+            EmployeeId = QuickAddEmployee.Id,
+            Date = QuickAddDate,
+            ShiftSettingId = QuickAddShift.Id,
+        });
+
+        IsQuickAdding = false;
+        await LoadScheduleAsync();
+        _snackbarService.ShowSuccess($"已新增 {QuickAddEmployee.Name} {QuickAddDate:MM/dd} {QuickAddShift.Alias}");
+    }
+
+    // ══════════════════════════════════════════
+    // 功能二：右鍵選單操作
+    // ══════════════════════════════════════════
+
+    [RelayCommand]
+    public async Task DeleteEntryAsync(int entryId)
+    {
+        await _entryService.RemoveEntryAsync(entryId);
+        await LoadScheduleAsync();
+        _snackbarService.ShowSuccess("排班已刪除");
+    }
+
+    [RelayCommand]
+    public async Task CopyToNextWeekAsync(int entryId)
+    {
+        if (CurrentSchedule is null) return;
+
+        var entry = CurrentSchedule.Entries.FirstOrDefault(e => e.Id == entryId);
+        if (entry is null) return;
+
+        var targetDate = entry.Date.AddDays(7);
+        var targetSchedule = targetDate.Year == SelectedYear && targetDate.Month == SelectedMonth
+            ? CurrentSchedule
+            : await _scheduleService.GetAsync(targetDate.Year, targetDate.Month);
+
+        if (targetSchedule is null)
+        {
+            _snackbarService.ShowError($"{targetDate.Year}/{targetDate.Month} 班表不存在，請先建立");
+            return;
+        }
+
+        var exists = targetSchedule.Entries.Any(e =>
+            e.EmployeeId == entry.EmployeeId &&
+            e.Date == targetDate &&
+            e.ShiftSettingId == entry.ShiftSettingId);
+
+        if (exists)
+        {
+            _snackbarService.ShowError("目標日期已有相同排班");
+            return;
+        }
+
+        await _entryService.AddEntryAsync(new ScheduleEntry
+        {
+            MonthlyScheduleId = targetSchedule.Id,
+            EmployeeId = entry.EmployeeId,
+            Date = targetDate,
+            ShiftSettingId = entry.ShiftSettingId,
+        });
+
+        await LoadScheduleAsync();
+        _snackbarService.ShowSuccess($"已複製到 {targetDate:MM/dd}");
+    }
+
+    // ── 功能二補充：編輯排班 ─────────────────────
+    [ObservableProperty] private bool _isEditEntryOpen;
+    [ObservableProperty] private string _editEntryInfo = string.Empty;
+    [ObservableProperty] private ShiftSetting? _editEntryShift;
+    [ObservableProperty] private string _editEntryNote = string.Empty;
+    private int _editEntryId;
+
+    [RelayCommand]
+    public void OpenEditEntry(int entryId)
+    {
+        if (CurrentSchedule is null) return;
+        var entry = CurrentSchedule.Entries.FirstOrDefault(e => e.Id == entryId);
+        if (entry is null) return;
+
+        _editEntryId = entryId;
+        EditEntryInfo = $"{entry.Employee?.Name} — {entry.Date:MM/dd}（{GetDayOfWeekText(entry.Date.DayOfWeek)}）";
+        EditEntryShift = EnabledShifts.FirstOrDefault(s => s.Id == entry.ShiftSettingId)
+                         ?? EnabledShifts.FirstOrDefault();
+        EditEntryNote = entry.Note ?? string.Empty;
+        IsEditEntryOpen = true;
+        IsQuickAdding = false;
+        IsBatchMode = false;
+        IsCreating = false;
+    }
+
+    [RelayCommand]
+    public async Task ConfirmEditEntryAsync()
+    {
+        if (EditEntryShift is null) return;
+        await _entryService.UpdateEntryAsync(_editEntryId, EditEntryShift.Id, EditEntryNote);
+        IsEditEntryOpen = false;
+        await LoadScheduleAsync();
+        _snackbarService.ShowSuccess("排班已更新");
+    }
+
+    [RelayCommand]
+    public void CancelEditEntry() => IsEditEntryOpen = false;
+
+    // ══════════════════════════════════════════
+    // 功能三：批次分配
+    // ══════════════════════════════════════════
+    [ObservableProperty] private bool _isBatchMode;
+    [ObservableProperty] private Employee? _batchEmployee;
+    [ObservableProperty] private ShiftSetting? _batchShift;
+    [ObservableProperty] private DateTime? _batchStartDate = DateTime.Today;
+    [ObservableProperty] private DateTime? _batchEndDate = DateTime.Today.AddDays(6);
+
+    public ObservableCollection<DayOfWeekOption> BatchWeekdayOptions { get; } = new()
+    {
+        new(DayOfWeek.Monday,    "周一") { IsChecked = true },
+        new(DayOfWeek.Tuesday,   "周二") { IsChecked = true },
+        new(DayOfWeek.Wednesday, "周三") { IsChecked = true },
+        new(DayOfWeek.Thursday,  "周四") { IsChecked = true },
+        new(DayOfWeek.Friday,    "周五") { IsChecked = true },
+        new(DayOfWeek.Saturday,  "周六"),
+        new(DayOfWeek.Sunday,    "周日"),
+    };
+
+    [RelayCommand]
+    public void StartBatch()
+    {
+        BatchEmployee = ActiveEmployees.FirstOrDefault();
+        BatchShift = EnabledShifts.FirstOrDefault();
+        BatchStartDate = new DateTime(SelectedYear, SelectedMonth, 1);
+        BatchEndDate = new DateTime(SelectedYear, SelectedMonth,
+            DateTime.DaysInMonth(SelectedYear, SelectedMonth));
+        IsCreating = false;
+        IsQuickAdding = false;
+        IsBatchMode = true;
+    }
+
+    [RelayCommand]
+    public void CancelBatch() => IsBatchMode = false;
+
+    [RelayCommand]
+    public async Task ConfirmBatchAsync()
+    {
+        if (BatchEmployee is null || BatchShift is null ||
+            BatchStartDate is null || BatchEndDate is null) return;
+
+        var start = DateOnly.FromDateTime(BatchStartDate.Value);
+        var end = DateOnly.FromDateTime(BatchEndDate.Value);
+        if (start > end)
+        {
+            _snackbarService.ShowError("起始日期不能晚於結束日期");
+            return;
+        }
+
+        var selectedDays = BatchWeekdayOptions
+            .Where(o => o.IsChecked)
+            .Select(o => o.Day)
+            .ToHashSet();
+
+        if (!selectedDays.Any())
+        {
+            _snackbarService.ShowError("請至少選擇一個星期日");
+            return;
+        }
+
+        // 按年月分組載入需要的班表
+        var scheduleCache = new Dictionary<(int year, int month), MonthlySchedule?>();
+        var entriesToAdd = new List<ScheduleEntry>();
+
+        for (var date = start; date <= end; date = date.AddDays(1))
+        {
+            if (!selectedDays.Contains(date.DayOfWeek)) continue;
+
+            var key = (date.Year, date.Month);
+            if (!scheduleCache.TryGetValue(key, out var schedule))
+            {
+                schedule = await _scheduleService.GetAsync(date.Year, date.Month);
+                scheduleCache[key] = schedule;
+            }
+            if (schedule is null) continue;
+
+            // 如果該日是店休日，跳過
+            if (schedule.ClosedDays.Contains(date.Day)) continue;
+
+            entriesToAdd.Add(new ScheduleEntry
+            {
+                MonthlyScheduleId = schedule.Id,
+                EmployeeId = BatchEmployee.Id,
+                Date = date,
+                ShiftSettingId = BatchShift.Id,
+            });
+        }
+
+        var added = await _entryService.AddEntriesAsync(entriesToAdd);
+        IsBatchMode = false;
+        await LoadScheduleAsync();
+        _snackbarService.ShowSuccess(
+            $"已新增 {added} 筆排班（略過 {entriesToAdd.Count - added} 筆重複）");
+    }
+
+    // ══════════════════════════════════════════
+    // 功能四：複製上週班表
+    // ══════════════════════════════════════════
+    [RelayCommand]
+    public async Task CopyLastWeekAsync()
+    {
+        if (CurrentSchedule is null) return;
+
+        var weekStart = GetCurrentWeekStart();
+        var prevWeekStart = weekStart.AddDays(-7);
+        var prevWeekEnd = weekStart.AddDays(-1);
+
+        var prevEntries = await _entryService.GetEntriesByDateRangeAsync(prevWeekStart, prevWeekEnd);
+
+        if (!prevEntries.Any())
+        {
+            _snackbarService.ShowError("上週無任何排班可複製");
+            return;
+        }
+
+        var scheduleCache = new Dictionary<(int year, int month), MonthlySchedule?>();
+        var entriesToAdd = new List<ScheduleEntry>();
+
+        foreach (var entry in prevEntries)
+        {
+            var targetDate = entry.Date.AddDays(7);
+            var key = (targetDate.Year, targetDate.Month);
+
+            if (!scheduleCache.TryGetValue(key, out var targetSchedule))
+            {
+                targetSchedule = await _scheduleService.GetAsync(targetDate.Year, targetDate.Month);
+                scheduleCache[key] = targetSchedule;
+            }
+            if (targetSchedule is null) continue;
+
+            entriesToAdd.Add(new ScheduleEntry
+            {
+                MonthlyScheduleId = targetSchedule.Id,
+                EmployeeId = entry.EmployeeId,
+                Date = targetDate,
+                ShiftSettingId = entry.ShiftSettingId,
+            });
+        }
+
+        var added = await _entryService.AddEntriesAsync(entriesToAdd);
+        await LoadScheduleAsync();
+
+        if (added == 0)
+            _snackbarService.ShowError("本週已有相同排班，無需複製");
+        else
+            _snackbarService.ShowSuccess($"已複製 {added} 筆排班到本週");
+    }
 
     // ── 資料源 ────────────────────────────────
     public ObservableCollection<ShiftSetting> EnabledShifts { get; } = new();
@@ -96,13 +385,11 @@ public partial class ScheduleViewModel : ObservableObject
     // ══════════════════════════════════════════
     public async Task LoadAsync()
     {
-        // 載入啟用中的班別
         var shifts = await _shiftService.GetAllAsync();
         EnabledShifts.Clear();
         foreach (var s in shifts.Where(s => s.IsEnabled))
             EnabledShifts.Add(s);
 
-        // 載入在職員工
         var employees = await _employeeService.GetAllAsync();
         ActiveEmployees.Clear();
         foreach (var e in employees.Where(e => !e.IsResigned))
@@ -127,11 +414,12 @@ public partial class ScheduleViewModel : ObservableObject
         CreateYear = SelectedYear;
         CreateMonth = SelectedMonth;
 
-        // 帶入系統設定的店休日預設
         var settings = await _shopSettingService.GetAsync();
         foreach (var option in CreateClosedDayOptions)
             option.IsChecked = settings?.ClosedDaysOfWeek.Contains((int)option.Day) ?? false;
 
+        IsQuickAdding = false;
+        IsBatchMode = false;
         IsCreating = true;
     }
 
@@ -141,12 +429,9 @@ public partial class ScheduleViewModel : ObservableObject
     [RelayCommand]
     public async Task ConfirmCreateScheduleAsync()
     {
-        if (await _scheduleService.ExistsAsync(CreateYear, CreateMonth))
-            return; // 已存在，不重複建立
+        if (await _scheduleService.ExistsAsync(CreateYear, CreateMonth)) return;
 
         var settings = await _shopSettingService.GetAsync() ?? new ShopSetting();
-
-        // 用使用者調整後的店休日覆寫設定
         settings.ClosedDaysOfWeek = CreateClosedDayOptions
             .Where(o => o.IsChecked)
             .Select(o => (int)o.Day)
@@ -158,8 +443,7 @@ public partial class ScheduleViewModel : ObservableObject
         SelectedYear = CreateYear;
         SelectedMonth = CreateMonth;
         await LoadScheduleAsync();
-        _snackbarService.Show("建立成功", $"{CreateYear} 年 {CreateMonth} 月班表已建立",
-            ControlAppearance.Success, null, TimeSpan.FromSeconds(3));
+        _snackbarService.ShowSuccess($"{CreateYear} 年 {CreateMonth} 月班表已建立");
     }
 
     // ══════════════════════════════════════════
@@ -207,13 +491,11 @@ public partial class ScheduleViewModel : ObservableObject
 
         var daysInMonth = DateTime.DaysInMonth(SelectedYear, SelectedMonth);
         var firstDay = new DateOnly(SelectedYear, SelectedMonth, 1);
-        var weekStart = CurrentSchedule.WeekStartDay; // 0=Sun, 1=Mon
+        var weekStart = CurrentSchedule.WeekStartDay;
 
-        // 計算第一天前面需要幾個空格
         var firstDow = (int)firstDay.DayOfWeek;
         var offset = (firstDow - weekStart + 7) % 7;
 
-        // 前面的空白天
         for (int i = 0; i < offset; i++)
             CalendarDays.Add(new CalendarDay { IsPlaceholder = true });
 
@@ -235,7 +517,6 @@ public partial class ScheduleViewModel : ObservableObject
                 IsSelected = date == SelectedDate,
             };
 
-            // 如果不是店休日，填入所有啟用的班別色塊
             if (!isClosed)
             {
                 foreach (var shift in EnabledShifts)
@@ -248,8 +529,10 @@ public partial class ScheduleViewModel : ObservableObject
                     {
                         ShiftSetting = shift,
                         Date = date,
-                        Employees = new ObservableCollection<Employee>(
-                            entries.Select(e => e.Employee!).Where(e => e is not null)),
+                        EntryItems = new ObservableCollection<EntryItem>(
+                            entries
+                                .Where(e => e.Employee is not null)
+                                .Select(e => new EntryItem { EntryId = e.Id, Employee = e.Employee! })),
                         IsDisabled = IsShiftDisabledForEmployee(date, shift),
                     });
                 }
@@ -270,7 +553,6 @@ public partial class ScheduleViewModel : ObservableObject
         var startOffset = (selectedDow - weekStart + 7) % 7;
         var weekStartDate = SelectedDate.AddDays(-startOffset);
 
-        // 產生時間軸 (0~23 小時)
         for (int hour = 0; hour < 24; hour++)
         {
             var slot = new CalendarTimeSlot { Hour = hour, Label = $"{hour:D2}:00" };
@@ -297,8 +579,10 @@ public partial class ScheduleViewModel : ObservableObject
                             {
                                 ShiftSetting = shift,
                                 Date = date,
-                                Employees = new ObservableCollection<Employee>(
-                                    entries.Select(e => e.Employee!).Where(e => e is not null)),
+                                EntryItems = new ObservableCollection<EntryItem>(
+                                    entries
+                                        .Where(e => e.Employee is not null)
+                                        .Select(e => new EntryItem { EntryId = e.Id, Employee = e.Employee! })),
                                 IsDisabled = IsShiftDisabledForEmployee(date, shift),
                             });
                         }
@@ -309,7 +593,6 @@ public partial class ScheduleViewModel : ObservableObject
             TimeSlots.Add(slot);
         }
 
-        // 產生周的日期標題
         for (int d = 0; d < 7; d++)
         {
             var date = weekStartDate.AddDays(d);
@@ -353,8 +636,10 @@ public partial class ScheduleViewModel : ObservableObject
                         {
                             ShiftSetting = shift,
                             Date = SelectedDate,
-                            Employees = new ObservableCollection<Employee>(
-                                entries.Select(e => e.Employee!).Where(e => e is not null)),
+                            EntryItems = new ObservableCollection<EntryItem>(
+                                entries
+                                    .Where(e => e.Employee is not null)
+                                    .Select(e => new EntryItem { EntryId = e.Id, Employee = e.Employee! })),
                             IsDisabled = IsShiftDisabledForEmployee(SelectedDate, shift),
                         });
                     }
@@ -372,7 +657,6 @@ public partial class ScheduleViewModel : ObservableObject
     {
         if (CurrentSchedule is null) return;
 
-        // 檢查是否已排過
         var existing = CurrentSchedule.Entries
             .Any(e => e.EmployeeId == employee.Id && e.Date == date && e.ShiftSettingId == shift.Id);
         if (existing) return;
@@ -386,8 +670,6 @@ public partial class ScheduleViewModel : ObservableObject
         };
 
         await _entryService.AddEntryAsync(entry);
-
-        // 重新載入
         await LoadScheduleAsync();
     }
 
@@ -410,15 +692,11 @@ public partial class ScheduleViewModel : ObservableObject
             switch (rule.Type)
             {
                 case ScheduleRuleType.FixedOff:
-                    if (rule.FixedOffDays.Contains((int)date.DayOfWeek))
-                        return true;
+                    if (rule.FixedOffDays.Contains((int)date.DayOfWeek)) return true;
                     break;
-
                 case ScheduleRuleType.ExcludeShift:
-                    if (rule.ExcludedShiftIds.Contains(shift.Id))
-                        return true;
+                    if (rule.ExcludedShiftIds.Contains(shift.Id)) return true;
                     break;
-
                 case ScheduleRuleType.NotWith:
                     if (CurrentSchedule?.Entries.Any(e =>
                         e.Date == date && e.ShiftSettingId == shift.Id &&
@@ -433,14 +711,21 @@ public partial class ScheduleViewModel : ObservableObject
     // ══════════════════════════════════════════
     // 工具方法
     // ══════════════════════════════════════════
+    private DateOnly GetCurrentWeekStart()
+    {
+        var weekStart = CurrentSchedule?.WeekStartDay ?? 1;
+        var selectedDow = (int)SelectedDate.DayOfWeek;
+        var offset = (selectedDow - weekStart + 7) % 7;
+        return SelectedDate.AddDays(-offset);
+    }
+
     private static bool IsShiftInHour(ShiftSetting shift, int hour)
     {
         var startHour = shift.StartTime.Hour;
         var endHour = shift.EndTime.Hour;
-
         if (shift.EndTime > shift.StartTime)
             return hour >= startHour && hour < endHour;
-        else // 跨日
+        else
             return hour >= startHour || hour < endHour;
     }
 
@@ -465,7 +750,13 @@ public enum CalendarViewMode { Month, Week, Day }
 
 public record ViewModeOption(CalendarViewMode Value, string Label);
 
-/// <summary>月視圖中的一天</summary>
+/// <summary>排班記錄顯示單位（含 EntryId 供右鍵操作使用）</summary>
+public class EntryItem
+{
+    public int EntryId { get; set; }
+    public Employee Employee { get; set; } = null!;
+}
+
 public class CalendarDay
 {
     public DateOnly Date { get; set; }
@@ -479,16 +770,14 @@ public class CalendarDay
     public ObservableCollection<ShiftBlock> ShiftBlocks { get; } = new();
 }
 
-/// <summary>行事曆上的班別色塊</summary>
 public class ShiftBlock
 {
     public ShiftSetting ShiftSetting { get; set; } = null!;
     public DateOnly Date { get; set; }
-    public ObservableCollection<Employee> Employees { get; set; } = new();
+    public ObservableCollection<EntryItem> EntryItems { get; set; } = new();
     public bool IsDisabled { get; set; }
 }
 
-/// <summary>時間軸一小時列</summary>
 public class CalendarTimeSlot
 {
     public int Hour { get; set; }
@@ -496,7 +785,6 @@ public class CalendarTimeSlot
     public ObservableCollection<DayTimeSlot> Days { get; } = new();
 }
 
-/// <summary>一天中的一個小時格</summary>
 public class DayTimeSlot
 {
     public DateOnly Date { get; set; }

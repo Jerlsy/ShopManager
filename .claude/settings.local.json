@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ':*)",
+      "Bash(python -c \"import sys; exec\\(open\\('/dev/stdin'\\).read\\(\\)\\)\")",
+      "Bash(cat)",
+      "Bash(python /tmp/check_encoding.py)",
+      "Bash(python check_encoding.py)",
+      "Bash(python check_bytes.py)",
+      "Bash(python check_bytes2.py)",
+      "Bash(python check_bytes3.py)",
+      "Bash(python3:*)",
+      "Bash(ls *.py)",
+      "Bash(python fix_all_chinese.py)"
+    ]
+  }
+}

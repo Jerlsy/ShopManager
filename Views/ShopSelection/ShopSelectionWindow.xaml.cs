@@ -1,8 +1,9 @@
 using ShopManager.ViewModels;
+using System.Windows;
 
 namespace ShopManager.Views.ShopSelection;
 
-public partial class ShopSelectionWindow : Wpf.Ui.Controls.FluentWindow
+public partial class ShopSelectionWindow : Window
 {
     public ShopSelectionWindow(ShopSelectionViewModel viewModel)
     {

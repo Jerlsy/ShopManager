@@ -35,7 +35,6 @@ public partial class SchedulePage : UserControl
             return;
         }
 
-        // 檢查目標是否 disabled
         if (sender is FrameworkElement fe && fe.Tag is ShiftBlock block && block.IsDisabled)
         {
             e.Effects = DragDropEffects.None;
@@ -54,7 +53,6 @@ public partial class SchedulePage : UserControl
 
         var employee = (Employee)e.Data.GetData("Employee");
 
-        // 找到對應的 ShiftBlock
         ShiftBlock? block = null;
         if (sender is FrameworkElement fe)
         {
@@ -70,15 +68,22 @@ public partial class SchedulePage : UserControl
         e.Handled = true;
     }
 
-    // ── 日期點擊（月視圖切換選中日期）──────
+    // ── 日期格子點擊 → 開啟快速新增 ───────
     private void CalendarDay_Click(object sender, MouseButtonEventArgs e)
     {
+        // 如果點擊源是員工 chip（EntryItem border），不要觸發快速新增
+        if (e.OriginalSource is FrameworkElement src &&
+            (src.DataContext is EntryItem || src.DataContext is ShiftBlock))
+            return;
+
         if (sender is FrameworkElement fe
             && fe.DataContext is CalendarDay day
             && !day.IsPlaceholder
+            && !day.IsClosed
             && DataContext is ScheduleViewModel vm)
         {
-            vm.SelectedDate = day.Date;
+            vm.OpenQuickAddCommand.Execute(day);
+            e.Handled = true;
         }
     }
 

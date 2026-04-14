@@ -5,14 +5,13 @@ using ShopManager.Models;
 using ShopManager.Services;
 using ShopManager.ViewModels;
 using ShopManager.Views;
-using ShopManager.Views.ShopSettings;
-using ShopManager.Views.ShiftSettings;
-using ShopManager.Views.SalarySettings;
 using ShopManager.Views.EmployeeManagement;
+using ShopManager.Views.SalarySettings;
 using ShopManager.Views.Schedule;
 using ShopManager.Views.ShopSelection;
+using ShopManager.Views.ShopSettings;
+using ShopManager.Views.ShiftSettings;
 using System.Windows;
-using Wpf.Ui;
 
 namespace ShopManager;
 
@@ -28,14 +27,20 @@ public partial class App : Application
         ConfigureServices(services);
         Services = services.BuildServiceProvider();
 
-        // 確保資料庫已建立
+        // 確保資料庫已建立。
         using (var scope = Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Database.EnsureCreated();
         }
 
-        // 先顯示店鋪選擇視窗
+        // 套用儲存中的主題偏好。
+        var themeService = Services.GetRequiredService<ThemeService>();
+        themeService.ApplyCurrent();
+
+        // 先關閉自動退出，避免店鋪選擇視窗關閉時整個應用程式提早結束。
+        ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
         var selectionWindow = Services.GetRequiredService<ShopSelectionWindow>();
         var result = selectionWindow.ShowDialog();
         if (result != true)
@@ -44,24 +49,28 @@ public partial class App : Application
             return;
         }
 
-        // ShopContext 已設定，開啟主視窗
         var mainWindow = Services.GetRequiredService<MainWindow>();
+        MainWindow = mainWindow;
+        ShutdownMode = ShutdownMode.OnMainWindowClose;
         mainWindow.Show();
     }
 
     private static void ConfigureServices(ServiceCollection services)
     {
-        // DbContext
+        // 資料庫內容。
         services.AddDbContext<AppDbContext>(ServiceLifetime.Transient);
 
-        // WPF-UI Services
-        services.AddSingleton<ISnackbarService, SnackbarService>();
-        services.AddSingleton<IContentDialogService, ContentDialogService>();
+        // 應用程式共用服務。
+        services.AddSingleton<AppSnackbarService>();
+        services.AddSingleton<IAppSnackbarService>(p => p.GetRequiredService<AppSnackbarService>());
+        services.AddSingleton<IAppDialogService, AppDialogService>();
+        services.AddSingleton<ThemeService>();
+        services.AddSingleton<NavigationService>();
 
-        // ShopContext — Singleton，保存當前選中的店鋪
+        // 保存目前選取店鋪的共用內容。
         services.AddSingleton<ShopContext>();
 
-        // Services
+        // 商業邏輯服務。
         services.AddTransient<ShopSettingService>();
         services.AddTransient<ShiftSettingService>();
         services.AddTransient<SalarySettingService>();
@@ -69,7 +78,7 @@ public partial class App : Application
         services.AddTransient<MonthlyScheduleService>();
         services.AddTransient<ScheduleService>();
 
-        // ViewModels
+        // ViewModel。
         services.AddTransient<MainViewModel>();
         services.AddTransient<SystemSettingViewModel>();
         services.AddTransient<ShiftSettingViewModel>();
@@ -78,14 +87,14 @@ public partial class App : Application
         services.AddTransient<ScheduleViewModel>();
         services.AddTransient<ShopSelectionViewModel>();
 
-        // Pages
+        // 頁面。
         services.AddTransient<ShopSettingPage>();
         services.AddTransient<ShiftSettingPage>();
         services.AddTransient<SalarySettingPage>();
         services.AddTransient<EmployeeListPage>();
         services.AddTransient<SchedulePage>();
 
-        // Windows
+        // 視窗。
         services.AddSingleton<MainWindow>();
         services.AddTransient<ShopSelectionWindow>();
     }

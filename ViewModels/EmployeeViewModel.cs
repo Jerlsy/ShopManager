@@ -2,9 +2,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ShopManager.Models;
 using ShopManager.Services;
-using Wpf.Ui;
-using Wpf.Ui.Controls;
-using Wpf.Ui.Extensions;
 
 namespace ShopManager.ViewModels;
 
@@ -41,20 +38,19 @@ public partial class EmployeeViewModel : ObservableObject
     private readonly EmployeeService _employeeService;
     private readonly ShiftSettingService _shiftService;
     private readonly SalarySettingService _salaryService;
-    private readonly ISnackbarService _snackbarService;
-    private readonly IContentDialogService _contentDialogService;
+    private readonly IAppSnackbarService _snackbarService;
+    private readonly IAppDialogService _dialogService;
 
     public EmployeeViewModel(EmployeeService employeeService,
         ShiftSettingService shiftService, SalarySettingService salaryService,
-        ISnackbarService snackbarService, IContentDialogService contentDialogService)
+        IAppSnackbarService snackbarService, IAppDialogService dialogService)
     {
         _employeeService = employeeService;
         _shiftService = shiftService;
         _salaryService = salaryService;
         _snackbarService = snackbarService;
-        _contentDialogService = contentDialogService;
+        _dialogService = dialogService;
 
-        // 初始化周幾清單（固定順序：一到日）
         FixedOffDayItems = new List<DayOfWeekItem>
         {
             new() { Day = DayOfWeek.Monday,    Label = "週一" },
@@ -77,13 +73,8 @@ public partial class EmployeeViewModel : ObservableObject
     [ObservableProperty] private List<SalarySetting> _availableSalaries = new();
 
     // ── 排班規則 UI 用清單 ─────────────────────────────────
-    /// <summary>固定休假：周一到周日的勾選清單</summary>
     public List<DayOfWeekItem> FixedOffDayItems { get; }
-
-    /// <summary>排除班別：啟用班別的勾選清單</summary>
     [ObservableProperty] private List<ShiftCheckItem> _excludeShiftItems = new();
-
-    /// <summary>不與共事：在職員工的勾選清單（排除自己）</summary>
     [ObservableProperty] private List<ColleagueCheckItem> _notWithItems = new();
 
     // ── 基本編輯欄位 ───────────────────────────────────────
@@ -104,7 +95,6 @@ public partial class EmployeeViewModel : ObservableObject
     [ObservableProperty] private bool _hasConflicts;
     [ObservableProperty] private List<string> _conflictMonths = new();
 
-    // ── 靜態資源 ───────────────────────────────────────────
     public static List<string> MessengerTypes { get; } = new()
     {
         "Line", "Messenger", "WeChat", "WhatsApp", "Telegram", "Signal"
@@ -120,21 +110,16 @@ public partial class EmployeeViewModel : ObservableObject
         AvailableSalaries = await _salaryService.GetAllAsync();
     }
 
-    /// <summary>載入並初始化排班規則勾選清單</summary>
     private async Task LoadScheduleRuleSourcesAsync(int? currentEmployeeId = null)
     {
-        // 排除班別清單（啟用的班別）
         var shifts = await _shiftService.GetAllAsync();
         ExcludeShiftItems = shifts
             .Where(s => s.IsEnabled)
             .Select(s => new ShiftCheckItem { ShiftId = s.Id, Alias = s.Alias })
             .ToList();
 
-        // 不與共事清單（在職員工，排除自己）
         var allActive = Employees.Where(e =>
-            !e.IsResigned &&
-            e.Id != (currentEmployeeId ?? -1))
-            .ToList();
+            !e.IsResigned && e.Id != (currentEmployeeId ?? -1)).ToList();
 
         NotWithItems = allActive
             .Select(e => new ColleagueCheckItem { EmployeeId = e.Id, Name = e.Name })
@@ -149,7 +134,6 @@ public partial class EmployeeViewModel : ObservableObject
     {
         await LoadAsync();
         await LoadScheduleRuleSourcesAsync(null);
-
         SelectedEmployee = null;
         ClearEditFields();
         IsEditing = true;
@@ -178,23 +162,18 @@ public partial class EmployeeViewModel : ObservableObject
         EditHireDate = emp.HireDate;
         EditResignDate = emp.ResignDate;
 
-        // ── 還原排班規則勾選狀態 ──
-        // 找到現有的各類規則
         var fixedOffRule = emp.ScheduleRules.FirstOrDefault(r => r.Type == ScheduleRuleType.FixedOff);
         var excludeShiftRule = emp.ScheduleRules.FirstOrDefault(r => r.Type == ScheduleRuleType.ExcludeShift);
         var notWithRule = emp.ScheduleRules.FirstOrDefault(r => r.Type == ScheduleRuleType.NotWith);
 
-        // 固定休假 — 勾選對應周幾
         var fixedOffDays = fixedOffRule?.FixedOffDays ?? new List<int>();
         foreach (var item in FixedOffDayItems)
             item.IsChecked = fixedOffDays.Contains((int)item.Day);
 
-        // 排除班別 — 勾選對應班別
         var excludedShiftIds = excludeShiftRule?.ExcludedShiftIds ?? new List<int>();
         foreach (var item in ExcludeShiftItems)
             item.IsChecked = excludedShiftIds.Contains(item.ShiftId);
 
-        // 不與共事 — 勾選對應員工（已離職/不存在者自動剔除，來源清單已過濾）
         var excludedColleagueIds = notWithRule?.ExcludedColleagueIds ?? new List<int>();
         foreach (var item in NotWithItems)
             item.IsChecked = excludedColleagueIds.Contains(item.EmployeeId);
@@ -208,7 +187,6 @@ public partial class EmployeeViewModel : ObservableObject
     [RelayCommand]
     public async Task SaveAsync()
     {
-        // 檢查離職日後排班（預留）
         if (EditResignDate.HasValue && SelectedEmployee is not null)
         {
             var conflicts = await _employeeService.CheckScheduleAfterResignAsync(
@@ -220,7 +198,6 @@ public partial class EmployeeViewModel : ObservableObject
                 return;
             }
         }
-
         await DoSaveAsync();
     }
 
@@ -247,13 +224,10 @@ public partial class EmployeeViewModel : ObservableObject
         emp.HireDate = EditHireDate;
         emp.ResignDate = EditResignDate;
 
-        // ── 組裝排班規則 ──────────────────────────────────
         var rules = new List<ScheduleRule>();
 
-        var checkedOffDays = FixedOffDayItems
-            .Where(d => d.IsChecked)
-            .Select(d => (int)d.Day)
-            .ToList();
+        var checkedOffDays = FixedOffDayItems.Where(d => d.IsChecked)
+            .Select(d => (int)d.Day).ToList();
         if (checkedOffDays.Any())
             rules.Add(new ScheduleRule
             {
@@ -262,10 +236,8 @@ public partial class EmployeeViewModel : ObservableObject
                 FixedOffDays = checkedOffDays
             });
 
-        var checkedShiftIds = ExcludeShiftItems
-            .Where(s => s.IsChecked)
-            .Select(s => s.ShiftId)
-            .ToList();
+        var checkedShiftIds = ExcludeShiftItems.Where(s => s.IsChecked)
+            .Select(s => s.ShiftId).ToList();
         if (checkedShiftIds.Any())
             rules.Add(new ScheduleRule
             {
@@ -274,10 +246,8 @@ public partial class EmployeeViewModel : ObservableObject
                 ExcludedShiftIds = checkedShiftIds
             });
 
-        var checkedColleagueIds = NotWithItems
-            .Where(c => c.IsChecked)
-            .Select(c => c.EmployeeId)
-            .ToList();
+        var checkedColleagueIds = NotWithItems.Where(c => c.IsChecked)
+            .Select(c => c.EmployeeId).ToList();
         if (checkedColleagueIds.Any())
             rules.Add(new ScheduleRule
             {
@@ -288,16 +258,12 @@ public partial class EmployeeViewModel : ObservableObject
 
         emp.ScheduleRules = rules;
 
-        // 儲存
-        if (SelectedEmployee is null)
-            await _employeeService.AddAsync(emp);
-        else
-            await _employeeService.UpdateAsync(emp);
+        if (SelectedEmployee is null) await _employeeService.AddAsync(emp);
+        else await _employeeService.UpdateAsync(emp);
 
         IsEditing = false;
         await LoadAsync();
-        _snackbarService.Show("儲存成功", "員工資料已更新",
-            ControlAppearance.Success, null, TimeSpan.FromSeconds(3));
+        _snackbarService.ShowSuccess("員工資料已儲存");
     }
 
     // ══════════════════════════════════════════════════════
@@ -306,17 +272,12 @@ public partial class EmployeeViewModel : ObservableObject
     [RelayCommand]
     public async Task DeleteAsync(Employee emp)
     {
-        var result = await _contentDialogService.ShowSimpleDialogAsync(
-            new SimpleContentDialogCreateOptions
-            {
-                Title = "確認刪除",
-                Content = $"確定要刪除員工「{emp.Name}」嗎？此操作無法復原。",
-                PrimaryButtonText = "刪除",
-                CloseButtonText = "取消",
-            });
+        var confirmed = await _dialogService.ShowConfirmAsync(
+            "確認刪除",
+            $"確定要刪除員工「{emp.Name}」嗎？此操作無法復原。",
+            "刪除", "取消");
 
-        if (result != ContentDialogResult.Primary)
-            return;
+        if (!confirmed) return;
 
         await _employeeService.DeleteAsync(emp.Id);
         await LoadAsync();
@@ -330,7 +291,7 @@ public partial class EmployeeViewModel : ObservableObject
     }
 
     // ══════════════════════════════════════════════════════
-    // 自訂聯絡方式
+    // 自訂聯絡方式 / 預設獎金
     // ══════════════════════════════════════════════════════
     [RelayCommand]
     public void AddCustomContact() =>
@@ -344,9 +305,6 @@ public partial class EmployeeViewModel : ObservableObject
         EditCustomContacts = list;
     }
 
-    // ══════════════════════════════════════════════════════
-    // 預設獎金
-    // ══════════════════════════════════════════════════════
     [RelayCommand]
     public void AddBonus() =>
         EditDefaultBonuses = new List<DefaultBonus>(EditDefaultBonuses) { new() };
@@ -359,9 +317,6 @@ public partial class EmployeeViewModel : ObservableObject
         EditDefaultBonuses = list;
     }
 
-    // ══════════════════════════════════════════════════════
-    // 工具
-    // ══════════════════════════════════════════════════════
     private void ClearEditFields()
     {
         EditName = string.Empty;
@@ -378,8 +333,6 @@ public partial class EmployeeViewModel : ObservableObject
         EditResignDate = null;
         HasConflicts = false;
         ConflictMonths = new();
-
-        // 清空排班規則勾選
         foreach (var d in FixedOffDayItems) d.IsChecked = false;
         foreach (var s in ExcludeShiftItems) s.IsChecked = false;
         foreach (var c in NotWithItems) c.IsChecked = false;
