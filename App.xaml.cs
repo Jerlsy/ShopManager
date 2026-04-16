@@ -38,6 +38,10 @@ public partial class App : Application
         var themeService = Services.GetRequiredService<ThemeService>();
         themeService.ApplyCurrent();
 
+        // 套用儲存中的外觀偏好（字體大小 / 字型）。
+        var appearanceService = Services.GetRequiredService<AppearanceService>();
+        appearanceService.ApplyCurrent();
+
         // 先關閉自動退出，避免店鋪選擇視窗關閉時整個應用程式提早結束。
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
@@ -65,6 +69,7 @@ public partial class App : Application
         services.AddSingleton<IAppSnackbarService>(p => p.GetRequiredService<AppSnackbarService>());
         services.AddSingleton<IAppDialogService, AppDialogService>();
         services.AddSingleton<ThemeService>();
+        services.AddSingleton<AppearanceService>();
         services.AddSingleton<NavigationService>();
 
         // 保存目前選取店鋪的共用內容。

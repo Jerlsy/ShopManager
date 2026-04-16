@@ -1,776 +1,124 @@
-<UserControl x:Class="ShopManager.Views.Schedule.SchedulePage"
-         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-         xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
-         xmlns:vm="clr-namespace:ShopManager.ViewModels">
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="200"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+﻿<UserControl x:Class="ShopManager.Views.Schedule.SchedulePage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:vm="clr-namespace:ShopManager.ViewModels">
 
-        
-        <!-- 左側：員工清單面板                    -->
-        
-        <Border Grid.Column="0"
-                Background="{DynamicResource AppPanelBrush}"
+    <Grid Margin="28,8,28,28">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 頁面標題列 -->
+        <Border Grid.Row="0"
+                CornerRadius="20"
+                Background="{DynamicResource AppSurfaceAltBrush}"
                 BorderBrush="{DynamicResource AppBorderBrush}"
-                BorderThickness="0,0,1,0"
-                Padding="12">
-            <DockPanel>
-                <TextBlock Text="在職員工"
-                           FontSize="20" FontWeight="SemiBold"
-                           DockPanel.Dock="Top" Margin="0,0,0,4"/>
-
-                <TextBlock Text="（點選員工以檢視限制，拖放到班別格子排班）"
-                           FontSize="11" TextWrapping="Wrap"
-                           Opacity="0.55"
-                           DockPanel.Dock="Top" Margin="0,0,0,8"/>
-
-                <ListBox ItemsSource="{Binding ActiveEmployees}"
-                         SelectedItem="{Binding SelectedEmployee}"
-                         Style="{StaticResource MaterialDesignListBox}"
-                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                    <ListBox.ItemContainerStyle>
-                        <Style TargetType="ListBoxItem" BasedOn="{StaticResource MaterialDesignListBoxItem}">
-                            <Setter Property="Padding" Value="8,6"/>
-                            <Setter Property="Margin" Value="0,2"/>
-                            <Setter Property="AllowDrop" Value="False"/>
-                        </Style>
-                    </ListBox.ItemContainerStyle>
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding Name}" FontSize="13"
-                                       MouseLeftButtonDown="Employee_MouseLeftButtonDown"
-                                       Cursor="Hand"/>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </DockPanel>
-        </Border>
-
-        
-        <!-- 右側：行事曆主區域                    -->
-        
-        <DockPanel Grid.Column="1" Margin="16,12,12,12">
-
-            <!-- 頂部工具列 -->
-            <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
+                BorderThickness="1"
+                Padding="24"
+                Margin="0,0,0,20">
+            <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-
-                <!-- 月份導覽 -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Style="{StaticResource MaterialDesignIconButton}"
-                            Command="{Binding PreviousMonthCommand}" Margin="0,0,2,0">
-                        <md:PackIcon Kind="ChevronLeft" Width="20" Height="20"/>
-                    </Button>
-                    <TextBlock Text="{Binding CalendarTitle}"
-                               FontSize="24" FontWeight="SemiBold"
-                               VerticalAlignment="Center" Margin="6,0,6,0"/>
-                    <Button Style="{StaticResource MaterialDesignIconButton}"
-                            Command="{Binding NextMonthCommand}" Margin="2,0,6,0">
-                        <md:PackIcon Kind="ChevronRight" Width="20" Height="20"/>
-                    </Button>
-                    <Button Content="今天"
-                            Style="{StaticResource MaterialDesignOutlinedButton}"
-                           
-                            Command="{Binding GoToTodayCommand}"/>
+                <StackPanel>
+                    <TextBlock Text="排班管理" FontSize="{DynamicResource FontSizePageTitle}" FontWeight="SemiBold"/>
+                    <TextBlock Text="拖曳班別至格子內完成排班，系統將即時計算總工時與人力需求。"
+                               Margin="0,8,0,0" Foreground="{DynamicResource AppSubtleForegroundBrush}"/>
                 </StackPanel>
-
-                <!-- 視圖切換 + 功能操作區 -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal">
-                    <ComboBox ItemsSource="{Binding ViewModeOptions}"
-                              DisplayMemberPath="Label"
-                              SelectedValuePath="Value"
-                              SelectedValue="{Binding ViewMode}"
-                              Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                              Width="80" Margin="0,0,8,0"/>
-
-                    <!-- 複製上週(班表已建立才顯示)-->
-                    <Button Style="{StaticResource MaterialDesignOutlinedButton}"
-                           
-                            Margin="0,0,8,0"
-                            Command="{Binding CopyLastWeekCommand}"
-                            Visibility="{Binding HasSchedule,
-                                Converter={StaticResource BoolToVisibilityConverter}}">
-                        <StackPanel Orientation="Horizontal">
-                            <md:PackIcon Kind="ContentCopy" Width="16" Height="16" Margin="0,0,6,0"/>
-                            <TextBlock Text="複製上週" VerticalAlignment="Center"/>
-                        </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- 月份導覽 -->
+                    <Button Style="{StaticResource MaterialDesignOutlinedButton}" Margin="0,0,8,0" Command="{Binding PreviousMonthCommand}">
+                        <md:PackIcon Kind="ChevronLeft"/>
+                    </Button>
+                    <TextBlock Text="{Binding CalendarTitle}" VerticalAlignment="Center" FontSize="{DynamicResource FontSizeSubTitle}" FontWeight="Bold" Margin="0,0,8,0"/>
+                    <Button Style="{StaticResource MaterialDesignOutlinedButton}" Margin="0,0,20,0" Command="{Binding NextMonthCommand}">
+                        <md:PackIcon Kind="ChevronRight"/>
                     </Button>
 
-                    <!-- 批次排班(班表已建立才顯示)-->
-                    <Button Style="{StaticResource MaterialDesignOutlinedButton}"
-                           
-                            Margin="0,0,8,0"
-                            Command="{Binding StartBatchCommand}"
-                            Visibility="{Binding HasSchedule,
-                                Converter={StaticResource BoolToVisibilityConverter}}">
+                    <!-- 視圖模式切換 -->
+                    <Border CornerRadius="20" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
+                            Background="{DynamicResource AppPanelAltBrush}" Margin="0,0,16,0" Padding="4">
                         <StackPanel Orientation="Horizontal">
-                            <md:PackIcon Kind="CalendarMultiple" Width="16" Height="16" Margin="0,0,6,0"/>
-                            <TextBlock Text="批次排班" VerticalAlignment="Center"/>
+                            <RadioButton Content="月" GroupName="ViewMode" Margin="2,0"
+                                         IsChecked="{Binding IsMonthView, Mode=OneWay}"
+                                         Command="{Binding SetMonthViewCommand}"
+                                         Style="{StaticResource MaterialDesignTabRadioButton}"/>
+                            <RadioButton Content="周" GroupName="ViewMode" Margin="2,0"
+                                         IsChecked="{Binding IsWeekView, Mode=OneWay}"
+                                         Command="{Binding SetWeekViewCommand}"
+                                         Style="{StaticResource MaterialDesignTabRadioButton}"/>
+                            <RadioButton Content="日" GroupName="ViewMode" Margin="2,0"
+                                         IsChecked="{Binding IsDayView, Mode=OneWay}"
+                                         Command="{Binding SetDayViewCommand}"
+                                         Style="{StaticResource MaterialDesignTabRadioButton}"/>
                         </StackPanel>
-                    </Button>
+                    </Border>
 
-                    <!-- 新增班表(班表未建立才顯示)-->
+                    <!-- 新增班表 -->
                     <Button Style="{StaticResource MaterialDesignRaisedButton}"
-                           
                             Command="{Binding StartCreateScheduleCommand}"
-                            Visibility="{Binding HasSchedule,
-                                Converter={StaticResource BoolToVisibilityConverter},
-                                ConverterParameter=Inverse}">
+                            Visibility="{Binding HasSchedule, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
                         <StackPanel Orientation="Horizontal">
-                            <md:PackIcon Kind="CalendarPlus" Width="16" Height="16" Margin="0,0,6,0"/>
-                            <TextBlock Text="新增班表" VerticalAlignment="Center"/>
+                            <md:PackIcon Kind="CalendarPlus" Width="18" Height="18" Margin="0,0,8,0"/>
+                            <TextBlock Text="新增班表"/>
                         </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Command="{Binding StartCreateScheduleCommand}"
+                            Visibility="{Binding HasSchedule, Converter={StaticResource BoolToVisibilityConverter}}"
+                            ToolTip="重新建立本月班表">
+                        <md:PackIcon Kind="CalendarRefresh" Width="18" Height="18"/>
                     </Button>
                 </StackPanel>
             </Grid>
+        </Border>
 
-            <!-- 建立班表對話框 -->
-            <Border Background="{DynamicResource AppSurfaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="24" DockPanel.Dock="Top"
-                     Visibility="{Binding IsCreating, Converter={StaticResource BoolToVisibilityConverter}}"
-                     Padding="16" Margin="0,0,0,12">
-                <StackPanel MaxWidth="500" HorizontalAlignment="Left">
-                    <TextBlock Text="新增班表"
-                               FontSize="24" FontWeight="SemiBold"
-                               Margin="0,0,0,12"/>
+        <!-- 主排班區 -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="280"/>
+                <ColumnDefinition Width="20"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                        <StackPanel Margin="0,0,16,0">
-                            <TextBlock Text="年"
-                                       FontSize="12" FontWeight="Medium" Foreground="{DynamicResource AppSubtleForegroundStrongBrush}"
-                                       Margin="0,0,0,4" Opacity="0.7"/>
-                            <ComboBox ItemsSource="{Binding AvailableYears}"
-                                      SelectedItem="{Binding CreateYear}"
-                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                      Width="100"/>
-                        </StackPanel>
-                        <StackPanel>
-                            <TextBlock Text="月"
-                                       FontSize="12" FontWeight="Medium" Foreground="{DynamicResource AppSubtleForegroundStrongBrush}"
-                                       Margin="0,0,0,4" Opacity="0.7"/>
-                            <ComboBox ItemsSource="{Binding AvailableMonths}"
-                                      SelectedItem="{Binding CreateMonth}"
-                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                      Width="80"/>
-                        </StackPanel>
-                    </StackPanel>
-
-                    <TextBlock Text="該月店休日（可調整）"
-                               FontSize="12" FontWeight="Medium" Foreground="{DynamicResource AppSubtleForegroundStrongBrush}"
-                               Margin="0,0,0,8" Opacity="0.7"/>
-                    <ItemsControl ItemsSource="{Binding CreateClosedDayOptions}" Margin="0,0,0,12">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel Orientation="Horizontal"/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
+            <!-- 左側員工列表 (支援拖曳) -->
+            <Border Grid.Column="0"
+                    Padding="20"
+                    CornerRadius="20"
+                    Background="{DynamicResource AppSurfaceBrush}"
+                    BorderBrush="{DynamicResource AppBorderBrush}"
+                    BorderThickness="1">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="員工清單" FontSize="{DynamicResource FontSizeSubTitle}" FontWeight="SemiBold" Margin="0,0,0,16"/>
+                    <ListBox ItemsSource="{Binding Employees}" Background="Transparent">
+                        <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <CheckBox Content="{Binding Label}"
-                                          IsChecked="{Binding IsChecked}"
-                                          Margin="0,0,16,4"/>
+                                <Border Padding="12" Background="{DynamicResource AppPanelAltBrush}" CornerRadius="16" Margin="0,0,0,8" MouseLeftButtonDown="Employee_MouseLeftButtonDown">
+                                    <TextBlock Text="{Binding Name}" FontWeight="Medium"/>
+                                </Border>
                             </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-
-                    <StackPanel Orientation="Horizontal">
-                        <Button Content="建立"
-                                Style="{StaticResource MaterialDesignRaisedButton}"
-                               
-                                Margin="0,0,8,0"
-                                Command="{Binding ConfirmCreateScheduleCommand}"/>
-                        <Button Content="取消"
-                                Style="{StaticResource MaterialDesignOutlinedButton}"
-                               
-                                Command="{Binding CancelCreateCommand}"/>
-                    </StackPanel>
-                </StackPanel>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
             </Border>
 
-            <!-- 排班編輯面板 -->
-            <Border Background="{DynamicResource AppSurfaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="24" DockPanel.Dock="Top"
-                     Visibility="{Binding IsEditEntryOpen, Converter={StaticResource BoolToVisibilityConverter}}"
-                     Padding="16" Margin="0,0,0,12">
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                        <md:PackIcon Kind="Pencil" Width="18" Height="18"
-                                     Foreground="{DynamicResource PrimaryHueMidBrush}"
-                                     VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBlock FontSize="24" FontWeight="SemiBold"
-                                   VerticalAlignment="Center">
-                            <Run Text="編輯排班 · "/>
-                            <Run Text="{Binding EditEntryInfo, Mode=OneWay}"
-                                 Foreground="{DynamicResource PrimaryHueMidBrush}"
-                                 FontWeight="SemiBold"/>
-                        </TextBlock>
-                    </StackPanel>
-
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="16"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Text="班別"
-                                       FontSize="12" FontWeight="Medium" Foreground="{DynamicResource AppSubtleForegroundStrongBrush}"
-                                       Margin="0,0,0,4" Opacity="0.7"/>
-                            <ComboBox ItemsSource="{Binding EnabledShifts}"
-                                      DisplayMemberPath="Alias"
-                                      SelectedItem="{Binding EditEntryShift}"
-                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                      md:HintAssist.Hint="選擇班別"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="2">
-                            <TextBlock Text="備註（選填）"
-                                       FontSize="12" FontWeight="Medium" Foreground="{DynamicResource AppSubtleForegroundStrongBrush}"
-                                       Margin="0,0,0,4" Opacity="0.7"/>
-                            <TextBox Text="{Binding EditEntryNote, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                     md:HintAssist.Hint="輸入備註"/>
-                        </StackPanel>
-                    </Grid>
-
-                    <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
-                        <Button Style="{StaticResource MaterialDesignRaisedButton}"
-                               
-                                Margin="0,0,8,0"
-                                Command="{Binding ConfirmEditEntryCommand}">
-                            <StackPanel Orientation="Horizontal">
-                                <md:PackIcon Kind="ContentSave" Width="16" Height="16" Margin="0,0,6,0"/>
-                                <TextBlock Text="儲存" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Content="取消"
-                                Style="{StaticResource MaterialDesignOutlinedButton}"
-                               
-                                Command="{Binding CancelEditEntryCommand}"/>
-                    </StackPanel>
-                </StackPanel>
+            <!-- 右側行事曆 -->
+            <Border Grid.Column="2"
+                    CornerRadius="20"
+                    Background="{DynamicResource AppSurfaceBrush}"
+                    BorderBrush="{DynamicResource AppBorderBrush}"
+                    BorderThickness="1"
+                    Padding="8">
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                    <!-- 這裡 ContentControl 應該載入 ViewModel 綁定的 ScheduleGrid，且需處理拖放事件 -->
+                    <ContentControl Content="{Binding ScheduleGrid}"
+                                    DragOver="ShiftBlock_DragOver"
+                                    Drop="ShiftBlock_Drop"/>
+                </ScrollViewer>
             </Border>
-
-            <!-- 快速新增班次面板 -->
-            <Border Background="{DynamicResource AppSurfaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="24" DockPanel.Dock="Top"
-                     Visibility="{Binding IsQuickAdding, Converter={StaticResource BoolToVisibilityConverter}}"
-                     Padding="16" Margin="0,0,0,12">
-                <StackPanel>
-                    <!-- 標題 -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                        <md:PackIcon Kind="CalendarPlus" Width="18" Height="18"
-                                     Foreground="{DynamicResource PrimaryHueMidBrush}"
-                                     VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBlock FontSize="24" FontWeight="SemiBold"
-                                   VerticalAlignment="Center">
-                            <Run Text="快速新增排班 · "/>
-                            <Run Text="{Binding QuickAddDate, StringFormat={}{0:yyyy/MM/dd}, Mode=OneWay}"
-                                 Foreground="{DynamicResource PrimaryHueMidBrush}"
-                                 FontWeight="SemiBold"/>
-                        </TextBlock>
-                    </StackPanel>
-
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="16"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <!-- 員工 -->
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Text="員工"
-                                       FontSize="12" FontWeight="Medium" Foreground="{DynamicResource AppSubtleForegroundStrongBrush}"
-                                       Margin="0,0,0,4" Opacity="0.7"/>
-                            <ComboBox ItemsSource="{Binding ActiveEmployees}"
-                                      DisplayMemberPath="Name"
-                                      SelectedItem="{Binding QuickAddEmployee}"
-                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                      md:HintAssist.Hint="選擇員工"/>
-                        </StackPanel>
-
-                        <!-- 班別 -->
-                        <StackPanel Grid.Column="2">
-                            <TextBlock Text="班別"
-                                       FontSize="12" FontWeight="Medium" Foreground="{DynamicResource AppSubtleForegroundStrongBrush}"
-                                       Margin="0,0,0,4" Opacity="0.7"/>
-                            <ComboBox ItemsSource="{Binding EnabledShifts}"
-                                      DisplayMemberPath="Alias"
-                                      SelectedItem="{Binding QuickAddShift}"
-                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                      md:HintAssist.Hint="選擇班別"/>
-                        </StackPanel>
-                    </Grid>
-
-                    <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
-                        <Button Style="{StaticResource MaterialDesignRaisedButton}"
-                               
-                                Margin="0,0,8,0"
-                                Command="{Binding ConfirmQuickAddCommand}">
-                            <StackPanel Orientation="Horizontal">
-                                <md:PackIcon Kind="Check" Width="16" Height="16" Margin="0,0,6,0"/>
-                                <TextBlock Text="儲存" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Content="取消"
-                                Style="{StaticResource MaterialDesignOutlinedButton}"
-                               
-                                Command="{Binding CancelQuickAddCommand}"/>
-                    </StackPanel>
-                </StackPanel>
-            </Border>
-
-            <!-- 批次排班面板 -->
-            <Border Background="{DynamicResource AppSurfaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="24" DockPanel.Dock="Top"
-                     Visibility="{Binding IsBatchMode, Converter={StaticResource BoolToVisibilityConverter}}"
-                     Padding="16" Margin="0,0,0,12">
-                <StackPanel>
-                    <!-- 批次排班 -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                        <md:PackIcon Kind="CalendarMultiple" Width="18" Height="18"
-                                     Foreground="{DynamicResource PrimaryHueMidBrush}"
-                                     VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBlock Text="批次排班設定"
-                                   FontSize="24" FontWeight="SemiBold"
-                                   VerticalAlignment="Center"/>
-                    </StackPanel>
-
-                    <!-- 員工 + 班別 -->
-                    <Grid Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="16"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Text="員工 *"
-                                       FontSize="12" FontWeight="Medium" Foreground="{DynamicResource AppSubtleForegroundStrongBrush}"
-                                       Margin="0,0,0,4" Opacity="0.7"/>
-                            <ComboBox ItemsSource="{Binding ActiveEmployees}"
-                                      DisplayMemberPath="Name"
-                                      SelectedItem="{Binding BatchEmployee}"
-                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                      md:HintAssist.Hint="選擇員工"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="2">
-                            <TextBlock Text="班別 *"
-                                       FontSize="12" FontWeight="Medium" Foreground="{DynamicResource AppSubtleForegroundStrongBrush}"
-                                       Margin="0,0,0,4" Opacity="0.7"/>
-                            <ComboBox ItemsSource="{Binding EnabledShifts}"
-                                      DisplayMemberPath="Alias"
-                                      SelectedItem="{Binding BatchShift}"
-                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                      md:HintAssist.Hint="選擇班別"/>
-                        </StackPanel>
-                    </Grid>
-
-                    <!-- 日期範圍 -->
-                    <Grid Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="32"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Text="開始日期 *"
-                                       FontSize="12" FontWeight="Medium" Foreground="{DynamicResource AppSubtleForegroundStrongBrush}"
-                                       Margin="0,0,0,4" Opacity="0.7"/>
-                            <DatePicker SelectedDate="{Binding BatchStartDate}"
-                                        Style="{StaticResource MaterialDesignOutlinedDatePicker}"
-                                        md:HintAssist.Hint="開始"/>
-                        </StackPanel>
-                        <TextBlock Grid.Column="1" Text="→"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"
-                                   FontSize="18" Margin="0,8,0,0" Opacity="0.6"/>
-                        <StackPanel Grid.Column="2">
-                            <TextBlock Text="結束日期 *"
-                                       FontSize="12" FontWeight="Medium" Foreground="{DynamicResource AppSubtleForegroundStrongBrush}"
-                                       Margin="0,0,0,4" Opacity="0.7"/>
-                            <DatePicker SelectedDate="{Binding BatchEndDate}"
-                                        Style="{StaticResource MaterialDesignOutlinedDatePicker}"
-                                        md:HintAssist.Hint="結束"/>
-                        </StackPanel>
-                    </Grid>
-
-                    <!-- 套用星期 -->
-                    <TextBlock Text="套用星期"
-                               FontSize="12" FontWeight="Medium" Foreground="{DynamicResource AppSubtleForegroundStrongBrush}"
-                               Margin="0,0,0,6" Opacity="0.7"/>
-                    <ItemsControl ItemsSource="{Binding BatchWeekdayOptions}" Margin="0,0,0,16">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel Orientation="Horizontal"/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <CheckBox Content="{Binding Label}"
-                                          IsChecked="{Binding IsChecked}"
-                                          Margin="0,0,16,4"/>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-
-                    <StackPanel Orientation="Horizontal">
-                        <Button Style="{StaticResource MaterialDesignRaisedButton}"
-                               
-                                Margin="0,0,8,0"
-                                Command="{Binding ConfirmBatchCommand}">
-                            <StackPanel Orientation="Horizontal">
-                                <md:PackIcon Kind="Check" Width="16" Height="16" Margin="0,0,6,0"/>
-                                <TextBlock Text="確認批次排班" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Content="取消"
-                                Style="{StaticResource MaterialDesignOutlinedButton}"
-                               
-                                Command="{Binding CancelBatchCommand}"/>
-                    </StackPanel>
-                </StackPanel>
-            </Border>
-
-            <!-- 空白班表提示 -->
-            <StackPanel Visibility="{Binding HasSchedule,
-                            Converter={StaticResource BoolToVisibilityConverter},
-                            ConverterParameter=Inverse}"
-                        HorizontalAlignment="Center" VerticalAlignment="Center">
-                <md:PackIcon Kind="CalendarBlank" Width="68" Height="68"
-                             HorizontalAlignment="Center" Opacity="0.3"/>
-                <TextBlock Text="此月份尚未建立班表"
-                           FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource AppSubtleForegroundBrush}"
-                           Opacity="0.55"
-                           HorizontalAlignment="Center" Margin="0,12,0,0"/>
-                <TextBlock Text="請點擊「新增班表」開始建立"
-                           FontSize="12" FontWeight="Medium" Foreground="{DynamicResource AppSubtleForegroundStrongBrush}"
-                           Opacity="0.4"
-                           HorizontalAlignment="Center" Margin="0,4,0,0"/>
-            </StackPanel>
-
-            
-            <!-- 月視圖區域                       -->
-            
-            <ScrollViewer Visibility="{Binding HasSchedule,
-                              Converter={StaticResource BoolToVisibilityConverter}}">
-                <Grid>
-                    <!-- 月視圖 -->
-                    <StackPanel x:Name="MonthViewPanel"
-                                Visibility="{Binding ViewMode,
-                                    Converter={StaticResource ViewModeVisibilityConverter},
-                                    ConverterParameter=Month}">
-
-                        <!-- 星期標題列 -->
-                        <ItemsControl x:Name="WeekHeaders">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <UniformGrid Rows="1" Columns="7"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                        </ItemsControl>
-
-                        <!-- 日曆格子 -->
-                        <ItemsControl ItemsSource="{Binding CalendarDays}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <UniformGrid Columns="7"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border MinHeight="100" Margin="1" CornerRadius="4"
-                                            AllowDrop="True"
-                                            Drop="ShiftBlock_Drop"
-                                            DragOver="ShiftBlock_DragOver"
-                                            MouseLeftButtonDown="CalendarDay_Click">
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Setter Property="Background"
-                                                        Value="{DynamicResource AppSurfaceBrush}"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsClosed}" Value="True">
-                                                        <Setter Property="Background" Value="#30808080"/>
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding IsPlaceholder}" Value="True">
-                                                        <Setter Property="Background" Value="Transparent"/>
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding IsWeekend}" Value="True">
-                                                        <Setter Property="Background" Value="#15808080"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Border.Style>
-
-                                        <StackPanel Margin="4" Visibility="{Binding IsPlaceholder,
-                                                        Converter={StaticResource BoolToVisibilityConverter},
-                                                        ConverterParameter=Inverse}">
-                                            <!-- 日期與星期 -->
-                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                                <TextBlock FontSize="12" Margin="0,0,4,0">
-                                                    <TextBlock.Style>
-                                                        <Style TargetType="TextBlock">
-                                                            <Setter Property="Text" Value="{Binding Day}"/>
-                                                            <Setter Property="FontWeight" Value="Normal"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsToday}" Value="True">
-                                                                    <Setter Property="FontWeight" Value="Bold"/>
-                                                                    <Setter Property="Foreground"
-                                                                            Value="{DynamicResource PrimaryHueMidBrush}"/>
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding IsClosed}" Value="True">
-                                                                    <Setter Property="Opacity" Value="0.45"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
-                                                <TextBlock Text="{Binding DayOfWeekText}" FontSize="10"
-                                                           Opacity="0.45" VerticalAlignment="Center"/>
-                                                <TextBlock Text="休" FontSize="10" Opacity="0.5"
-                                                           Margin="4,0,0,0" VerticalAlignment="Center"
-                                                           Visibility="{Binding IsClosed,
-                                                               Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                            </StackPanel>
-
-                                            <!-- 班別色塊 (待辦1+2: 員工名稱顯示的 chip ×) -->
-                                            <ItemsControl ItemsSource="{Binding ShiftBlocks}">
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <!-- 點擊 Border:班次操作項 -->
-                                                        <Border CornerRadius="3" Padding="4,2" Margin="0,1"
-                                                                AllowDrop="True"
-                                                                Drop="ShiftBlock_Drop"
-                                                                DragOver="ShiftBlock_DragOver"
-                                                                Tag="{Binding}"
-                                                                Background="{Binding ShiftSetting.Color,
-                                                                    Converter={StaticResource HexToBrushConverter}}"
-                                                                Opacity="{Binding IsDisabled,
-                                                                    Converter={StaticResource BoolToOpacityConverter}}">
-                                                            <StackPanel>
-                                                                <TextBlock Text="{Binding ShiftSetting.Alias}"
-                                                                           FontSize="10" Foreground="White"
-                                                                           FontWeight="SemiBold"/>
-                                                                <!-- 員工 chips(已排員工/停用)-->
-                                                                <ItemsControl ItemsSource="{Binding EntryItems}">
-                                                                    <ItemsControl.ItemTemplate>
-                                                                        <DataTemplate>
-                                                                            <Border CornerRadius="2" Padding="2,1"
-                                                                                    Margin="0,1,0,0"
-                                                                                    Background="#22000000"
-                                                                                    Tag="{Binding DataContext,
-                                                                                        RelativeSource={RelativeSource AncestorType=UserControl}}">
-                                                                                <Border.ContextMenu>
-                                                                                    <ContextMenu DataContext="{Binding PlacementTarget.Tag,
-                                                                                                     RelativeSource={RelativeSource Self}}">
-                                                                                        <MenuItem Header="編輯此班次"
-                                                                                                  Command="{Binding OpenEditEntryCommand}"
-                                                                                                  CommandParameter="{Binding PlacementTarget.DataContext.EntryId,
-                                                                                                      RelativeSource={RelativeSource AncestorType=ContextMenu}}">
-                                                                                            <MenuItem.Icon>
-                                                                                                <md:PackIcon Kind="Pencil" Width="14" Height="14"/>
-                                                                                            </MenuItem.Icon>
-                                                                                        </MenuItem>
-                                                                                        <MenuItem Header="複製到下一週排班"
-                                                                                                  Command="{Binding CopyToNextWeekCommand}"
-                                                                                                  CommandParameter="{Binding PlacementTarget.DataContext.EntryId,
-                                                                                                      RelativeSource={RelativeSource AncestorType=ContextMenu}}">
-                                                                                            <MenuItem.Icon>
-                                                                                                <md:PackIcon Kind="ContentCopy" Width="14" Height="14"/>
-                                                                                            </MenuItem.Icon>
-                                                                                        </MenuItem>
-                                                                                        <Separator/>
-                                                                                        <MenuItem Header="刪除此班次"
-                                                                                                  Command="{Binding DeleteEntryCommand}"
-                                                                                                  CommandParameter="{Binding PlacementTarget.DataContext.EntryId,
-                                                                                                      RelativeSource={RelativeSource AncestorType=ContextMenu}}">
-                                                                                            <MenuItem.Icon>
-                                                                                                <md:PackIcon Kind="Delete" Width="14" Height="14"/>
-                                                                                            </MenuItem.Icon>
-                                                                                        </MenuItem>
-                                                                                    </ContextMenu>
-                                                                                </Border.ContextMenu>
-                                                                                <TextBlock Text="{Binding Employee.Name}"
-                                                                                           FontSize="9" Foreground="#DDFFFFFF"/>
-                                                                            </Border>
-                                                                        </DataTemplate>
-                                                                    </ItemsControl.ItemTemplate>
-                                                                </ItemsControl>
-                                                            </StackPanel>
-                                                        </Border>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-
-                    <!-- 周/日視圖 — 時間軸 -->
-                    <StackPanel x:Name="TimeViewPanel"
-                                Visibility="{Binding ViewMode,
-                                    Converter={StaticResource ViewModeVisibilityConverter},
-                                    ConverterParameter=WeekOrDay}">
-
-                        <!-- 周視圖的日期標題列 -->
-                        <ItemsControl ItemsSource="{Binding CalendarDays}"
-                                      Margin="50,0,0,0"
-                                      Visibility="{Binding ViewMode,
-                                          Converter={StaticResource ViewModeVisibilityConverter},
-                                          ConverterParameter=Week}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <UniformGrid Rows="1" Columns="7"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock HorizontalAlignment="Center" Margin="0,0,0,8"
-                                               Cursor="Hand"
-                                               MouseLeftButtonDown="WeekDayHeader_Click">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsToday}" Value="True">
-                                                        <Setter Property="FontWeight" Value="Bold"/>
-                                                        <Setter Property="Foreground"
-                                                                Value="{DynamicResource PrimaryHueMidBrush}"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                        <Run Text="{Binding DayOfWeekText, Mode=OneWay}"/>
-                                        <Run Text=" "/>
-                                        <Run Text="{Binding Day, Mode=OneWay}"/>
-                                    </TextBlock>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-
-                        <!-- 時間軸列 -->
-                        <ItemsControl ItemsSource="{Binding TimeSlots}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid MinHeight="48">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="50"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="{Binding Label}"
-                                                   FontSize="11" VerticalAlignment="Top"
-                                                   Opacity="0.45" Margin="0,0,8,0"/>
-                                        <ItemsControl Grid.Column="1" ItemsSource="{Binding Days}">
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate>
-                                                    <UniformGrid Rows="1"/>
-                                                </ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Border Margin="1" CornerRadius="2"
-                                                            AllowDrop="True"
-                                                            Drop="ShiftBlock_Drop"
-                                                            DragOver="ShiftBlock_DragOver"
-                                                            BorderBrush="{DynamicResource AppBorderBrush}"
-                                                            BorderThickness="0,0,0,0.5">
-                                                        <Border.Style>
-                                                            <Style TargetType="Border">
-                                                                <Setter Property="Background" Value="Transparent"/>
-                                                                <Style.Triggers>
-                                                                    <DataTrigger Binding="{Binding IsClosed}" Value="True">
-                                                                        <Setter Property="Background" Value="#20808080"/>
-                                                                    </DataTrigger>
-                                                                </Style.Triggers>
-                                                            </Style>
-                                                        </Border.Style>
-                                                        <ItemsControl ItemsSource="{Binding ShiftBlocks}">
-                                                            <ItemsControl.ItemTemplate>
-                                                                <DataTemplate>
-                                                                    <Border CornerRadius="3" Padding="4,2" Margin="1"
-                                                                            AllowDrop="True"
-                                                                            Drop="ShiftBlock_Drop"
-                                                                            DragOver="ShiftBlock_DragOver"
-                                                                            Tag="{Binding}"
-                                                                            Background="{Binding ShiftSetting.Color,
-                                                                                Converter={StaticResource HexToBrushConverter}}"
-                                                                            Opacity="{Binding IsDisabled,
-                                                                                Converter={StaticResource BoolToOpacityConverter}}">
-                                                                        <StackPanel Orientation="Horizontal">
-                                                                            <TextBlock Text="{Binding ShiftSetting.Alias}"
-                                                                                       FontSize="10" Foreground="White"
-                                                                                       FontWeight="SemiBold" Margin="0,0,4,0"/>
-                                                                            <ItemsControl ItemsSource="{Binding EntryItems}">
-                                                                                <ItemsControl.ItemsPanel>
-                                                                                    <ItemsPanelTemplate>
-                                                                                        <StackPanel Orientation="Horizontal"/>
-                                                                                    </ItemsPanelTemplate>
-                                                                                </ItemsControl.ItemsPanel>
-                                                                                <ItemsControl.ItemTemplate>
-                                                                                    <DataTemplate>
-                                                                                        <Border CornerRadius="2" Padding="2,0"
-                                                                                                Margin="2,0,0,0"
-                                                                                                Tag="{Binding DataContext,
-                                                                                                    RelativeSource={RelativeSource AncestorType=UserControl}}">
-                                                                                            <Border.ContextMenu>
-                                                                                                <ContextMenu DataContext="{Binding PlacementTarget.Tag,
-                                                                                                                 RelativeSource={RelativeSource Self}}">
-                                                                                                    <MenuItem Header="編輯此班次"
-                                                                                                              Command="{Binding OpenEditEntryCommand}"
-                                                                                                              CommandParameter="{Binding PlacementTarget.DataContext.EntryId,
-                                                                                                                  RelativeSource={RelativeSource AncestorType=ContextMenu}}">
-                                                                                                        <MenuItem.Icon>
-                                                                                                            <md:PackIcon Kind="Pencil" Width="14" Height="14"/>
-                                                                                                        </MenuItem.Icon>
-                                                                                                    </MenuItem>
-                                                                                                    <MenuItem Header="複製到下一週排班"
-                                                                                                              Command="{Binding CopyToNextWeekCommand}"
-                                                                                                              CommandParameter="{Binding PlacementTarget.DataContext.EntryId,
-                                                                                                                  RelativeSource={RelativeSource AncestorType=ContextMenu}}">
-                                                                                                        <MenuItem.Icon>
-                                                                                                            <md:PackIcon Kind="ContentCopy" Width="14" Height="14"/>
-                                                                                                        </MenuItem.Icon>
-                                                                                                    </MenuItem>
-                                                                                                    <Separator/>
-                                                                                                    <MenuItem Header="刪除此班次"
-                                                                                                              Command="{Binding DeleteEntryCommand}"
-                                                                                                              CommandParameter="{Binding PlacementTarget.DataContext.EntryId,
-                                                                                                                  RelativeSource={RelativeSource AncestorType=ContextMenu}}">
-                                                                                                        <MenuItem.Icon>
-                                                                                                            <md:PackIcon Kind="Delete" Width="14" Height="14"/>
-                                                                                                        </MenuItem.Icon>
-                                                                                                    </MenuItem>
-                                                                                                </ContextMenu>
-                                                                                            </Border.ContextMenu>
-                                                                                            <TextBlock Text="{Binding Employee.Name}"
-                                                                                                       FontSize="9"
-                                                                                                       Foreground="#DDFFFFFF"
-                                                                                                       Margin="2,0,0,0"/>
-                                                                                        </Border>
-                                                                                    </DataTemplate>
-                                                                                </ItemsControl.ItemTemplate>
-                                                                            </ItemsControl>
-                                                                        </StackPanel>
-                                                                    </Border>
-                                                                </DataTemplate>
-                                                            </ItemsControl.ItemTemplate>
-                                                        </ItemsControl>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </Grid>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-                </Grid>
-            </ScrollViewer>
-
-        </DockPanel>
+        </Grid>
     </Grid>
 </UserControl>
-
-

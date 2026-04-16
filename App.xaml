@@ -3,7 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:helpers="clr-namespace:ShopManager.Helpers"
-             xmlns:sys="clr-namespace:System;assembly=mscorlib">
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
+             xmlns:local="clr-namespace:ShopManager">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -12,6 +13,70 @@
                                  SecondaryColor="Blue"/>
                 <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign3.Defaults.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+
+            <CornerRadius x:Key="MaterialDesign.SmallComponent.CornerRadius">5</CornerRadius>
+
+            <!-- ── 全域字型（由 AppearanceService 於啟動時覆寫） ── -->
+            <FontFamily x:Key="AppFontFamily">pack://application:,,,/Fonts/#Noto Sans TC</FontFamily>
+
+            <!-- ── 比例字體大小（base=15，由 AppearanceService 動態更新） ── -->
+            <sys:Double x:Key="FontSizeCaption">12</sys:Double>
+            <sys:Double x:Key="FontSizeSmall">13</sys:Double>
+            <sys:Double x:Key="FontSizeSmallBody">14</sys:Double>
+            <sys:Double x:Key="FontSizeBody">15</sys:Double>
+            <sys:Double x:Key="FontSizeBodyPlus">16</sys:Double>
+            <sys:Double x:Key="FontSizeHeading">18</sys:Double>
+            <sys:Double x:Key="FontSizeSubTitle">20</sys:Double>
+            <sys:Double x:Key="FontSizeSectionAlt">22</sys:Double>
+            <sys:Double x:Key="FontSizeSection">24</sys:Double>
+            <sys:Double x:Key="FontSizeDialogTitle">26</sys:Double>
+            <sys:Double x:Key="FontSizeListTitle">28</sys:Double>
+            <sys:Double x:Key="FontSizeWindowTitle">30</sys:Double>
+            <sys:Double x:Key="FontSizePageTitle">32</sys:Double>
+
+            <!-- ── 基礎文字樣式 ── -->
+            <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource {x:Type TextBlock}}">
+                <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
+                <Setter Property="FontSize"   Value="{DynamicResource FontSizeBody}"/>
+            </Style>
+
+            <!-- ── TextBox 全域樣式（圓角與字體縮放同步） ── -->
+            <Style TargetType="{x:Type TextBox}" BasedOn="{StaticResource MaterialDesignOutlinedTextBox}">
+                <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
+                <Setter Property="FontSize"   Value="{DynamicResource FontSizeBody}"/>
+                <Setter Property="md:TextFieldAssist.TextFieldCornerRadius" Value="5"/>
+                <Setter Property="md:TextFieldAssist.HasOutlinedTextField" Value="True"/>
+            </Style>
+            <!-- 讓具名樣式直接繼承上面的設定，解決圓角與字體不一致 -->
+            <Style x:Key="MaterialDesignOutlinedTextBox" TargetType="{x:Type TextBox}" BasedOn="{StaticResource {x:Type TextBox}}"/>
+            <Style x:Key="MaterialDesignFilledTextBox"   TargetType="{x:Type TextBox}" BasedOn="{StaticResource {x:Type TextBox}}">
+                <Setter Property="md:TextFieldAssist.HasOutlinedTextField" Value="False"/>
+                <Setter Property="md:TextFieldAssist.HasFilledTextField"   Value="True"/>
+            </Style>
+
+            <!-- ── ComboBox 全域樣式（圓角與字體縮放同步） ── -->
+            <Style TargetType="{x:Type ComboBox}" BasedOn="{StaticResource MaterialDesignOutlinedComboBox}">
+                <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
+                <Setter Property="FontSize"   Value="{DynamicResource FontSizeBody}"/>
+                <Setter Property="TextElement.FontSize" Value="{DynamicResource FontSizeBody}"/>
+                <Setter Property="md:TextFieldAssist.TextFieldCornerRadius" Value="5"/>
+                <Setter Property="md:TextFieldAssist.HasOutlinedTextField" Value="True"/>
+            </Style>
+            <!-- 讓具名樣式直接繼承上面的設定 -->
+            <Style x:Key="MaterialDesignOutlinedComboBox" TargetType="{x:Type ComboBox}" BasedOn="{StaticResource {x:Type ComboBox}}"/>
+            <Style x:Key="MaterialDesignFilledComboBox"   TargetType="{x:Type ComboBox}" BasedOn="{StaticResource {x:Type ComboBox}}">
+                <Setter Property="md:TextFieldAssist.HasOutlinedTextField" Value="False"/>
+                <Setter Property="md:TextFieldAssist.HasFilledTextField"   Value="True"/>
+            </Style>
+
+            <!-- ── PasswordBox 全域樣式 ── -->
+            <Style TargetType="{x:Type PasswordBox}" BasedOn="{StaticResource MaterialDesignOutlinedPasswordBox}">
+                <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
+                <Setter Property="FontSize"   Value="{DynamicResource FontSizeBody}"/>
+                <Setter Property="md:TextFieldAssist.TextFieldCornerRadius" Value="5"/>
+                <Setter Property="md:TextFieldAssist.HasOutlinedTextField" Value="True"/>
+            </Style>
+            <Style x:Key="MaterialDesignOutlinedPasswordBox" TargetType="{x:Type PasswordBox}" BasedOn="{StaticResource {x:Type PasswordBox}}"/>
 
             <Color x:Key="AppShellBackgroundColor">#EEF3F8</Color>
             <Color x:Key="AppShellGradientStartColor">#F4F8FC</Color>

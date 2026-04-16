@@ -1,15 +1,16 @@
-<Window x:Class="ShopManager.Views.ShopSelection.ShopSelectionWindow"
+﻿<Window x:Class="ShopManager.Views.ShopSelection.ShopSelectionWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
-        Title="ShopManager"
+        Title="ShopManager - 店鋪選取"
         WindowStyle="None"
+        AllowsTransparency="True"
         ResizeMode="NoResize"
         WindowState="Maximized"
-        Background="{DynamicResource AppShellBackgroundBrush}"
+        Background="Transparent"
         TextElement.Foreground="{DynamicResource MaterialDesign.Brush.Foreground}"
-        TextElement.FontFamily="{md:MaterialDesignFont}"
-        FontSize="14">
+        TextElement.FontFamily="{DynamicResource AppFontFamily}"
+        FontSize="{DynamicResource FontSizeBody}">
 
     <Grid x:Name="WindowRoot">
         <Grid.Background>
@@ -22,89 +23,90 @@
 
         <Border HorizontalAlignment="Center"
                 VerticalAlignment="Center"
-                MinWidth="{Binding ElementName=WindowRoot, Path=ActualWidth, Converter={StaticResource MultiplyDoubleConverter}, ConverterParameter=0.7}"
-                MinHeight="{Binding ElementName=WindowRoot, Path=ActualHeight, Converter={StaticResource MultiplyDoubleConverter}, ConverterParameter=0.7}"
-                MaxWidth="{Binding ElementName=WindowRoot, Path=ActualWidth, Converter={StaticResource MultiplyDoubleConverter}, ConverterParameter=0.95}"
-                MaxHeight="{Binding ElementName=WindowRoot, Path=ActualHeight, Converter={StaticResource MultiplyDoubleConverter}, ConverterParameter=0.95}"
-                CornerRadius="36"
+                Width="480"
+                CornerRadius="20"
                 Background="{DynamicResource AppSurfaceBrush}"
                 BorderBrush="{DynamicResource AppBorderBrush}"
                 BorderThickness="1"
-                Padding="32">
-            <ScrollViewer VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Auto">
-                <Grid MinWidth="460">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="24"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="24"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
+                Padding="40">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="40" ShadowDepth="10" Opacity="0.15" Color="Black"/>
+            </Border.Effect>
+            
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="32"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="24"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-                    <StackPanel Grid.Row="0">
-                        <Border Width="58"
-                                Height="58"
-                                CornerRadius="20"
-                                Background="#E3EBF3"
-                                HorizontalAlignment="Left">
-                            <md:PackIcon Kind="StorefrontOutline"
-                                         Width="30"
-                                         Height="30"
-                                         Foreground="{DynamicResource PrimaryHueMidBrush}"
-                                         HorizontalAlignment="Center"
-                                         VerticalAlignment="Center"/>
-                        </Border>
-                        <TextBlock Text="選擇店鋪"
-                                   FontSize="28"
-                                   FontWeight="SemiBold"
-                                   Margin="0,18,0,6"/>
-                        <TextBlock Text="請選擇要進入的店鋪,也可在下方新建一個專屬的店鋪"
-                                   Foreground="{DynamicResource AppSubtleForegroundBrush}"/>
-                    </StackPanel>
+                <!-- 頂部圖示與歡迎文字 -->
+                <StackPanel Grid.Row="0">
+                    <Border Width="72"
+                            Height="72"
+                            CornerRadius="20"
+                            Background="{DynamicResource AppPanelAltBrush}"
+                            BorderBrush="{DynamicResource AppBorderBrush}"
+                            BorderThickness="1"
+                            HorizontalAlignment="Center"
+                            Margin="0,0,0,24">
+                        <md:PackIcon Kind="StorefrontOutline"
+                                     Width="40"
+                                     Height="40"
+                                     Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Center"/>
+                    </Border>
+                    <TextBlock Text="歡迎使用 ShopManager"
+                               FontSize="{DynamicResource FontSizeWindowTitle}"
+                               FontWeight="Bold"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,8"/>
+                    <TextBlock Text="請選擇店鋪以進入管理系統"
+                               FontSize="{DynamicResource FontSizeBodyPlus}"
+                               HorizontalAlignment="Center"
+                               Foreground="{DynamicResource AppSubtleForegroundBrush}"/>
+                </StackPanel>
 
-                    <StackPanel Grid.Row="2">
-                        <ComboBox ItemsSource="{Binding Shops}"
-                                  SelectedItem="{Binding SelectedShop}"
-                                  DisplayMemberPath="Name"
-                                  md:HintAssist.Hint="選擇店鋪"
-                                  Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                                  Margin="0,0,0,16"/>
+                <!-- 店鋪選取區塊 -->
+                <StackPanel Grid.Row="2">
+                    <TextBlock Text="選取店鋪" FontSize="{DynamicResource FontSizeSmallBody}" FontWeight="Bold" Foreground="{DynamicResource PrimaryHueMidBrush}" Margin="0,0,0,12"/>
+                    
+                    <ComboBox ItemsSource="{Binding Shops}"
+                              SelectedItem="{Binding SelectedShop}"
+                              DisplayMemberPath="Name"
+                              Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                              md:HintAssist.Hint="請選擇店鋪..."
+                              Margin="0,0,0,16"/>
 
-                        <TextBox md:HintAssist.Hint="請輸入新店鋪名稱"
-                                 Text="{Binding NewShopName, UpdateSourceTrigger=PropertyChanged}"
-                                 Margin="0,0,0,8">
-                            <TextBox.Style>
-                                <Style TargetType="TextBox" BasedOn="{StaticResource MaterialDesignOutlinedTextBox}">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsNewShopSelected}" Value="True">
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBox.Style>
-                        </TextBox>
+                    <!-- 僅在選中「新增店鋪」時顯示 -->
+                    <Border Background="{DynamicResource AppPanelAltBrush}" 
+                            CornerRadius="20" Padding="20" 
+                            BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
+                            Visibility="{Binding IsNewShopSelected, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <StackPanel>
+                            <TextBlock Text="建立新據點" FontSize="{DynamicResource FontSizeSmallBody}" FontWeight="Bold" Foreground="{DynamicResource PrimaryHueMidBrush}" Margin="0,0,0,12"/>
+                            <TextBlock Text="店鋪名稱 *" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding NewShopName, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                            <TextBlock Text="新店鋪將初始化獨立的員工與排班設定。" FontSize="{DynamicResource FontSizeSmall}" Opacity="0.5" Margin="4,8,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
 
-                        <Border CornerRadius="22"
-                                Background="{DynamicResource AppInfoBrush}"
-                                Padding="14,12"
-                                Margin="0,8,0,0">
-                            <TextBlock Text="選擇已存在店鋪,可直接使用原有的所有資料,新建則為全新"
-                                       TextWrapping="Wrap"
-                                       Foreground="{DynamicResource AppSubtleForegroundStrongBrush}"/>
-                        </Border>
-                    </StackPanel>
-
-                    <Button Grid.Row="4"
-                            Content="進入系統"
-                            Style="{StaticResource MaterialDesignRaisedButton}"
-                            HorizontalAlignment="Stretch"
-                            Height="48"
-                            Command="{Binding EnterCommand}"/>
-                </Grid>
-            </ScrollViewer>
+                <!-- 進入按鈕 -->
+                <Button Grid.Row="4"
+                        Content="進入系統管理"
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        HorizontalAlignment="Stretch"
+                        Height="56"
+                        FontSize="{DynamicResource FontSizeSubTitle}"
+                        FontWeight="Bold"
+                        md:ButtonAssist.CornerRadius="20"
+                        Command="{Binding EnterCommand}"/>
+            </Grid>
         </Border>
     </Grid>
 </Window>
-

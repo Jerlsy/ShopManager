@@ -14,7 +14,8 @@ public partial class SystemSettingViewModel(
     IAppDialogService dialogService,
     AppDbContext db,
     ShopContext shopContext,
-    ThemeService themeService) : ObservableObject
+    ThemeService themeService,
+    AppearanceService appearanceService) : ObservableObject
 {
     [ObservableProperty] private string _name = string.Empty;
     [ObservableProperty] private string _address = string.Empty;
@@ -32,6 +33,12 @@ public partial class SystemSettingViewModel(
     [ObservableProperty] private bool _nationalHolidaysOff = true;
     [ObservableProperty] private string _customPrimaryHex = "#546E7A";
     [ObservableProperty] private string _customSecondaryHex = "#29B6F6";
+
+    // ── 外觀設定 ────────────────────────────────────────────────────────────
+    [ObservableProperty] private double _baseFontSize = 15.0;
+    [ObservableProperty] private FontOption? _selectedFontFamily;
+
+    public IReadOnlyList<FontOption> AvailableFontFamilies => AppearanceService.AvailableFonts;
 
     public ObservableCollection<DayOfWeekOption> ClosedDayOptions { get; } = new()
     {
@@ -73,6 +80,11 @@ public partial class SystemSettingViewModel(
         CustomPrimaryHex = themeService.CustomPrimaryHex;
         CustomSecondaryHex = themeService.CustomSecondaryHex;
         NotifyThemeChanged();
+
+        BaseFontSize = appearanceService.BaseFontSize;
+        SelectedFontFamily = AppearanceService.AvailableFonts
+            .FirstOrDefault(f => f.Name == appearanceService.FontFamilyName)
+            ?? AppearanceService.AvailableFonts[0];
     }
 
     [RelayCommand]
@@ -95,6 +107,12 @@ public partial class SystemSettingViewModel(
         };
 
         await service.SaveAsync(setting);
+
+        // 套用外觀設定
+        appearanceService.SetBaseFontSize(BaseFontSize);
+        if (SelectedFontFamily is not null)
+            appearanceService.SetFontFamily(SelectedFontFamily.Name);
+
         WeakReferenceMessenger.Default.Send(new SystemConfiguredMessage { ShopName = Name });
         snackbarService.ShowSuccess("店舖設定已儲存");
     }

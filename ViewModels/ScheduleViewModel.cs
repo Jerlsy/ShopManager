@@ -376,7 +376,21 @@ public partial class ScheduleViewModel : ObservableObject
 
     partial void OnSelectedYearChanged(int value) { OnPropertyChanged(nameof(CalendarTitle)); _ = LoadScheduleAsync(); }
     partial void OnSelectedMonthChanged(int value) { OnPropertyChanged(nameof(CalendarTitle)); _ = LoadScheduleAsync(); }
-    partial void OnViewModeChanged(CalendarViewMode value) => BuildCalendarView();
+    partial void OnViewModeChanged(CalendarViewMode value)
+    {
+        OnPropertyChanged(nameof(IsMonthView));
+        OnPropertyChanged(nameof(IsWeekView));
+        OnPropertyChanged(nameof(IsDayView));
+        BuildCalendarView();
+    }
+
+    public bool IsMonthView => ViewMode == CalendarViewMode.Month;
+    public bool IsWeekView  => ViewMode == CalendarViewMode.Week;
+    public bool IsDayView   => ViewMode == CalendarViewMode.Day;
+
+    [RelayCommand] public void SetMonthView() => ViewMode = CalendarViewMode.Month;
+    [RelayCommand] public void SetWeekView()  => ViewMode = CalendarViewMode.Week;
+    [RelayCommand] public void SetDayView()   => ViewMode = CalendarViewMode.Day;
     partial void OnSelectedDateChanged(DateOnly value) => BuildCalendarView();
     partial void OnSelectedEmployeeChanged(Employee? value) => BuildCalendarView();
 

@@ -184,9 +184,9 @@ public class HexToBrushConverter : IValueConverter
         throw new NotImplementedException();
 }
 
-/// <summary>將數值乘上指定倍率，常用於視窗尺寸上限計算。</summary>
+/// <summary>將數值乘上指定倍率，常用於視窗尺寸上限計算。支援單一綁定與多重綁定。</summary>
 [ValueConversion(typeof(double), typeof(double))]
-public class MultiplyDoubleConverter : IValueConverter
+public class MultiplyDoubleConverter : IValueConverter, IMultiValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
@@ -204,5 +204,22 @@ public class MultiplyDoubleConverter : IValueConverter
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotImplementedException();
+
+    public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (values.Length < 2) return 0d;
+        
+        var val = values[0] is double d ? d : 0d;
+        var factor = 1d;
+
+        if (values[1] is double f) factor = f;
+        else if (values[1] is string s && double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var ps)) factor = ps;
+        else if (parameter is string p && double.TryParse(p, NumberStyles.Float, CultureInfo.InvariantCulture, out var pp)) factor = pp;
+
+        return val * factor;
+    }
+
+    public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture) =>
         throw new NotImplementedException();
 }

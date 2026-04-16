@@ -158,14 +158,13 @@ public class ThemeService
         }
         else
         {
-            // 淺色模式：參考 MD3 強對比邏輯，大幅增加背景飽和度
-            // 讓外層 Shell 呈現濃郁的品牌調性（25% ~ 45%）
-            shellBackground = Mix(primary, Colors.White, 0.30);      // 30% 主色
-            shellGradientStart = Mix(primary, Colors.White, 0.20);   // 20% 主色
-            shellGradientMid = Mix(primary, Colors.White, 0.35);     // 35% 主色
-            shellGradientEnd = Mix(primary, Colors.White, 0.45);     // 45% 主色
+            // 淺色模式：再次調深背景飽和度，增強品牌視覺感（45% ~ 65%）
+            shellBackground = Mix(primary, Colors.White, 0.50);      // 50% 主色
+            shellGradientStart = Mix(primary, Colors.White, 0.40);   // 40% 主色
+            shellGradientMid = Mix(primary, Colors.White, 0.55);     // 55% 主色
+            shellGradientEnd = Mix(primary, Colors.White, 0.65);     // 65% 主色
             
-            // 中央主要內容面板（Surface）保持極淺染色（4%），確保閱讀清晰並與背景形成強烈對比
+            // 中央主要內容面板（Surface）維持極淺染色（4%），確保與深色背景形成強烈對比
             surface = Mix(primary, Colors.White, 0.04);              
             surfaceAlt = Mix(primary, Colors.White, 0.08);           
             panel = Mix(primary, Colors.White, 0.12);                

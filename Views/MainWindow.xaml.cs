@@ -18,6 +18,10 @@ public partial class MainWindow : Window
         DataContext = viewModel;
         _snackbarService = snackbarService;
 
+        // WindowStyle=None 最大化時需限制在工作區範圍內，避免蓋住工作列。
+        MaxWidth = SystemParameters.WorkArea.Width;
+        MaxHeight = SystemParameters.WorkArea.Height;
+
         // 將 Snackbar 的 MessageQueue 連接到共用服務。
         Loaded += (_, _) =>
         {

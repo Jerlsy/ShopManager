@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using MaterialDesignThemes.Wpf;
 using ShopManager.Models;
@@ -32,6 +33,10 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _shopName = "店鋪管理系統";
     [ObservableProperty] private bool _isSystemConfigured;
     [ObservableProperty] private NavItem? _selectedNavItem;
+    [ObservableProperty] private bool _isNavExpanded = true;
+
+    [RelayCommand]
+    private void ToggleNav() => IsNavExpanded = !IsNavExpanded;
 
     public object? CurrentContent => _navigation.CurrentContent;
 
@@ -70,6 +75,18 @@ public partial class MainViewModel : ObservableObject
             vm.ShopName = m.ShopName;
             vm.OnPropertyChanged(nameof(VisibleNavItems));
         });
+    }
+
+    [RelayCommand]
+    private void LeaveShop()
+    {
+        WeakReferenceMessenger.Default.Send(new ShopClosedMessage());
+    }
+
+    [RelayCommand]
+    private void ExitApp()
+    {
+        System.Windows.Application.Current.Shutdown();
     }
 
     partial void OnSelectedNavItemChanged(NavItem? value)
