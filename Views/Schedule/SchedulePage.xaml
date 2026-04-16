@@ -1,32 +1,26 @@
-﻿<UserControl x:Class="ShopManager.Views.Schedule.SchedulePage"
+<UserControl x:Class="ShopManager.Views.Schedule.SchedulePage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:vm="clr-namespace:ShopManager.ViewModels">
 
-    <Grid Margin="28,8,28,28">
+    <Grid Margin="{StaticResource PageMargin}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!-- 頁面標題列 -->
-        <Border Grid.Row="0"
-                CornerRadius="20"
-                Background="{DynamicResource AppSurfaceAltBrush}"
-                BorderBrush="{DynamicResource AppBorderBrush}"
-                BorderThickness="1"
-                Padding="24"
-                Margin="0,0,0,20">
+        <Border Grid.Row="0" Style="{StaticResource PageHeaderStyle}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel>
-                    <TextBlock Text="排班管理" FontSize="{DynamicResource FontSizePageTitle}" FontWeight="SemiBold"/>
+                    <TextBlock Text="排班管理" Style="{StaticResource PageTitleStyle}"/>
                     <TextBlock Text="拖曳班別至格子內完成排班，系統將即時計算總工時與人力需求。"
-                               Margin="0,8,0,0" Foreground="{DynamicResource AppSubtleForegroundBrush}"/>
+                               Style="{StaticResource SubtleTextStyle}" Margin="0,8,0,0"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <!-- 月份導覽 -->
@@ -85,18 +79,13 @@
             </Grid.ColumnDefinitions>
 
             <!-- 左側員工列表 (支援拖曳) -->
-            <Border Grid.Column="0"
-                    Padding="20"
-                    CornerRadius="20"
-                    Background="{DynamicResource AppSurfaceBrush}"
-                    BorderBrush="{DynamicResource AppBorderBrush}"
-                    BorderThickness="1">
+            <Border Grid.Column="0" Style="{StaticResource SectionCardStyle}">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="員工清單" FontSize="{DynamicResource FontSizeSubTitle}" FontWeight="SemiBold" Margin="0,0,0,16"/>
+                    <TextBlock DockPanel.Dock="Top" Text="員工清單" Style="{StaticResource SectionTitleStyle}"/>
                     <ListBox ItemsSource="{Binding Employees}" Background="Transparent">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border Padding="12" Background="{DynamicResource AppPanelAltBrush}" CornerRadius="16" Margin="0,0,0,8" MouseLeftButtonDown="Employee_MouseLeftButtonDown">
+                                <Border Style="{StaticResource ItemCardStyle}" CornerRadius="16" Margin="0,0,0,8" MouseLeftButtonDown="Employee_MouseLeftButtonDown">
                                     <TextBlock Text="{Binding Name}" FontWeight="Medium"/>
                                 </Border>
                             </DataTemplate>

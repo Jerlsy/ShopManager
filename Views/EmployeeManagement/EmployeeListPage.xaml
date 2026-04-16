@@ -1,32 +1,26 @@
-﻿<UserControl x:Class="ShopManager.Views.EmployeeManagement.EmployeeListPage"
+<UserControl x:Class="ShopManager.Views.EmployeeManagement.EmployeeListPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:vm="clr-namespace:ShopManager.ViewModels">
 
-    <Grid Margin="28,8,28,28">
+    <Grid Margin="{StaticResource PageMargin}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!-- 頁面標題 -->
-        <Border Grid.Row="0"
-                CornerRadius="20"
-                Background="{DynamicResource AppSurfaceAltBrush}"
-                BorderBrush="{DynamicResource AppBorderBrush}"
-                BorderThickness="1"
-                Padding="24"
-                Margin="0,0,0,20">
+        <Border Grid.Row="0" Style="{StaticResource PageHeaderStyle}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel>
-                    <TextBlock Text="員工資料管理" FontSize="{DynamicResource FontSizePageTitle}" FontWeight="SemiBold"/>
+                    <TextBlock Text="員工資料管理" Style="{StaticResource PageTitleStyle}"/>
                     <TextBlock Text="管理員工基本資料、聯絡方式、預設班別與排班規則"
-                               Margin="0,8,0,0" Foreground="{DynamicResource AppSubtleForegroundBrush}"/>
+                               Style="{StaticResource SubtleTextStyle}" Margin="0,8,0,0"/>
                 </StackPanel>
                 <Button Grid.Column="1"
                         Style="{StaticResource MaterialDesignRaisedButton}"
@@ -48,14 +42,9 @@
             </Grid.ColumnDefinitions>
 
             <!-- 員工列表 -->
-            <Border Grid.Column="0"
-                    Padding="20"
-                    CornerRadius="20"
-                    Background="{DynamicResource AppSurfaceBrush}"
-                    BorderBrush="{DynamicResource AppBorderBrush}"
-                    BorderThickness="1">
+            <Border Grid.Column="0" Style="{StaticResource SectionCardStyle}">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="員工清單" FontSize="{DynamicResource FontSizeSectionAlt}" FontWeight="SemiBold" Margin="0,0,0,20"/>
+                    <TextBlock DockPanel.Dock="Top" Text="員工清單" Style="{StaticResource SectionTitleStyle}"/>
                     <ListBox ItemsSource="{Binding Employees}"
                              SelectedItem="{Binding SelectedEmployee}"
                              Style="{StaticResource MaterialDesignListBox}">
@@ -81,10 +70,10 @@
                         </ListBox.ItemContainerStyle>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border Padding="16" Background="{DynamicResource AppPanelAltBrush}" CornerRadius="20" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+                                <Border Style="{StaticResource ItemCardStyle}">
                                     <StackPanel>
-                                        <TextBlock Text="{Binding Name}" FontSize="{DynamicResource FontSizeHeading}" FontWeight="SemiBold"/>
-                                        <TextBlock Text="{Binding Phone, FallbackValue='未設定電話'}" FontSize="{DynamicResource FontSizeSmallBody}" Opacity="0.6" Margin="0,4,0,0"/>
+                                        <TextBlock Text="{Binding Name}" Style="{StaticResource ItemTitleStyle}"/>
+                                        <TextBlock Text="{Binding Phone, FallbackValue='未設定電話'}" Style="{StaticResource CaptionTextStyle}" Margin="0,4,0,0"/>
                                     </StackPanel>
                                 </Border>
                             </DataTemplate>
@@ -98,37 +87,31 @@
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
                             Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
                     <md:PackIcon Kind="AccountEditOutline" Width="80" Height="80" Opacity="0.12" HorizontalAlignment="Center"/>
-                    <TextBlock Text="請從左側選擇員工，或點選上方「新增員工」進行編輯" Margin="0,20,0,0" Opacity="0.45" FontSize="{DynamicResource FontSizeHeading}" HorizontalAlignment="Center"/>
+                    <TextBlock Text="請從左側選擇員工，或點選上方「新增員工」進行編輯" Margin="0,20,0,0" Opacity="0.45" Style="{StaticResource ItemTitleStyle}" HorizontalAlignment="Center"/>
                 </StackPanel>
 
                 <ScrollViewer Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <Border Background="{DynamicResource AppSurfaceBrush}"
-                            BorderBrush="{DynamicResource AppBorderBrush}"
-                            BorderThickness="1"
-                            CornerRadius="20"
-                            Padding="32"
-                            HorizontalAlignment="Stretch">
+                    <Border Style="{StaticResource EditFormCardStyle}" HorizontalAlignment="Stretch">
                         <StackPanel>
-                            <!-- 編輯表單內容沿用原邏輯 ... -->
                             <TextBlock Text="{Binding SelectedEmployee, Converter={StaticResource NullToStringConverter}, ConverterParameter='新增員工|編輯員工資料'}"
                                        FontSize="{DynamicResource FontSizeListTitle}" FontWeight="SemiBold" Margin="0,0,0,24"/>
 
-                            <TextBlock Text="基本資料" FontSize="{DynamicResource FontSizeSmallBody}" FontWeight="Bold" Foreground="{DynamicResource PrimaryHueMidBrush}" Margin="0,0,0,12"/>
+                            <TextBlock Text="基本資料" Style="{StaticResource FormSectionStyle}"/>
                             <Grid Margin="0,0,0,16">
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0">
-                                    <TextBlock Text="姓名 *" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                    <TextBox Text="{Binding EditName}" Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                                    <TextBlock Text="姓名 *" Style="{StaticResource FieldLabelStyle}"/>
+                                    <TextBox Text="{Binding EditName}"/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="2">
-                                    <TextBlock Text="身分證字號" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                    <TextBox Text="{Binding EditIdNumber}" Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                                    <TextBlock Text="身分證字號" Style="{StaticResource FieldLabelStyle}"/>
+                                    <TextBox Text="{Binding EditIdNumber}"/>
                                 </StackPanel>
                             </Grid>
-                            <TextBlock Text="聯絡地址" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                            <TextBox Text="{Binding EditAddress}" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,16" AcceptsReturn="True" MinHeight="60" VerticalContentAlignment="Top"/>
-                            <TextBlock Text="聯繫電話" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                            <TextBox Text="{Binding EditPhone}" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,24"/>
+                            <TextBlock Text="聯絡地址" Style="{StaticResource FieldLabelStyle}"/>
+                            <TextBox Text="{Binding EditAddress}" Margin="0,0,0,16" AcceptsReturn="True" MinHeight="60" VerticalContentAlignment="Top"/>
+                            <TextBlock Text="聯繫電話" Style="{StaticResource FieldLabelStyle}"/>
+                            <TextBox Text="{Binding EditPhone}" Margin="0,0,0,24"/>
 
                             <StackPanel Orientation="Horizontal" Margin="0,24,0,0">
                                 <Button Style="{StaticResource MaterialDesignRaisedButton}" Command="{Binding SaveCommand}" Margin="0,0,12,0">

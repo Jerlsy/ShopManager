@@ -1,34 +1,25 @@
-﻿<UserControl x:Class="ShopManager.Views.SalarySettings.SalarySettingPage"
+<UserControl x:Class="ShopManager.Views.SalarySettings.SalarySettingPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:models="clr-namespace:ShopManager.Models">
 
-    <Grid Margin="28,8,28,28">
+    <Grid Margin="{StaticResource PageMargin}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0"
-                CornerRadius="20"
-                Background="{DynamicResource AppSurfaceAltBrush}"
-                BorderBrush="{DynamicResource AppBorderBrush}"
-                BorderThickness="1"
-                Padding="24"
-                Margin="0,0,0,20">
+        <Border Grid.Row="0" Style="{StaticResource PageHeaderStyle}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel>
-                    <TextBlock Text="薪資設定"
-                               FontSize="{DynamicResource FontSizePageTitle}"
-                               FontWeight="SemiBold"/>
+                    <TextBlock Text="薪資設定" Style="{StaticResource PageTitleStyle}"/>
                     <TextBlock Text="設定薪資方案、加班倍率，並管理全店通用的勞基法基礎參數"
-                               Margin="0,8,0,0"
-                               Foreground="{DynamicResource AppSubtleForegroundBrush}"/>
+                               Style="{StaticResource SubtleTextStyle}" Margin="0,8,0,0"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Style="{StaticResource MaterialDesignOutlinedButton}"
@@ -60,18 +51,9 @@
             </Grid.ColumnDefinitions>
 
             <!-- 薪資列表 -->
-            <Border Grid.Column="0"
-                    Padding="20"
-                    CornerRadius="20"
-                    Background="{DynamicResource AppSurfaceBrush}"
-                    BorderBrush="{DynamicResource AppBorderBrush}"
-                    BorderThickness="1">
+            <Border Grid.Column="0" Style="{StaticResource SectionCardStyle}">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top"
-                               Text="方案清單"
-                               FontSize="{DynamicResource FontSizeSectionAlt}"
-                               FontWeight="SemiBold"
-                               Margin="0,0,0,20"/>
+                    <TextBlock DockPanel.Dock="Top" Text="方案清單" Style="{StaticResource SectionTitleStyle}"/>
 
                     <ListBox ItemsSource="{Binding Salaries}"
                              SelectedItem="{Binding SelectedSalary}"
@@ -100,23 +82,18 @@
                         </ListBox.ItemContainerStyle>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border Padding="16,14"
-                                        Background="{DynamicResource AppPanelAltBrush}"
-                                        CornerRadius="20"
-                                        BorderBrush="{DynamicResource AppBorderBrush}"
-                                        BorderThickness="1">
+                                <Border Style="{StaticResource ItemCardStyle}" Padding="16,14">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0">
-                                            <TextBlock Text="{Binding Alias}" FontSize="{DynamicResource FontSizeHeading}" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Alias}" Style="{StaticResource ItemTitleStyle}"/>
                                             <TextBlock Text="{Binding Type, Converter={StaticResource SalaryTypeDisplayConverter}}"
-                                                       FontSize="{DynamicResource FontSizeSmall}" Margin="0,4,0,0"
-                                                       Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold"/>
+                                                       Style="{StaticResource FieldLabelStyle}" Margin="0,4,0,0"/>
                                             <TextBlock Text="{Binding Description}"
-                                                       FontSize="{DynamicResource FontSizeSmall}" Margin="0,4,0,0" Opacity="0.5"
+                                                       Style="{StaticResource CaptionTextStyle}" Margin="0,4,0,0"
                                                        TextTrimming="CharacterEllipsis"/>
                                         </StackPanel>
                                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
@@ -154,38 +131,32 @@
                     <TextBlock Text="請點選左側方案，或點選「新增薪資」開始編輯"
                                Margin="0,20,0,0"
                                Opacity="0.45"
-                               FontSize="{DynamicResource FontSizeHeading}"
+                               Style="{StaticResource ItemTitleStyle}"
                                HorizontalAlignment="Center"/>
                 </StackPanel>
 
                 <ScrollViewer Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <Border Background="{DynamicResource AppSurfaceBrush}"
-                            BorderBrush="{DynamicResource AppBorderBrush}"
-                            BorderThickness="1"
-                            CornerRadius="20"
-                            Padding="32"
-                            MaxWidth="680"
-                            HorizontalAlignment="Left">
+                    <Border Style="{StaticResource EditFormCardStyle}" MaxWidth="680" HorizontalAlignment="Left">
                         <StackPanel>
                             <TextBlock Text="{Binding SelectedSalary, Converter={StaticResource NullToStringConverter}, ConverterParameter='新增薪資方案|編輯薪資方案'}"
                                        FontSize="{DynamicResource FontSizeListTitle}" FontWeight="SemiBold"
                                        Margin="0,0,0,24"/>
 
-                            <TextBlock Text="薪資方案名稱 *" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <TextBlock Text="薪資方案名稱 *" Style="{StaticResource FieldLabelStyle}"/>
                             <TextBox Text="{Binding EditAlias, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                    
                                      Margin="0,0,0,16"/>
 
-                            <TextBlock Text="方案說明 (備註)" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <TextBlock Text="方案說明 (備註)" Style="{StaticResource FieldLabelStyle}"/>
                             <TextBox Text="{Binding EditDescription, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                    
                                      Margin="0,0,0,20"
                                      AcceptsReturn="True" MinHeight="60" VerticalContentAlignment="Top"/>
 
-                            <TextBlock Text="薪資類型" FontSize="{DynamicResource FontSizeSmallBody}" FontWeight="Bold" Foreground="{DynamicResource PrimaryHueMidBrush}" Margin="0,0,0,12"/>
+                            <TextBlock Text="薪資類型" Style="{StaticResource FormSectionStyle}"/>
                             <ComboBox ItemsSource="{Binding SalaryTypes}"
                                       SelectedItem="{Binding EditType}"
-                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                     
                                       md:HintAssist.Hint="選擇類型"
                                       Margin="0,0,0,20">
                                 <ComboBox.ItemTemplate>
@@ -196,30 +167,30 @@
                             </ComboBox>
 
                             <!-- 動態輸入項 -->
-                            <Border Margin="0,0,0,20" Padding="16,12" CornerRadius="12" Background="{DynamicResource AppPanelAltBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+                            <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,20" Padding="16,12">
                                 <Grid>
                                     <!-- 時薪 -->
                                     <StackPanel Visibility="{Binding EditType, Converter={StaticResource SalaryTypeVisibilityConverter}, ConverterParameter=Hourly}">
-                                        <TextBlock Text="基本時薪 (元) *" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                        <TextBlock Text="基本時薪 (元) *" Style="{StaticResource FieldLabelStyle}"/>
                                         <TextBox Text="{Binding EditHourlyRate, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
-                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                                                />
                                     </StackPanel>
                                     <!-- 月薪 -->
                                     <StackPanel Visibility="{Binding EditType, Converter={StaticResource SalaryTypeVisibilityConverter}, ConverterParameter=Monthly}">
-                                        <TextBlock Text="月薪底薪 (元) *" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                        <TextBlock Text="月薪底薪 (元) *" Style="{StaticResource FieldLabelStyle}"/>
                                         <TextBox Text="{Binding EditMonthlyBase, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
-                                                 Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                                                />
                                     </StackPanel>
                                     <!-- 合約 -->
                                     <Grid Visibility="{Binding EditType, Converter={StaticResource SalaryTypeVisibilityConverter}, ConverterParameter=Contract}">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0">
-                                            <TextBlock Text="合約總額 (元) *" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                            <TextBox Text="{Binding EditContractAmount, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                                            <TextBlock Text="合約總額 (元) *" Style="{StaticResource FieldLabelStyle}"/>
+                                            <TextBox Text="{Binding EditContractAmount, UpdateSourceTrigger=PropertyChanged}"/>
                                         </StackPanel>
                                         <StackPanel Grid.Column="2">
-                                            <TextBlock Text="結算週期" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                            <TextBox Text="{Binding EditContractCycle, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                                            <TextBlock Text="結算週期" Style="{StaticResource FieldLabelStyle}"/>
+                                            <TextBox Text="{Binding EditContractCycle, UpdateSourceTrigger=PropertyChanged}"/>
                                         </StackPanel>
                                     </Grid>
                                 </Grid>
@@ -234,30 +205,30 @@
                                     <Grid Margin="0,0,0,12">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0">
-                                            <TextBlock Text="加班費倍率 1 (×)" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                            <TextBox Text="{Binding EditOT1Rate, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}" Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                                            <TextBlock Text="加班費倍率 1 (×)" Style="{StaticResource FieldLabelStyle}"/>
+                                            <TextBox Text="{Binding EditOT1Rate, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
                                         </StackPanel>
                                         <StackPanel Grid.Column="2">
-                                            <TextBlock Text="加班費倍率 2 (×)" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                            <TextBox Text="{Binding EditOT2Rate, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}" Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                                            <TextBlock Text="加班費倍率 2 (×)" Style="{StaticResource FieldLabelStyle}"/>
+                                            <TextBox Text="{Binding EditOT2Rate, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
                                         </StackPanel>
                                     </Grid>
                                     <Grid Margin="0,0,0,12">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0">
-                                            <TextBlock Text="假日加班倍率 (×)" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                            <TextBox Text="{Binding EditHolidayRate, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}" Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                                            <TextBlock Text="假日加班倍率 (×)" Style="{StaticResource FieldLabelStyle}"/>
+                                            <TextBox Text="{Binding EditHolidayRate, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
                                         </StackPanel>
                                     </Grid>
                                     <Grid Margin="0,0,0,8">
                                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0">
-                                            <TextBlock Text="每日最長工時 (小時)" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                            <TextBox Text="{Binding EditDailyMaxHours, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}" Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                                            <TextBlock Text="每日最長工時 (小時)" Style="{StaticResource FieldLabelStyle}"/>
+                                            <TextBox Text="{Binding EditDailyMaxHours, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
                                         </StackPanel>
                                         <StackPanel Grid.Column="2">
-                                            <TextBlock Text="每週最長工時 (小時)" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                            <TextBox Text="{Binding EditWeeklyMaxHours, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}" Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                                            <TextBlock Text="每週最長工時 (小時)" Style="{StaticResource FieldLabelStyle}"/>
+                                            <TextBox Text="{Binding EditWeeklyMaxHours, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
                                         </StackPanel>
                                     </Grid>
                                 </StackPanel>
@@ -287,11 +258,11 @@
         <ScrollViewer Grid.Row="1"
                       Visibility="{Binding ShowLaborLaw, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel MaxWidth="800" HorizontalAlignment="Left">
-                <Border Background="{DynamicResource AppInfoBrush}" CornerRadius="16" Padding="20" Margin="0,0,0,24">
+                <Border Style="{StaticResource InfoBoxStyle}" Margin="0,0,0,24">
                     <StackPanel Orientation="Horizontal">
                         <md:PackIcon Kind="InformationOutline" Width="24" Height="24" Foreground="{DynamicResource AppInfoForegroundBrush}" VerticalAlignment="Top" Margin="0,2,14,0"/>
                         <TextBlock Text="以下數值僅供系統自動計算薪資時參考，請定期檢查並確保符合勞動部最新公告。"
-                                   TextWrapping="Wrap" Foreground="{DynamicResource AppInfoForegroundBrush}" FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"/>
+                                   TextWrapping="Wrap" Style="{StaticResource PageTitleStyle}" FontSize="{DynamicResource FontSizeBody}" Foreground="{DynamicResource AppInfoForegroundBrush}"/>
                     </StackPanel>
                 </Border>
 
@@ -301,14 +272,14 @@
                     <StackPanel Grid.Column="0">
                         <Expander Header="時薪人員標準" IsExpanded="True" Style="{StaticResource MaterialDesignExpander}" Margin="0,0,0,16">
                             <StackPanel Margin="16,8,16,8">
-                                <TextBlock Text="法定最低時薪 (元)" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                <TextBox Text="{Binding LaborLaw.HourlyMinimumWage}" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,16"/>
-                                <TextBlock Text="每日工時上限 (小時)" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                <TextBox Text="{Binding LaborLaw.HourlyDailyMaxHours}" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,16"/>
-                                <TextBlock Text="加班倍率 1（第 2 小時起）" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                <TextBox Text="{Binding LaborLaw.HourlyOT1Rate}" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,16"/>
-                                <TextBlock Text="加班倍率 2（第 3 小時起）" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                <TextBox Text="{Binding LaborLaw.HourlyOT2Rate}" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,8"/>
+                                <TextBlock Text="法定最低時薪 (元)" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding LaborLaw.HourlyMinimumWage}" Margin="0,0,0,16"/>
+                                <TextBlock Text="每日工時上限 (小時)" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding LaborLaw.HourlyDailyMaxHours}" Margin="0,0,0,16"/>
+                                <TextBlock Text="加班倍率 1（第 2 小時起）" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding LaborLaw.HourlyOT1Rate}" Margin="0,0,0,16"/>
+                                <TextBlock Text="加班倍率 2（第 3 小時起）" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding LaborLaw.HourlyOT2Rate}" Margin="0,0,0,8"/>
                             </StackPanel>
                         </Expander>
                     </StackPanel>
@@ -316,14 +287,14 @@
                     <StackPanel Grid.Column="2">
                         <Expander Header="月薪人員標準" IsExpanded="True" Style="{StaticResource MaterialDesignExpander}" Margin="0,0,0,16">
                             <StackPanel Margin="16,8,16,8">
-                                <TextBlock Text="法定最低月薪 (元)" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                <TextBox Text="{Binding LaborLaw.MonthlyMinimumWage}" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,16"/>
-                                <TextBlock Text="每日工時上限 (小時)" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                <TextBox Text="{Binding LaborLaw.MonthlyDailyMaxHours}" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,16"/>
-                                <TextBlock Text="加班倍率 1（第 2 小時起）" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                <TextBox Text="{Binding LaborLaw.MonthlyOT1Rate}" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,16"/>
-                                <TextBlock Text="加班倍率 2（第 3 小時起）" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                <TextBox Text="{Binding LaborLaw.MonthlyOT2Rate}" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,8"/>
+                                <TextBlock Text="法定最低月薪 (元)" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding LaborLaw.MonthlyMinimumWage}" Margin="0,0,0,16"/>
+                                <TextBlock Text="每日工時上限 (小時)" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding LaborLaw.MonthlyDailyMaxHours}" Margin="0,0,0,16"/>
+                                <TextBlock Text="加班倍率 1（第 2 小時起）" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding LaborLaw.MonthlyOT1Rate}" Margin="0,0,0,16"/>
+                                <TextBlock Text="加班倍率 2（第 3 小時起）" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding LaborLaw.MonthlyOT2Rate}" Margin="0,0,0,8"/>
                             </StackPanel>
                         </Expander>
                     </StackPanel>
@@ -333,12 +304,12 @@
                     <Grid Margin="16,8,16,8">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0">
-                            <TextBlock Text="假日加班費率 (×)" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                            <TextBox Text="{Binding LaborLaw.HolidayOTRate}" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,8"/>
+                            <TextBlock Text="假日加班費率 (×)" Style="{StaticResource FieldLabelStyle}"/>
+                            <TextBox Text="{Binding LaborLaw.HolidayOTRate}" Margin="0,0,0,8"/>
                         </StackPanel>
                         <StackPanel Grid.Column="2">
-                            <TextBlock Text="每月加班時數上限 (小時)" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                            <TextBox Text="{Binding LaborLaw.MaxMonthlyOTHours}" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,8"/>
+                            <TextBlock Text="每月加班時數上限 (小時)" Style="{StaticResource FieldLabelStyle}"/>
+                            <TextBox Text="{Binding LaborLaw.MaxMonthlyOTHours}" Margin="0,0,0,8"/>
                         </StackPanel>
                     </Grid>
                 </Expander>

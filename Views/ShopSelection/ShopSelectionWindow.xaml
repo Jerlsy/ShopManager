@@ -77,7 +77,7 @@
                     <ComboBox ItemsSource="{Binding Shops}"
                               SelectedItem="{Binding SelectedShop}"
                               DisplayMemberPath="Name"
-                              Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                             
                               md:HintAssist.Hint="請選擇店鋪..."
                               Margin="0,0,0,16"/>
 
@@ -90,7 +90,7 @@
                             <TextBlock Text="建立新據點" FontSize="{DynamicResource FontSizeSmallBody}" FontWeight="Bold" Foreground="{DynamicResource PrimaryHueMidBrush}" Margin="0,0,0,12"/>
                             <TextBlock Text="店鋪名稱 *" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
                             <TextBox Text="{Binding NewShopName, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+                                    />
                             <TextBlock Text="新店鋪將初始化獨立的員工與排班設定。" FontSize="{DynamicResource FontSizeSmall}" Opacity="0.5" Margin="4,8,0,0"/>
                         </StackPanel>
                     </Border>

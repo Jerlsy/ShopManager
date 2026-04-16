@@ -1,50 +1,34 @@
-﻿<UserControl x:Class="ShopManager.Views.ShopSettings.ShopSettingPage"
+<UserControl x:Class="ShopManager.Views.ShopSettings.ShopSettingPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:vm="clr-namespace:ShopManager.ViewModels">
 
-    <Border Padding="28,8,28,28">
-        <StackPanel>
-            <StackPanel.Resources>
-                <Style TargetType="Border" x:Key="SectionBorderStyle">
-                    <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}"/>
-                    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
-                    <Setter Property="BorderThickness" Value="1"/>
-                    <Setter Property="CornerRadius" Value="20"/>
-                    <Setter Property="Padding" Value="24"/>
-                    <Setter Property="Margin" Value="0,0,0,20"/>
-                </Style>
-            </StackPanel.Resources>
-
+    <ScrollViewer>
+        <StackPanel Margin="{StaticResource PageMargin}">
             <!-- 頁面標題 -->
-            <Border CornerRadius="20"
-                    Background="{DynamicResource AppSurfaceAltBrush}"
-                    BorderBrush="{DynamicResource AppBorderBrush}"
-                    BorderThickness="1"
-                    Padding="24"
-                    Margin="0,0,0,20">
+            <Border Style="{StaticResource PageHeaderStyle}">
                 <StackPanel>
-                    <TextBlock Text="店鋪與環境設定" FontSize="{DynamicResource FontSizePageTitle}" FontWeight="SemiBold"/>
+                    <TextBlock Text="店鋪與環境設定" Style="{StaticResource PageTitleStyle}"/>
                     <TextBlock Text="管理店鋪基本資訊、系統顯示風格、行事曆規則以及資料維護"
-                               Margin="0,8,0,0" Foreground="{DynamicResource AppSubtleForegroundBrush}"/>
+                               Style="{StaticResource SubtleTextStyle}" Margin="0,8,0,0"/>
                 </StackPanel>
             </Border>
 
             <!-- 店鋪資訊 -->
-            <Border Style="{StaticResource SectionBorderStyle}">
+            <Border Style="{StaticResource SectionCardStyle}" Margin="0,0,0,20">
                 <StackPanel>
-                    <TextBlock Text="店鋪資訊" FontSize="{DynamicResource FontSizeSection}" FontWeight="SemiBold" Margin="0,0,0,24"/>
-                    <TextBlock Text="店鋪名稱 *" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" md:TextFieldAssist.TextFieldCornerRadius="5" Margin="0,0,0,16"/>
-                    <TextBlock Text="地址" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" md:TextFieldAssist.TextFieldCornerRadius="5" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" VerticalContentAlignment="Top" Margin="0,0,0,16"/>
-                    <TextBlock Text="聯絡電話" FontSize="{DynamicResource FontSizeSmall}" Foreground="{DynamicResource PrimaryHueMidBrush}" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding Phone, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" md:TextFieldAssist.TextFieldCornerRadius="5" Margin="0,0,0,24"/>
+                    <TextBlock Text="店鋪資訊" Style="{StaticResource SectionTitleStyle}"/>
+                    <TextBlock Text="店鋪名稱 *" Style="{StaticResource FieldLabelStyle}"/>
+                    <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,16"/>
+                    <TextBlock Text="地址" Style="{StaticResource FieldLabelStyle}"/>
+                    <TextBox Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" VerticalContentAlignment="Top" Margin="0,0,0,16"/>
+                    <TextBlock Text="聯絡電話" Style="{StaticResource FieldLabelStyle}"/>
+                    <TextBox Text="{Binding Phone, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,24"/>
                     
                     <Border BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,1,0,0" Padding="0,20,0,0">
                         <Grid>
-                            <TextBlock Text="其他聯絡方式" FontSize="{DynamicResource FontSizeSubTitle}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <TextBlock Text="其他聯絡方式" Style="{StaticResource FormSectionStyle}" VerticalAlignment="Center" Margin="0"/>
                             <Button HorizontalAlignment="Right" Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding AddContactCommand}" Height="32" Padding="12,0">
                                 <StackPanel Orientation="Horizontal">
                                     <md:PackIcon Kind="Plus" Width="16" Height="16" Margin="0,0,4,0"/>
@@ -56,15 +40,15 @@
                     <ItemsControl ItemsSource="{Binding ContactInfos}" Margin="0,16,0,0">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Margin="0,0,0,12" Padding="16" CornerRadius="20" Background="{DynamicResource AppPanelAltBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+                                <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,12">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="120"/>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <ComboBox Grid.Column="0" Margin="0,0,12,0" ItemsSource="{Binding DataContext.ContactTypes, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding Type}" Style="{StaticResource MaterialDesignOutlinedComboBox}" md:HintAssist.Hint="類型"/>                                        
-                                        <TextBox Grid.Column="1" Margin="0,0,12,0" Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}" md:HintAssist.Hint="帳號/主網址" MinWidth="150"/>
+                                        <ComboBox Grid.Column="0" Margin="0,0,12,0" ItemsSource="{Binding DataContext.ContactTypes, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding Type}" md:HintAssist.Hint="類型"/>                                        
+                                        <TextBox Grid.Column="1" Margin="0,0,12,0" Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" md:HintAssist.Hint="帳號/主網址" MinWidth="150"/>
                                         <Button Grid.Column="2" Style="{StaticResource MaterialDesignIconButton}" Width="40" Height="40" Foreground="{DynamicResource MaterialDesign.Brush.ValidationError}" Command="{Binding DataContext.RemoveContactCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}"><md:PackIcon Kind="Delete" Width="20" Height="20"/></Button>
                                     </Grid>
                                 </Border>
@@ -75,18 +59,18 @@
             </Border>
 
             <!-- 行事曆規則 -->
-            <Border Style="{StaticResource SectionBorderStyle}">
+            <Border Style="{StaticResource SectionCardStyle}" Margin="0,0,0,20">
                 <StackPanel>
-                    <TextBlock Text="行事曆規則" FontSize="{DynamicResource FontSizeSection}" FontWeight="SemiBold" Margin="0,0,0,24"/>
-                    <Border Padding="18" CornerRadius="20" Background="{DynamicResource AppPanelAltBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Margin="0,0,0,16">
+                    <TextBlock Text="行事曆規則" Style="{StaticResource SectionTitleStyle}"/>
+                    <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,16">
                         <StackPanel>
-                            <TextBlock Text="預設一週起始日" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                            <ComboBox ItemsSource="{Binding WeekStartOptions}" SelectedItem="{Binding SelectedWeekStartDay}" DisplayMemberPath="Label" Style="{StaticResource MaterialDesignOutlinedComboBox}" md:HintAssist.Hint="起始日"/>
+                            <TextBlock Text="預設一週起始日" Style="{StaticResource FieldLabelStyle}" Margin="0,0,0,10"/>
+                            <ComboBox ItemsSource="{Binding WeekStartOptions}" SelectedItem="{Binding SelectedWeekStartDay}" DisplayMemberPath="Label" md:HintAssist.Hint="起始日"/>
                         </StackPanel>
                     </Border>
-                    <Border Padding="18" CornerRadius="20" Background="{DynamicResource AppPanelAltBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Margin="0,0,0,16">
+                    <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,16">
                         <StackPanel>
-                            <TextBlock Text="每週固定店休日" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                            <TextBlock Text="每週固定店休日" Style="{StaticResource FieldLabelStyle}" Margin="0,0,0,10"/>
                             <ItemsControl ItemsSource="{Binding ClosedDayOptions}">
                                 <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
@@ -95,12 +79,12 @@
                             </ItemsControl>
                         </StackPanel>
                     </Border>
-                    <Border Padding="18" CornerRadius="20" Background="{DynamicResource AppPanelAltBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+                    <Border Style="{StaticResource ItemCardStyle}">
                         <Grid>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                             <StackPanel>
-                                <TextBlock Text="國定假日是否休假" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                <TextBlock Text="{Binding IsHolidayOff, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter='國定假日放假|國定假日照常上班', Mode=OneWay}" FontSize="{DynamicResource FontSizeSmall}" Opacity="0.6"/>
+                                <TextBlock Text="國定假日是否休假" Style="{StaticResource FieldLabelStyle}" Margin="0,0,0,4"/>
+                                <TextBlock Text="{Binding IsHolidayOff, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter='國定假日放假|國定假日照常上班', Mode=OneWay}" Style="{StaticResource CaptionTextStyle}"/>
                             </StackPanel>
                             <ToggleButton Grid.Column="1" Style="{StaticResource MaterialDesignSwitchToggleButton}" IsChecked="{Binding IsHolidayOff}" VerticalAlignment="Center"/>
                         </Grid>
@@ -109,14 +93,14 @@
             </Border>
 
             <!-- 系統介面風格與顯示設定 -->
-            <Border Style="{StaticResource SectionBorderStyle}">
+            <Border Style="{StaticResource SectionCardStyle}" Margin="0,0,0,20">
                 <StackPanel>
-                    <TextBlock Text="系統介面風格與顯示設定" FontSize="{DynamicResource FontSizeSection}" FontWeight="SemiBold" Margin="0,0,0,24"/>
+                    <TextBlock Text="系統介面風格與顯示設定" Style="{StaticResource SectionTitleStyle}"/>
 
                     <!-- 配色主題 -->
-                    <Border Padding="18" CornerRadius="20" Background="{DynamicResource AppPanelAltBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Margin="0,0,0,16">
+                    <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,16">
                         <StackPanel>
-                            <TextBlock Text="配色主題" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                            <TextBlock Text="配色主題" Style="{StaticResource FieldLabelStyle}" Margin="0,0,0,12"/>
                             <WrapPanel>
                                 <Button Width="46" Height="46" Margin="0,0,10,10" Command="{Binding SetSkyBlueAccentCommand}" ToolTip="晴空藍" Style="{StaticResource MaterialDesignFloatingActionMiniButton}" Background="#03A9F4" BorderBrush="#01579B"/>
                                 <Button Width="46" Height="46" Margin="0,0,10,10" Command="{Binding SetMintGreenAccentCommand}" ToolTip="薄荷綠" Style="{StaticResource MaterialDesignFloatingActionMiniButton}" Background="#00C853" BorderBrush="#00471F"/>
@@ -131,7 +115,7 @@
                     </Border>
 
                     <!-- 自訂顏色 -->
-                    <Border Padding="18" CornerRadius="20" Background="{DynamicResource AppPanelAltBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Margin="0,0,0,16">
+                    <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,16">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -139,15 +123,15 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0" Margin="0,0,12,0">
-                                <TextBlock Text="自訂主色" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                <TextBlock Text="自訂主色" Style="{StaticResource FieldLabelStyle}" Margin="0,0,0,8"/>
                                 <TextBox Text="{Binding CustomPrimaryHex, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                        
                                          md:HintAssist.Hint="#1976D2"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Margin="12,0">
-                                <TextBlock Text="自訂副色" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                <TextBlock Text="自訂副色" Style="{StaticResource FieldLabelStyle}" Margin="0,0,0,8"/>
                                 <TextBox Text="{Binding CustomSecondaryHex, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                        
                                          md:HintAssist.Hint="#FF4081"/>
                             </StackPanel>
                             <Button Grid.Column="2" Style="{StaticResource MaterialDesignRaisedButton}"
@@ -157,17 +141,17 @@
                     </Border>
 
                     <!-- 字體大小 -->
-                    <Border Padding="18" CornerRadius="20" Background="{DynamicResource AppPanelAltBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Margin="0,0,0,16">
+                    <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,16">
                         <StackPanel>
                             <Grid Margin="0,0,0,8">
-                                <TextBlock Text="字體大小" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                <TextBlock Text="{Binding BaseFontSize, StringFormat={}{0:F1} pt}" Opacity="0.6" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                <TextBlock Text="字體大小" Style="{StaticResource FieldLabelStyle}" VerticalAlignment="Center" Margin="0"/>
+                                <TextBlock Text="{Binding BaseFontSize, StringFormat={}{0:F1} pt}" Style="{StaticResource CaptionTextStyle}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                             </Grid>
                             <Slider Minimum="11" Maximum="22" TickFrequency="0.5" IsSnapToTickEnabled="True"
                                     Value="{Binding BaseFontSize, Mode=TwoWay}"/>
                             <Grid Margin="0,4,0,0">
-                                <TextBlock Text="小 (11pt)" FontSize="{DynamicResource FontSizeCaption}" Opacity="0.5"/>
-                                <TextBlock Text="大 (22pt)" FontSize="{DynamicResource FontSizeCaption}" Opacity="0.5" HorizontalAlignment="Right"/>
+                                <TextBlock Text="小 (11pt)" Style="{StaticResource CaptionTextStyle}"/>
+                                <TextBlock Text="大 (22pt)" Style="{StaticResource CaptionTextStyle}" HorizontalAlignment="Right"/>
                             </Grid>
                             <Border Padding="12,8" Margin="0,12,0,0" CornerRadius="12" Background="{DynamicResource AppSurfaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
                                 <TextBlock Text="預覽：店鋪名稱、員工資料、排班管理 — 123456" TextWrapping="Wrap" FontFamily="{DynamicResource AppFontFamily}" FontSize="{Binding BaseFontSize}"/>
@@ -176,13 +160,13 @@
                     </Border>
 
                     <!-- 字型 -->
-                    <Border Padding="18" CornerRadius="20" Background="{DynamicResource AppPanelAltBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+                    <Border Style="{StaticResource ItemCardStyle}">
                         <StackPanel>
-                            <TextBlock Text="字型" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                            <TextBlock Text="字型" Style="{StaticResource FieldLabelStyle}" Margin="0,0,0,12"/>
                             <ComboBox ItemsSource="{Binding AvailableFontFamilies}"
                                       SelectedItem="{Binding SelectedFontFamily}"
                                       DisplayMemberPath="Name"
-                                      Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                     
                                       md:HintAssist.Hint="選擇字型"
                                       Width="280" HorizontalAlignment="Left"/>
                         </StackPanel>
@@ -191,9 +175,9 @@
             </Border>
 
             <!-- 危險區 -->
-            <Border Style="{StaticResource SectionBorderStyle}" BorderBrush="{DynamicResource MaterialDesign.Brush.ValidationError}">
+            <Border Style="{StaticResource SectionCardStyle}" BorderBrush="{DynamicResource MaterialDesign.Brush.ValidationError}" Margin="0,0,0,20">
                 <StackPanel>
-                    <TextBlock Text="危險區域" FontSize="{DynamicResource FontSizeSection}" FontWeight="SemiBold" Foreground="{DynamicResource MaterialDesign.Brush.ValidationError}" Margin="0,0,0,24"/>
+                    <TextBlock Text="危險區域" Style="{StaticResource SectionTitleStyle}" Foreground="{DynamicResource MaterialDesign.Brush.ValidationError}"/>
                     <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="{DynamicResource MaterialDesign.Brush.ValidationError}" Command="{Binding CloseShopCommand}" HorizontalAlignment="Left">
                         <StackPanel Orientation="Horizontal">
                             <md:PackIcon Kind="StoreOffOutline" Width="18" Height="18" Margin="0,0,8,0"/>
@@ -210,5 +194,5 @@
                 </StackPanel>
             </Button>
         </StackPanel>
-    </Border>
+    </ScrollViewer>
 </UserControl>
