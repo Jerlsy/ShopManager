@@ -66,6 +66,45 @@
 - [x] 重新設計 8 組清亮活潑的主題配色。
 - [x] 實作動態背景混色，讓淺色模式更有質感。
 - [x] 全面修正中文亂碼問題，統一編碼規範。
+- [x] 修正 TextBox / ComboBox 未套用 MD3 樣式（無圓角、無內距）問題。
+
+---
+
+## UI 樣式架構守則 (勿隨意修改)
+
+### 全域隱含樣式機制
+
+`App.xaml` 定義了 TextBox、ComboBox、PasswordBox 的**無 key 隱含樣式**，讓全站所有控制項自動繼承 MD3 的圓角、內距與字體：
+
+```xml
+<Style TargetType="{x:Type TextBox}" BasedOn="{StaticResource MaterialDesignOutlinedTextBox}">
+    <Setter Property="FontFamily" .../>
+    <Setter Property="md:TextFieldAssist.TextFieldCornerRadius" Value="5"/>
+    ...
+</Style>
+```
+
+這些隱含樣式 **BasedOn 套件原生的具名 key**（來自 `MaterialDesign3.Defaults.xaml`）。
+
+### 嚴禁製造循環 BasedOn
+
+**禁止**在 `App.xaml` 同一 ResourceDictionary 內同時定義：
+1. 隱含樣式 `BasedOn="{StaticResource MaterialDesignOutlinedTextBox}"` ← 參照本地具名 key
+2. 本地具名 key `BasedOn="{StaticResource {x:Type TextBox}}"` ← 參照同一隱含樣式
+
+這會形成循環參照，導致 MD3 樣式完全失效，控制項退回 WPF 預設外觀（無圓角、無邊框、無內距）。
+
+### 頁面內 TextBox / ComboBox 寫法
+
+各頁面的 TextBox / ComboBox **不需要**也**不應該**指定 `Style="{StaticResource MaterialDesignOutlinedTextBox}"`，隱含樣式會自動套用：
+
+```xml
+<!-- 正確 -->
+<TextBox Text="{Binding EditName}"/>
+
+<!-- 錯誤（冗餘，且若 App.xaml 定義了同名本地 key 會觸發循環） -->
+<TextBox Text="{Binding EditName}" Style="{StaticResource MaterialDesignOutlinedTextBox}"/>
+```
 
 ---
 
@@ -91,5 +130,5 @@ ShopManager/
 
 ---
 
-*最後更新時間：2026-04-15*
-*由 Gemini CLI 管理與維護*
+*最後更新時間：2026-04-17*
+*由 Claude Code 管理與維護*
