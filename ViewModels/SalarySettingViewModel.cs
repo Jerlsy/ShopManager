@@ -17,9 +17,17 @@ public partial class SalarySettingViewModel(
     [ObservableProperty] private LaborLawSetting _laborLaw = new();
 
     // 薪資清單
-    [ObservableProperty] private List<SalarySetting> _salaries = new();
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowEmptyHint))]
+    private List<SalarySetting> _salaries = new();
+
     [ObservableProperty] private SalarySetting? _selectedSalary;
-    [ObservableProperty] private bool _isEditing;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowEmptyHint))]
+    private bool _isEditing;
+
+    public bool ShowEmptyHint => !IsEditing && Salaries.Count == 0;
 
     // 編輯暫存
     [ObservableProperty] private string _editAlias = string.Empty;

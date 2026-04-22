@@ -12,6 +12,7 @@ public class ShopSetting
     [Required] public string Name { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;
     public string Phone { get; set; } = string.Empty;
+    public byte[]? LogoPhotoData { get; set; }
     public List<ContactInfo> ContactInfos { get; set; } = new();
 
     // ── 行事曆設定 ────────────────────────────

@@ -4,14 +4,19 @@
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:vm="clr-namespace:ShopManager.ViewModels">
 
-    <ScrollViewer>
-        <StackPanel Margin="{StaticResource PageMargin}">
+    <StackPanel Margin="{StaticResource PageMargin}">
             <!-- 頁面標題 -->
             <Border Style="{StaticResource PageHeaderStyle}">
-                <StackPanel>
-                    <TextBlock Text="店鋪與環境設定" Style="{StaticResource PageTitleStyle}"/>
-                    <TextBlock Text="管理店鋪基本資訊、系統顯示風格、行事曆規則以及資料維護"
-                               Style="{StaticResource SubtleTextStyle}" Margin="0,8,0,0"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="48" Height="48" CornerRadius="8" ClipToBounds="True" Margin="0,0,16,0"
+                            Visibility="{Binding DataContext.ShopLogoData, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NullToVisibilityConverter}}">
+                        <Image Source="{Binding DataContext.ShopLogoData, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BytesToImageConverter}}" Stretch="UniformToFill"/>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="店鋪與環境設定" Style="{StaticResource PageTitleStyle}"/>
+                        <TextBlock Text="管理店鋪基本資訊、系統顯示風格、行事曆規則以及資料維護"
+                                   Style="{StaticResource SubtleTextStyle}" Margin="0,8,0,0"/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 
@@ -19,6 +24,33 @@
             <Border Style="{StaticResource SectionCardStyle}" Margin="0,0,0,20">
                 <StackPanel>
                     <TextBlock Text="店鋪資訊" Style="{StaticResource SectionTitleStyle}"/>
+
+                    <!-- 店鋪 Logo -->
+                    <TextBlock Text="店鋪 Logo" Style="{StaticResource FieldLabelStyle}"/>
+                    <Button x:Name="PickLogoButton" Click="PickLogo_Click"
+                            HorizontalAlignment="Left" Margin="0,4,0,20"
+                            Style="{StaticResource MaterialDesignIconButton}"
+                            Width="100" Height="100"
+                            ToolTip="點擊上傳 Logo">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border Width="100" Height="100" CornerRadius="16"
+                                        Background="{DynamicResource AppPanelAltBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="2"
+                                        ClipToBounds="True" Cursor="Hand">
+                                    <Grid>
+                                        <Image Source="{Binding LogoPhotoData, Converter={StaticResource BytesToImageConverter}}"
+                                               Stretch="UniformToFill"
+                                               Visibility="{Binding LogoPhotoData, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                        <md:PackIcon Kind="StorefrontOutline" Width="36" Height="36" Opacity="0.35"
+                                                     HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                     Visibility="{Binding LogoPhotoData, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                                    </Grid>
+                                </Border>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+
                     <TextBlock Text="店鋪名稱 *" Style="{StaticResource FieldLabelStyle}"/>
                     <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,16"/>
                     <TextBlock Text="地址" Style="{StaticResource FieldLabelStyle}"/>
@@ -193,6 +225,5 @@
                     <TextBlock Text="儲存所有設定"/>
                 </StackPanel>
             </Button>
-        </StackPanel>
-    </ScrollViewer>
+    </StackPanel>
 </UserControl>

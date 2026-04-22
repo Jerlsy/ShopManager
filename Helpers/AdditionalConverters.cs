@@ -162,6 +162,24 @@ public class ColorMatchConverter : IMultiValueConverter
         throw new NotImplementedException();
 }
 
+/// <summary>byte[]? → BitmapImage（供大頭貼圖片顯示）</summary>
+[ValueConversion(typeof(byte[]), typeof(System.Windows.Media.ImageSource))]
+public class BytesToImageConverter : IValueConverter
+{
+    public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is not byte[] data || data.Length == 0) return null;
+        var bi = new System.Windows.Media.Imaging.BitmapImage();
+        bi.BeginInit();
+        bi.StreamSource = new System.IO.MemoryStream(data);
+        bi.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+        bi.EndInit();
+        return bi;
+    }
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotImplementedException();
+}
+
 /// <summary>hex 色碼字串 → SolidColorBrush（供班別色塊顯示）</summary>
 [ValueConversion(typeof(string), typeof(System.Windows.Media.SolidColorBrush))]
 public class HexToBrushConverter : IValueConverter

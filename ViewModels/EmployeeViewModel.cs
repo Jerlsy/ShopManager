@@ -1,21 +1,31 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MaterialDesignThemes.Wpf;
 using ShopManager.Models;
 using ShopManager.Services;
+using ShopManager.Views.Dialogs;
 
 namespace ShopManager.ViewModels;
 
-// ── 排班規則編輯用 UI 模型 ─────────────────────────────────
+// ── 排班規則 UI 模型 ────────────────────────────────────────
 
-/// <summary>可勾選的周幾選項（固定休假用）</summary>
 public partial class DayOfWeekItem : ObservableObject
 {
     public DayOfWeek Day { get; init; }
     public string Label { get; init; } = string.Empty;
+    public bool IsShopClosed { get; init; }
+    public bool IsUserEditable => !IsShopClosed;
     [ObservableProperty] private bool _isChecked;
 }
 
-/// <summary>可勾選的班別選項（排除班別用）</summary>
+public partial class AvailableDayItem : ObservableObject
+{
+    public DayOfWeek Day { get; init; }
+    public string Label { get; init; } = string.Empty;
+    [ObservableProperty] private bool _isAvailable;
+    public bool IsShopClosed { get; init; }
+}
+
 public partial class ShiftCheckItem : ObservableObject
 {
     public int ShiftId { get; init; }
@@ -23,7 +33,14 @@ public partial class ShiftCheckItem : ObservableObject
     [ObservableProperty] private bool _isChecked;
 }
 
-/// <summary>可勾選的同事選項（不與共事用）</summary>
+public partial class PreferShiftItem : ObservableObject
+{
+    public int? ShiftId { get; init; }   // null = 不限
+    public string Label { get; init; } = string.Empty;
+    [ObservableProperty] private bool _isSelected;
+    public bool IsUnlimited => ShiftId is null;
+}
+
 public partial class ColleagueCheckItem : ObservableObject
 {
     public int EmployeeId { get; init; }
@@ -38,16 +55,24 @@ public partial class EmployeeViewModel : ObservableObject
     private readonly EmployeeService _employeeService;
     private readonly ShiftSettingService _shiftService;
     private readonly SalarySettingService _salaryService;
+    private readonly ShopSettingService _shopSettingService;
     private readonly IAppSnackbarService _snackbarService;
     private readonly IAppDialogService _dialogService;
 
-    public EmployeeViewModel(EmployeeService employeeService,
-        ShiftSettingService shiftService, SalarySettingService salaryService,
-        IAppSnackbarService snackbarService, IAppDialogService dialogService)
+    private List<int> _shopClosedDays = new();
+
+    public EmployeeViewModel(
+        EmployeeService employeeService,
+        ShiftSettingService shiftService,
+        SalarySettingService salaryService,
+        ShopSettingService shopSettingService,
+        IAppSnackbarService snackbarService,
+        IAppDialogService dialogService)
     {
         _employeeService = employeeService;
         _shiftService = shiftService;
         _salaryService = salaryService;
+        _shopSettingService = shopSettingService;
         _snackbarService = snackbarService;
         _dialogService = dialogService;
 
@@ -64,41 +89,164 @@ public partial class EmployeeViewModel : ObservableObject
     }
 
     // ── 員工清單 ──────────────────────────────────────────
-    [ObservableProperty] private List<Employee> _employees = new();
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowEmptyHint))]
+    private List<Employee> _employees = new();
+
     [ObservableProperty] private Employee? _selectedEmployee;
-    [ObservableProperty] private bool _isEditing;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowEmptyHint))]
+    [NotifyPropertyChangedFor(nameof(ShowListCards))]
+    private bool _isEditing;
+
+    public bool ShowListCards => !IsEditing;
+
+    public bool ShowEmptyHint => !IsEditing && Employees.Count == 0;
 
     // ── 下拉選單來源 ───────────────────────────────────────
     [ObservableProperty] private List<ShiftSetting> _availableShifts = new();
     [ObservableProperty] private List<SalarySetting> _availableSalaries = new();
 
-    // ── 排班規則 UI 用清單 ─────────────────────────────────
+    // ── 排班規則 UI ────────────────────────────────────────
     public List<DayOfWeekItem> FixedOffDayItems { get; }
     [ObservableProperty] private List<ShiftCheckItem> _excludeShiftItems = new();
     [ObservableProperty] private List<ColleagueCheckItem> _notWithItems = new();
+    public bool HasNoColleagues => NotWithItems.Count == 0;
 
     // ── 基本編輯欄位 ───────────────────────────────────────
-    [ObservableProperty] private string _editName = string.Empty;
-    [ObservableProperty] private string _editIdNumber = string.Empty;
-    [ObservableProperty] private string _editAddress = string.Empty;
-    [ObservableProperty] private string _editPhone = string.Empty;
-    [ObservableProperty] private string? _editMessengerType;
-    [ObservableProperty] private string? _editMessengerValue;
-    [ObservableProperty] private List<CustomContact> _editCustomContacts = new();
-    [ObservableProperty] private ShiftSetting? _editDefaultShift;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IdNumberError))]
+    [NotifyPropertyChangedFor(nameof(IsIdValid))]
+    private string _editName = string.Empty;
+
+    [ObservableProperty] private string _editEnglishName = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IdNumberError))]
+    [NotifyPropertyChangedFor(nameof(IsIdValid))]
+    private string _editIdNumber = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BirthDays))]
+    private int? _editBirthYear;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BirthDays))]
+    private int? _editBirthMonth;
+
+    [ObservableProperty] private int? _editBirthDay;
+
+    [ObservableProperty] private byte[]? _editAvatarPhotoData;
+
+    [ObservableProperty] private List<ContactInfo> _editContactInfos = new();
+
     [ObservableProperty] private SalarySetting? _editDefaultSalary;
-    [ObservableProperty] private List<DefaultBonus> _editDefaultBonuses = new();
+    [ObservableProperty] private DateOnly? _editInterviewDate;
     [ObservableProperty] private DateOnly _editHireDate = DateOnly.FromDateTime(DateTime.Today);
     [ObservableProperty] private DateOnly? _editResignDate;
 
-    // ── 排班衝突 ───────────────────────────────────────────
+    // ── 衝突狀態 ──────────────────────────────────────────
     [ObservableProperty] private bool _hasConflicts;
     [ObservableProperty] private List<string> _conflictMonths = new();
 
-    public static List<string> MessengerTypes { get; } = new()
+    // ── 員工識別色色盤 ─────────────────────────────────────
+    private static readonly string[] _colorPalette =
+    [
+        "#A8D8EA", "#A8E6CF", "#FFCCB6", "#C6ADFF", "#FFD3B6",
+        "#B5EAD7", "#C7CEEA", "#FFB7C5", "#B5E7B0", "#FAE5A0",
+        "#F4C2C2", "#AEE1E1", "#F9D8A0", "#B8D8F8", "#D4EAB0",
+        "#F0B8D8", "#B8E8D0", "#E8D0F8", "#F8D0B8", "#C8E8F8",
+        "#F8E8B0", "#D0D8F8", "#B8F0D8", "#F8C8C8"
+    ];
+
+    // ── 靜態資料 ──────────────────────────────────────────
+    public static List<string> EmployeeContactTypes { get; } = new()
     {
-        "Line", "Messenger", "WeChat", "WhatsApp", "Telegram", "Signal"
+        "電話", "Email", "Line", "WhatsApp", "Telegram",
+        "WeChat", "Facebook", "Instagram", "其他"
     };
+
+    public static List<int> BirthYears { get; } =
+        Enumerable.Range(1940, DateTime.Today.Year - 1940 + 1).Reverse().ToList();
+
+    public static List<int> BirthMonths { get; } = Enumerable.Range(1, 12).ToList();
+
+    public static List<string> BirthMonthLabels { get; } =
+        Enumerable.Range(1, 12).Select(m => $"{m} 月").ToList();
+
+    public List<int> BirthDays =>
+        (EditBirthYear.HasValue && EditBirthMonth.HasValue)
+            ? Enumerable.Range(1, DateTime.DaysInMonth(EditBirthYear.Value, EditBirthMonth.Value)).ToList()
+            : Enumerable.Range(1, 31).ToList();
+
+    // ── 身分證驗證 ────────────────────────────────────────
+    public string? IdNumberError
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(EditIdNumber)) return "身分證為必填";
+            return ValidateTaiwanId(EditIdNumber) ? null : "身分證格式不正確";
+        }
+    }
+    public bool IsIdValid => IdNumberError == null;
+
+    private static readonly Dictionary<char, int> _idLetterMap = new()
+    {
+        {'A',10},{'B',11},{'C',12},{'D',13},{'E',14},{'F',15},{'G',16},{'H',17},
+        {'I',34},{'J',18},{'K',19},{'L',20},{'M',21},{'N',22},{'O',35},{'P',23},
+        {'Q',24},{'R',25},{'S',26},{'T',27},{'U',28},{'V',29},{'W',32},{'X',30},
+        {'Y',31},{'Z',33}
+    };
+
+    public static bool ValidateTaiwanId(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id)) return false;
+        id = id.Trim().ToUpper();
+        if (id.Length != 10) return false;
+        if (!_idLetterMap.TryGetValue(id[0], out int code)) return false;
+        for (int i = 1; i < 10; i++)
+            if (!char.IsDigit(id[i])) return false;
+        int[] weights = { 1, 9, 8, 7, 6, 5, 4, 3, 2, 1, 1 };
+        int[] digits = new int[11];
+        digits[0] = code / 10;
+        digits[1] = code % 10;
+        for (int i = 2; i <= 10; i++) digits[i] = id[i - 1] - '0';
+        return digits.Zip(weights, (d, w) => d * w).Sum() % 10 == 0;
+    }
+
+    // ── 摘要顯示（對話框按鈕用） ──────────────────────────
+    public string SalarySummary =>
+        EditDefaultSalary is null ? "未設定" : EditDefaultSalary.Alias;
+
+    public string ScheduleRulesSummary
+    {
+        get
+        {
+            var parts = new List<string>();
+            var offDays = FixedOffDayItems.Where(d => d.IsChecked).ToList();
+            if (offDays.Any()) parts.Add($"休 {string.Join("", offDays.Select(d => d.Label))}");
+            var excCount = ExcludeShiftItems.Count(s => s.IsChecked);
+            if (excCount > 0) parts.Add($"排除 {excCount} 個班別");
+            var nwCount = NotWithItems.Count(e => e.IsChecked);
+            if (nwCount > 0) parts.Add($"不與 {nwCount} 人共事");
+            return parts.Count == 0 ? "未設定" : string.Join("・", parts);
+        }
+    }
+
+    public string EmploymentSummary
+    {
+        get
+        {
+            if (EditHireDate == default) return "未設定到職日";
+            var s = EditHireDate.ToString("yyyy/MM/dd") + " 到職";
+            if (EditInterviewDate.HasValue)
+                s = EditInterviewDate.Value.ToString("yyyy/MM/dd") + " 面試 · " + s;
+            if (EditResignDate.HasValue)
+                s += " · " + EditResignDate.Value.ToString("yyyy/MM/dd") + " 離職";
+            return s;
+        }
+    }
 
     // ══════════════════════════════════════════════════════
     // 載入資料
@@ -108,6 +256,8 @@ public partial class EmployeeViewModel : ObservableObject
         Employees = await _employeeService.GetAllAsync();
         AvailableShifts = (await _shiftService.GetAllAsync()).Where(s => s.IsEnabled).ToList();
         AvailableSalaries = await _salaryService.GetAllAsync();
+        var shopSetting = await _shopSettingService.GetAsync();
+        _shopClosedDays = shopSetting?.ClosedDaysOfWeek ?? new List<int>();
     }
 
     private async Task LoadScheduleRuleSourcesAsync(int? currentEmployeeId = null)
@@ -118,12 +268,12 @@ public partial class EmployeeViewModel : ObservableObject
             .Select(s => new ShiftCheckItem { ShiftId = s.Id, Alias = s.Alias })
             .ToList();
 
-        var allActive = Employees.Where(e =>
-            !e.IsResigned && e.Id != (currentEmployeeId ?? -1)).ToList();
-
-        NotWithItems = allActive
+        NotWithItems = Employees
+            .Where(e => !e.IsResigned && e.Id != (currentEmployeeId ?? -1))
             .Select(e => new ColleagueCheckItem { EmployeeId = e.Id, Name = e.Name })
             .ToList();
+
+        OnPropertyChanged(nameof(HasNoColleagues));
     }
 
     // ══════════════════════════════════════════════════════
@@ -150,35 +300,105 @@ public partial class EmployeeViewModel : ObservableObject
 
         SelectedEmployee = emp;
         EditName = emp.Name;
+        EditEnglishName = emp.EnglishName ?? string.Empty;
         EditIdNumber = emp.IdNumber;
-        EditAddress = emp.Address;
-        EditPhone = emp.Phone;
-        EditMessengerType = emp.MessengerType;
-        EditMessengerValue = emp.MessengerValue;
-        EditCustomContacts = new List<CustomContact>(emp.CustomContacts);
-        EditDefaultShift = AvailableShifts.FirstOrDefault(s => s.Id == emp.DefaultShiftId);
-        EditDefaultSalary = AvailableSalaries.FirstOrDefault(s => s.Id == emp.DefaultSalaryId);
-        EditDefaultBonuses = new List<DefaultBonus>(emp.DefaultBonuses);
-        EditHireDate = emp.HireDate;
-        EditResignDate = emp.ResignDate;
+        EditAvatarPhotoData = emp.AvatarPhotoData;
 
+        if (emp.BirthDate.HasValue)
+        {
+            EditBirthYear  = emp.BirthDate.Value.Year;
+            EditBirthMonth = emp.BirthDate.Value.Month;
+            EditBirthDay   = emp.BirthDate.Value.Day;
+        }
+
+        EditContactInfos   = new List<ContactInfo>(emp.ContactInfos);
+        EditDefaultSalary  = AvailableSalaries.FirstOrDefault(s => s.Id == emp.DefaultSalaryId);
+        EditInterviewDate  = emp.InterviewDate;
+        EditHireDate       = emp.HireDate == default ? DateOnly.FromDateTime(DateTime.Today) : emp.HireDate;
+        EditResignDate     = emp.ResignDate;
+
+        // 固定休假
         var fixedOffRule = emp.ScheduleRules.FirstOrDefault(r => r.Type == ScheduleRuleType.FixedOff);
-        var excludeShiftRule = emp.ScheduleRules.FirstOrDefault(r => r.Type == ScheduleRuleType.ExcludeShift);
-        var notWithRule = emp.ScheduleRules.FirstOrDefault(r => r.Type == ScheduleRuleType.NotWith);
-
         var fixedOffDays = fixedOffRule?.FixedOffDays ?? new List<int>();
         foreach (var item in FixedOffDayItems)
             item.IsChecked = fixedOffDays.Contains((int)item.Day);
 
-        var excludedShiftIds = excludeShiftRule?.ExcludedShiftIds ?? new List<int>();
+        // 排除班別
+        var excludeRule = emp.ScheduleRules.FirstOrDefault(r => r.Type == ScheduleRuleType.ExcludeShift);
+        var excludedIds = excludeRule?.ExcludedShiftIds ?? new List<int>();
         foreach (var item in ExcludeShiftItems)
-            item.IsChecked = excludedShiftIds.Contains(item.ShiftId);
+            item.IsChecked = excludedIds.Contains(item.ShiftId);
 
-        var excludedColleagueIds = notWithRule?.ExcludedColleagueIds ?? new List<int>();
+        // 不與共事
+        var notWithRule = emp.ScheduleRules.FirstOrDefault(r => r.Type == ScheduleRuleType.NotWith);
+        var notWithIds = notWithRule?.ExcludedColleagueIds ?? new List<int>();
         foreach (var item in NotWithItems)
-            item.IsChecked = excludedColleagueIds.Contains(item.EmployeeId);
+            item.IsChecked = notWithIds.Contains(item.EmployeeId);
 
+        OnPropertyChanged(nameof(SalarySummary));
+        OnPropertyChanged(nameof(EmploymentSummary));
+        OnPropertyChanged(nameof(ScheduleRulesSummary));
         IsEditing = true;
+    }
+
+    // ══════════════════════════════════════════════════════
+    // 大頭貼
+    // ══════════════════════════════════════════════════════
+    public void SetAvatarPhoto(byte[] data)
+    {
+        EditAvatarPhotoData = data;
+    }
+
+    // ══════════════════════════════════════════════════════
+    // 對話框：薪資設定
+    // ══════════════════════════════════════════════════════
+    [RelayCommand]
+    private async Task OpenSalaryDialogAsync()
+    {
+        var dialog = new SalarySettingDialog(AvailableSalaries, EditDefaultSalary);
+        var result = await DialogHost.Show(dialog, "RootDialog");
+        if (result is SalaryDialogResult r)
+        {
+            EditDefaultSalary = r.Plan;
+            OnPropertyChanged(nameof(SalarySummary));
+        }
+    }
+
+    // ══════════════════════════════════════════════════════
+    // 對話框：到職設定
+    // ══════════════════════════════════════════════════════
+    [RelayCommand]
+    private async Task OpenEmploymentDialogAsync()
+    {
+        var dialog = new EmploymentDialog(EditInterviewDate, EditHireDate, EditResignDate);
+        var result = await DialogHost.Show(dialog, "RootDialog");
+        if (result is EmploymentDialogResult r)
+        {
+            EditInterviewDate = r.InterviewDate;
+            EditHireDate      = r.HireDate;
+            EditResignDate    = r.ResignDate;
+            OnPropertyChanged(nameof(EmploymentSummary));
+        }
+    }
+
+    // ══════════════════════════════════════════════════════
+    // 對話框：排班規則
+    // ══════════════════════════════════════════════════════
+    [RelayCommand]
+    private async Task OpenScheduleRulesDialogAsync()
+    {
+        var dialog = new Views.Dialogs.ScheduleRulesDialog(FixedOffDayItems, ExcludeShiftItems, NotWithItems, _shopClosedDays);
+        var result = await DialogHost.Show(dialog, "RootDialog");
+        if (result is Views.Dialogs.ScheduleRulesDialogResult r)
+        {
+            foreach (var d in FixedOffDayItems)
+                d.IsChecked = r.FixedOffDays.Contains((int)d.Day);
+            foreach (var s in ExcludeShiftItems)
+                s.IsChecked = r.ExcludedShiftIds.Contains(s.ShiftId);
+            foreach (var e in NotWithItems)
+                e.IsChecked = r.NotWithEmployeeIds.Contains(e.EmployeeId);
+            OnPropertyChanged(nameof(ScheduleRulesSummary));
+        }
     }
 
     // ══════════════════════════════════════════════════════
@@ -187,6 +407,17 @@ public partial class EmployeeViewModel : ObservableObject
     [RelayCommand]
     public async Task SaveAsync()
     {
+        if (string.IsNullOrWhiteSpace(EditName))
+        {
+            _snackbarService.ShowError("姓名為必填");
+            return;
+        }
+        if (!IsIdValid)
+        {
+            _snackbarService.ShowError(IdNumberError!);
+            return;
+        }
+
         if (EditResignDate.HasValue && SelectedEmployee is not null)
         {
             var conflicts = await _employeeService.CheckScheduleAfterResignAsync(
@@ -211,56 +442,47 @@ public partial class EmployeeViewModel : ObservableObject
     private async Task DoSaveAsync()
     {
         var emp = SelectedEmployee ?? new Employee();
-        emp.Name = EditName;
-        emp.IdNumber = EditIdNumber;
-        emp.Address = EditAddress;
-        emp.Phone = EditPhone;
-        emp.MessengerType = EditMessengerType;
-        emp.MessengerValue = EditMessengerValue;
-        emp.CustomContacts = EditCustomContacts;
-        emp.DefaultShiftId = EditDefaultShift?.Id;
+        emp.Name         = EditName;
+        emp.EnglishName  = string.IsNullOrWhiteSpace(EditEnglishName) ? null : EditEnglishName.Trim();
+        emp.IdNumber     = EditIdNumber;
+        emp.AvatarPhotoData = EditAvatarPhotoData;
+        emp.BirthDate    = (EditBirthYear.HasValue && EditBirthMonth.HasValue && EditBirthDay.HasValue)
+            ? new DateOnly(EditBirthYear.Value, EditBirthMonth.Value, EditBirthDay.Value)
+            : null;
+        emp.ContactInfos    = EditContactInfos;
         emp.DefaultSalaryId = EditDefaultSalary?.Id;
-        emp.DefaultBonuses = EditDefaultBonuses;
-        emp.HireDate = EditHireDate;
-        emp.ResignDate = EditResignDate;
+        emp.InterviewDate   = EditInterviewDate;
+        emp.HireDate        = EditHireDate;
+        emp.ResignDate      = EditResignDate;
 
+        // 排班規則
         var rules = new List<ScheduleRule>();
 
-        var checkedOffDays = FixedOffDayItems.Where(d => d.IsChecked)
-            .Select(d => (int)d.Day).ToList();
-        if (checkedOffDays.Any())
-            rules.Add(new ScheduleRule
-            {
-                EmployeeId = emp.Id,
-                Type = ScheduleRuleType.FixedOff,
-                FixedOffDays = checkedOffDays
-            });
+        var offDays = FixedOffDayItems.Where(d => d.IsChecked).Select(d => (int)d.Day).ToList();
+        if (offDays.Any())
+            rules.Add(new ScheduleRule { EmployeeId = emp.Id, Type = ScheduleRuleType.FixedOff, FixedOffDays = offDays });
 
-        var checkedShiftIds = ExcludeShiftItems.Where(s => s.IsChecked)
-            .Select(s => s.ShiftId).ToList();
-        if (checkedShiftIds.Any())
-            rules.Add(new ScheduleRule
-            {
-                EmployeeId = emp.Id,
-                Type = ScheduleRuleType.ExcludeShift,
-                ExcludedShiftIds = checkedShiftIds
-            });
+        var excludedShifts = ExcludeShiftItems.Where(s => s.IsChecked).Select(s => s.ShiftId).ToList();
+        if (excludedShifts.Any())
+            rules.Add(new ScheduleRule { EmployeeId = emp.Id, Type = ScheduleRuleType.ExcludeShift, ExcludedShiftIds = excludedShifts });
 
-        var checkedColleagueIds = NotWithItems.Where(c => c.IsChecked)
-            .Select(c => c.EmployeeId).ToList();
-        if (checkedColleagueIds.Any())
-            rules.Add(new ScheduleRule
-            {
-                EmployeeId = emp.Id,
-                Type = ScheduleRuleType.NotWith,
-                ExcludedColleagueIds = checkedColleagueIds
-            });
+        var notWithIds = NotWithItems.Where(e => e.IsChecked).Select(e => e.EmployeeId).ToList();
+        if (notWithIds.Any())
+            rules.Add(new ScheduleRule { EmployeeId = emp.Id, Type = ScheduleRuleType.NotWith, ExcludedColleagueIds = notWithIds });
 
         emp.ScheduleRules = rules;
 
-        if (SelectedEmployee is null) await _employeeService.AddAsync(emp);
-        else await _employeeService.UpdateAsync(emp);
+        if (SelectedEmployee is null)
+        {
+            emp.ColorHex = _colorPalette[Employees.Count % _colorPalette.Length];
+            await _employeeService.AddAsync(emp);
+        }
+        else
+        {
+            await _employeeService.UpdateAsync(emp);
+        }
 
+        SelectedEmployee = null;
         IsEditing = false;
         await LoadAsync();
         _snackbarService.ShowSuccess("員工資料已儲存");
@@ -276,9 +498,7 @@ public partial class EmployeeViewModel : ObservableObject
             "確認刪除",
             $"確定要刪除員工「{emp.Name}」嗎？此操作無法復原。",
             "刪除", "取消");
-
         if (!confirmed) return;
-
         await _employeeService.DeleteAsync(emp.Id);
         await LoadAsync();
     }
@@ -286,55 +506,55 @@ public partial class EmployeeViewModel : ObservableObject
     [RelayCommand]
     public void Cancel()
     {
+        SelectedEmployee = null;
         IsEditing = false;
         HasConflicts = false;
     }
 
     // ══════════════════════════════════════════════════════
-    // 自訂聯絡方式 / 預設獎金
+    // 聯絡方式
     // ══════════════════════════════════════════════════════
     [RelayCommand]
-    public void AddCustomContact() =>
-        EditCustomContacts = new List<CustomContact>(EditCustomContacts) { new() };
+    public void AddContactInfo() =>
+        EditContactInfos = new List<ContactInfo>(EditContactInfos)
+        {
+            new() { Type = "電話" }
+        };
 
     [RelayCommand]
-    public void RemoveCustomContact(CustomContact c)
+    public void RemoveContactInfo(ContactInfo c)
     {
-        var list = new List<CustomContact>(EditCustomContacts);
+        var list = new List<ContactInfo>(EditContactInfos);
         list.Remove(c);
-        EditCustomContacts = list;
+        EditContactInfos = list;
     }
 
-    [RelayCommand]
-    public void AddBonus() =>
-        EditDefaultBonuses = new List<DefaultBonus>(EditDefaultBonuses) { new() };
-
-    [RelayCommand]
-    public void RemoveBonus(DefaultBonus b)
-    {
-        var list = new List<DefaultBonus>(EditDefaultBonuses);
-        list.Remove(b);
-        EditDefaultBonuses = list;
-    }
-
+    // ══════════════════════════════════════════════════════
+    // 清除欄位
+    // ══════════════════════════════════════════════════════
     private void ClearEditFields()
     {
-        EditName = string.Empty;
-        EditIdNumber = string.Empty;
-        EditAddress = string.Empty;
-        EditPhone = string.Empty;
-        EditMessengerType = null;
-        EditMessengerValue = null;
-        EditCustomContacts = new();
-        EditDefaultShift = null;
-        EditDefaultSalary = null;
-        EditDefaultBonuses = new();
-        EditHireDate = DateOnly.FromDateTime(DateTime.Today);
-        EditResignDate = null;
-        HasConflicts = false;
-        ConflictMonths = new();
-        foreach (var d in FixedOffDayItems) d.IsChecked = false;
+        EditName           = string.Empty;
+        EditEnglishName    = string.Empty;
+        EditIdNumber       = string.Empty;
+        EditAvatarPhotoData = null;
+        EditBirthYear      = null;
+        EditBirthMonth     = null;
+        EditBirthDay       = null;
+        EditContactInfos   = new();
+        EditDefaultSalary  = null;
+        EditInterviewDate  = null;
+        EditHireDate       = DateOnly.FromDateTime(DateTime.Today);
+        EditResignDate     = null;
+        HasConflicts       = false;
+        ConflictMonths     = new();
+
+        foreach (var d in FixedOffDayItems)  d.IsChecked = false;
         foreach (var s in ExcludeShiftItems) s.IsChecked = false;
-        foreach (var c in NotWithItems) c.IsChecked = false;
+        foreach (var e in NotWithItems)      e.IsChecked = false;
+
+        OnPropertyChanged(nameof(SalarySummary));
+        OnPropertyChanged(nameof(EmploymentSummary));
+        OnPropertyChanged(nameof(ScheduleRulesSummary));
     }
 }

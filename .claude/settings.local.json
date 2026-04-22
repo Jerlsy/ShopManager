@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build *)",
+      "Bash(python -c ' *)",
+      "Bash(taskkill /PID 7024 /F)",
+      "Bash(cmd /c \"taskkill /PID 7024 /F\")",
+      "Bash(xargs grep *)",
+      "Bash(python -c \"from PIL import Image; print\\('Pillow OK'\\)\")",
+      "Bash(pip install *)",
+      "Bash(python -c \"from PIL import Image; print\\('OK'\\)\")",
+      "Bash(del *)",
+      "Bash(curl *)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(python -m json.tool)",
+      "Bash(python -c \"import json,sys; data=json.load\\(sys.stdin\\); holidays=[d for d in data if d['isHoliday'] and d['date'].startswith\\('202604'\\)]; print\\(json.dumps\\(holidays, ensure_ascii=False, indent=2\\)\\)\")"
+    ]
+  }
+}

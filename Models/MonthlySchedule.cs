@@ -20,8 +20,19 @@ public class MonthlySchedule
     /// <summary>班表狀態</summary>
     public ScheduleStatus Status { get; set; } = ScheduleStatus.Draft;
 
+    /// <summary>套用班別設定（哪些班別在哪幾天出現）</summary>
+    public List<ShiftDayConfig> ShiftDayConfigs { get; set; } = new();
+
     /// <summary>該月的排班記錄</summary>
     public List<ScheduleEntry> Entries { get; set; } = new();
+}
+
+/// <summary>班別-星期對應設定（建立班表時指定）</summary>
+public class ShiftDayConfig
+{
+    public int ShiftId { get; set; }
+    /// <summary>套用的星期幾清單（0=Sunday, 1=Monday, …）</summary>
+    public List<int> DaysOfWeek { get; set; } = new();
 }
 
 public enum ScheduleStatus

@@ -27,11 +27,13 @@ public partial class App : Application
         ConfigureServices(services);
         Services = services.BuildServiceProvider();
 
-        // 確保資料庫已建立。
+        // 確保資料庫已建立，並補齊新增欄位。
         using (var scope = Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Database.EnsureCreated();
+            MigrateColumns(db);
+            MigrateEmployeeColors(db);
         }
 
         // 套用儲存中的主題偏好。
@@ -57,6 +59,56 @@ public partial class App : Application
         MainWindow = mainWindow;
         ShutdownMode = ShutdownMode.OnMainWindowClose;
         mainWindow.Show();
+    }
+
+    // 員工識別色色盤（中飽和度、淺色調，確保深色文字可讀）
+    internal static readonly string[] EmployeeColorPalette =
+    [
+        "#A8D8EA", "#A8E6CF", "#FFCCB6", "#C6ADFF", "#FFD3B6",
+        "#B5EAD7", "#C7CEEA", "#FFB7C5", "#B5E7B0", "#FAE5A0",
+        "#F4C2C2", "#AEE1E1", "#F9D8A0", "#B8D8F8", "#D4EAB0",
+        "#F0B8D8", "#B8E8D0", "#E8D0F8", "#F8D0B8", "#C8E8F8",
+        "#F8E8B0", "#D0D8F8", "#B8F0D8", "#F8C8C8"
+    ];
+
+    private static void MigrateColumns(Data.AppDbContext db)
+    {
+        var conn = db.Database.GetDbConnection();
+        conn.Open();
+        try
+        {
+            var cols = new[]
+            {
+                ("Employees",       "EnglishName",      "TEXT"),
+                ("Employees",       "BirthDate",         "TEXT"),
+                ("Employees",       "AvatarPhotoData",   "BLOB"),
+                ("Employees",       "InterviewDate",     "TEXT"),
+                ("Employees",       "ContactInfos",      "TEXT NOT NULL DEFAULT '[]'"),
+                ("Employees",       "PreferredShiftIds", "TEXT NOT NULL DEFAULT '[]'"),
+                ("Employees",       "ColorHex",          "TEXT NOT NULL DEFAULT ''"),
+                ("MonthlySchedules","ShiftDayConfigs",   "TEXT NOT NULL DEFAULT '[]'"),
+                ("ShopSettings",    "LogoPhotoData",     "BLOB"),
+            };
+            foreach (var (table, col, type) in cols)
+            {
+                try
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = $"ALTER TABLE \"{table}\" ADD COLUMN \"{col}\" {type}";
+                    cmd.ExecuteNonQuery();
+                }
+                catch { /* 欄位已存在時 SQLite 拋出例外，忽略即可 */ }
+            }
+        }
+        finally { conn.Close(); }
+    }
+
+    private static void MigrateEmployeeColors(Data.AppDbContext db)
+    {
+        var employees = db.Employees.Where(e => e.ColorHex == "").ToList();
+        for (int i = 0; i < employees.Count; i++)
+            employees[i].ColorHex = EmployeeColorPalette[i % EmployeeColorPalette.Length];
+        if (employees.Count > 0) db.SaveChanges();
     }
 
     private static void ConfigureServices(ServiceCollection services)

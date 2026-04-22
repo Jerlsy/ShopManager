@@ -22,6 +22,7 @@ public class ShopSettingService(AppDbContext db, ShopContext shopContext)
             existing.Name = setting.Name;
             existing.Address = setting.Address;
             existing.Phone = setting.Phone;
+            existing.LogoPhotoData = setting.LogoPhotoData;
             existing.ContactInfos = setting.ContactInfos;
             existing.WeekStartDay = setting.WeekStartDay;
             existing.ClosedDaysOfWeek = setting.ClosedDaysOfWeek;

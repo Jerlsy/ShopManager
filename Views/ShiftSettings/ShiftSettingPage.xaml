@@ -15,10 +15,16 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <StackPanel>
-                    <TextBlock Text="班別設定" Style="{StaticResource PageTitleStyle}"/>
-                    <TextBlock Text="為各班別設定打卡時間與識別顏色，排班時可直接套用並快速新增排班"
-                               Style="{StaticResource SubtleTextStyle}" Margin="0,8,0,0"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="48" Height="48" CornerRadius="8" ClipToBounds="True" Margin="0,0,16,0"
+                            Visibility="{Binding DataContext.ShopLogoData, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NullToVisibilityConverter}}">
+                        <Image Source="{Binding DataContext.ShopLogoData, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BytesToImageConverter}}" Stretch="UniformToFill"/>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="班別設定" Style="{StaticResource PageTitleStyle}"/>
+                        <TextBlock Text="為各班別設定打卡時間與識別顏色，排班時可直接套用並快速新增排班"
+                                   Style="{StaticResource SubtleTextStyle}" Margin="0,8,0,0"/>
+                    </StackPanel>
                 </StackPanel>
                 <Button Grid.Column="1"
                         Style="{StaticResource MaterialDesignRaisedButton}"
@@ -33,18 +39,17 @@
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="380"/>
-                <ColumnDefinition Width="20"/>
+                <ColumnDefinition Width="280"/>
+                <ColumnDefinition Width="10"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
+            <!-- 班別列表 -->
             <Border Grid.Column="0" Style="{StaticResource SectionCardStyle}">
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top" Text="班別列表" Style="{StaticResource SectionTitleStyle}"/>
-
                     <ListBox ItemsSource="{Binding Shifts}"
                              SelectedItem="{Binding SelectedShift}"
-                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                              Style="{StaticResource MaterialDesignListBox}">
                         <ListBox.ItemContainerStyle>
                             <Style TargetType="ListBoxItem" BasedOn="{StaticResource MaterialDesignListBoxItem}">
@@ -141,7 +146,7 @@
                 <!-- 空狀態提示 -->
                 <StackPanel HorizontalAlignment="Center"
                             VerticalAlignment="Center"
-                            Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
+                            Visibility="{Binding ShowEmptyHint, Converter={StaticResource BoolToVisibilityConverter}}">
                     <md:PackIcon Kind="ClockOutline"
                                  Width="80" Height="80"
                                  Opacity="0.12"
@@ -154,8 +159,9 @@
                 </StackPanel>
 
                 <!-- 編輯表單 -->
-                <ScrollViewer Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <Border Style="{StaticResource EditFormCardStyle}" MaxWidth="640" HorizontalAlignment="Left">
+                <Border Style="{StaticResource EditFormCardStyle}" HorizontalAlignment="Stretch"
+                        Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}}"
+                        VerticalAlignment="Top">
                         <StackPanel>
                             <TextBlock Text="{Binding SelectedShift, Converter={StaticResource NullToStringConverter}, ConverterParameter='新增班別|編輯班別'}"
                                        FontSize="{DynamicResource FontSizeListTitle}"
@@ -319,7 +325,6 @@
                             </StackPanel>
                         </StackPanel>
                     </Border>
-                </ScrollViewer>
             </Grid>
         </Grid>
     </Grid>

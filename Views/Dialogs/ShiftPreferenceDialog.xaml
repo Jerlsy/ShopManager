@@ -1,0 +1,72 @@
+<UserControl x:Class="ShopManager.Views.Dialogs.ShiftPreferenceDialog"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+             MinWidth="420" MaxWidth="560">
+    <Border Background="{DynamicResource AppSurfaceBrush}"
+            BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
+            CornerRadius="20" Padding="28,24,28,16">
+        <StackPanel>
+            <TextBlock Text="班別偏好設定"
+                       FontSize="{DynamicResource FontSizeDialogTitle}" FontWeight="SemiBold"
+                       Margin="0,0,0,20"/>
+
+            <!-- 可排班日 -->
+            <TextBlock Text="可排班日" Style="{StaticResource FormSectionStyle}"/>
+            <ItemsControl x:Name="DayItemsControl" Margin="0,0,0,20">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <CheckBox IsChecked="{Binding IsAvailable, Mode=TwoWay}" Margin="0,0,20,8">
+                            <CheckBox.Style>
+                                <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+                                    <Setter Property="Content" Value="{Binding Label}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsShopClosed}" Value="True">
+                                            <Setter Property="IsEnabled" Value="False"/>
+                                            <Setter Property="Opacity" Value="0.35"/>
+                                            <Setter Property="ToolTip" Value="店鋪固定休息日"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </CheckBox.Style>
+                        </CheckBox>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- 偏好班別 -->
+            <TextBlock Text="偏好班別" Style="{StaticResource FormSectionStyle}"/>
+            <ItemsControl x:Name="ShiftItemsControl" Margin="0,0,0,4">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <CheckBox Content="{Binding Label}"
+                                  IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                  Margin="0,0,20,8"/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                <Button Content="取消"
+                        Style="{StaticResource MaterialDesignFlatButton}"
+                        Command="{x:Static md:DialogHost.CloseDialogCommand}"
+                        CommandParameter="{x:Null}"
+                        Margin="0,0,8,0"/>
+                <Button Content="確認"
+                        Style="{StaticResource MaterialDesignFlatButton}"
+                        Foreground="{DynamicResource PrimaryHueMidBrush}"
+                        Click="OkButton_Click"/>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

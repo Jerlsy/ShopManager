@@ -37,7 +37,9 @@ public class MonthlyScheduleService(AppDbContext db, ShopContext shopContext)
     /// <summary>
     /// 建立月班表，從系統設定帶入店休日預設值
     /// </summary>
-    public async Task<MonthlySchedule> CreateAsync(int year, int month, ShopSetting settings)
+    public async Task<MonthlySchedule> CreateAsync(int year, int month, ShopSetting settings,
+        List<ShiftDayConfig>? shiftDayConfigs = null,
+        List<int>? additionalClosedDays = null)
     {
         var daysInMonth = DateTime.DaysInMonth(year, month);
         var closedDays = new List<int>();
@@ -51,6 +53,14 @@ public class MonthlyScheduleService(AppDbContext db, ShopContext shopContext)
                 closedDays.Add(day);
         }
 
+        // 合併國定假日（只加入該月範圍內且尚未在清單中的日期）
+        if (additionalClosedDays is { Count: > 0 })
+        {
+            foreach (var d in additionalClosedDays.Where(d => d >= 1 && d <= daysInMonth && !closedDays.Contains(d)))
+                closedDays.Add(d);
+            closedDays.Sort();
+        }
+
         var schedule = new MonthlySchedule
         {
             ShopId = shopContext.ShopId,
@@ -58,6 +68,7 @@ public class MonthlyScheduleService(AppDbContext db, ShopContext shopContext)
             Month = month,
             ClosedDays = closedDays,
             WeekStartDay = settings.WeekStartDay,
+            ShiftDayConfigs = shiftDayConfigs ?? new(),
             Status = ScheduleStatus.Draft
         };
 

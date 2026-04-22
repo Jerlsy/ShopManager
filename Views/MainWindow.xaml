@@ -218,7 +218,7 @@
                                 <ScrollViewer x:Name="PageScrollViewer"
                                               HorizontalScrollBarVisibility="Auto"
                                               VerticalScrollBarVisibility="Auto">
-                                    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Top">
+                                    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                                         <Grid.MinWidth>
                                             <MultiBinding Converter="{StaticResource MultiplyDoubleConverter}">
                                                 <Binding ElementName="ContentArea" Path="ActualWidth"/>

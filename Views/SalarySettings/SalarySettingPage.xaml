@@ -16,10 +16,16 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <StackPanel>
-                    <TextBlock Text="薪資設定" Style="{StaticResource PageTitleStyle}"/>
-                    <TextBlock Text="設定薪資方案、加班倍率，並管理全店通用的勞基法基礎參數"
-                               Style="{StaticResource SubtleTextStyle}" Margin="0,8,0,0"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="48" Height="48" CornerRadius="8" ClipToBounds="True" Margin="0,0,16,0"
+                            Visibility="{Binding DataContext.ShopLogoData, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NullToVisibilityConverter}}">
+                        <Image Source="{Binding DataContext.ShopLogoData, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BytesToImageConverter}}" Stretch="UniformToFill"/>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="薪資設定" Style="{StaticResource PageTitleStyle}"/>
+                        <TextBlock Text="設定薪資方案、加班倍率，並管理全店通用的勞基法基礎參數"
+                                   Style="{StaticResource SubtleTextStyle}" Margin="0,8,0,0"/>
+                    </StackPanel>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Style="{StaticResource MaterialDesignOutlinedButton}"
@@ -45,8 +51,8 @@
         <Grid Grid.Row="1"
               Visibility="{Binding ShowLaborLaw, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="340"/>
-                <ColumnDefinition Width="20"/>
+                <ColumnDefinition Width="280"/>
+                <ColumnDefinition Width="10"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
@@ -54,7 +60,6 @@
             <Border Grid.Column="0" Style="{StaticResource SectionCardStyle}">
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top" Text="方案清單" Style="{StaticResource SectionTitleStyle}"/>
-
                     <ListBox ItemsSource="{Binding Salaries}"
                              SelectedItem="{Binding SelectedSalary}"
                              Style="{StaticResource MaterialDesignListBox}">
@@ -123,7 +128,7 @@
             <Grid Grid.Column="2">
                 <StackPanel HorizontalAlignment="Center"
                             VerticalAlignment="Center"
-                            Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
+                            Visibility="{Binding ShowEmptyHint, Converter={StaticResource BoolToVisibilityConverter}}">
                     <md:PackIcon Kind="CurrencyUsd"
                                  Width="80" Height="80"
                                  Opacity="0.12"
@@ -135,8 +140,9 @@
                                HorizontalAlignment="Center"/>
                 </StackPanel>
 
-                <ScrollViewer Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <Border Style="{StaticResource EditFormCardStyle}" MaxWidth="680" HorizontalAlignment="Left">
+                <Border Style="{StaticResource EditFormCardStyle}" HorizontalAlignment="Stretch"
+                        Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}}"
+                        VerticalAlignment="Top">
                         <StackPanel>
                             <TextBlock Text="{Binding SelectedSalary, Converter={StaticResource NullToStringConverter}, ConverterParameter='新增薪資方案|編輯薪資方案'}"
                                        FontSize="{DynamicResource FontSizeListTitle}" FontWeight="SemiBold"
@@ -250,14 +256,12 @@
                             </StackPanel>
                         </StackPanel>
                     </Border>
-                </ScrollViewer>
             </Grid>
         </Grid>
 
         <!-- 勞基法設定區 -->
-        <ScrollViewer Grid.Row="1"
-                      Visibility="{Binding ShowLaborLaw, Converter={StaticResource BoolToVisibilityConverter}}">
-            <StackPanel MaxWidth="800" HorizontalAlignment="Left">
+        <StackPanel Grid.Row="1" MaxWidth="800" HorizontalAlignment="Left"
+                    Visibility="{Binding ShowLaborLaw, Converter={StaticResource BoolToVisibilityConverter}}">
                 <Border Style="{StaticResource InfoBoxStyle}" Margin="0,0,0,24">
                     <StackPanel Orientation="Horizontal">
                         <md:PackIcon Kind="InformationOutline" Width="24" Height="24" Foreground="{DynamicResource AppInfoForegroundBrush}" VerticalAlignment="Top" Margin="0,2,14,0"/>
@@ -320,7 +324,6 @@
                     </Button>
                     <Button Style="{StaticResource MaterialDesignOutlinedButton}" Content="返回薪資列表" Width="140" Command="{Binding CloseLaborLawCommand}"/>
                 </StackPanel>
-            </StackPanel>
-        </ScrollViewer>
+        </StackPanel>
     </Grid>
 </UserControl>

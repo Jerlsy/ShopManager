@@ -17,10 +17,16 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <StackPanel>
-                    <TextBlock Text="員工資料管理" Style="{StaticResource PageTitleStyle}"/>
-                    <TextBlock Text="管理員工基本資料、聯絡方式、預設班別與排班規則"
-                               Style="{StaticResource SubtleTextStyle}" Margin="0,8,0,0"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="48" Height="48" CornerRadius="8" ClipToBounds="True" Margin="0,0,16,0"
+                            Visibility="{Binding DataContext.ShopLogoData, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NullToVisibilityConverter}}">
+                        <Image Source="{Binding DataContext.ShopLogoData, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BytesToImageConverter}}" Stretch="UniformToFill"/>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="員工資料管理" Style="{StaticResource PageTitleStyle}"/>
+                        <TextBlock Text="管理員工基本資料、聯絡方式、預設班別與排班規則"
+                                   Style="{StaticResource SubtleTextStyle}" Margin="0,8,0,0"/>
+                    </StackPanel>
                 </StackPanel>
                 <Button Grid.Column="1"
                         Style="{StaticResource MaterialDesignRaisedButton}"
@@ -33,96 +39,409 @@
             </Grid>
         </Border>
 
-        <!-- 主區域 -->
+        <!-- ══════════════════════════════════════════════════════ -->
+        <!-- 主區域：依 IsEditing 切換卡片模式 / 清單編輯模式 -->
+        <!-- ══════════════════════════════════════════════════════ -->
         <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="380"/>
-                <ColumnDefinition Width="20"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
 
-            <!-- 員工列表 -->
-            <Border Grid.Column="0" Style="{StaticResource SectionCardStyle}">
-                <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="員工清單" Style="{StaticResource SectionTitleStyle}"/>
-                    <ListBox ItemsSource="{Binding Employees}"
-                             SelectedItem="{Binding SelectedEmployee}"
-                             Style="{StaticResource MaterialDesignListBox}">
-                        <ListBox.ItemContainerStyle>
-                            <Style TargetType="ListBoxItem" BasedOn="{StaticResource MaterialDesignListBoxItem}">
-                                <Setter Property="Padding" Value="0"/>
-                                <Setter Property="Margin" Value="0,0,0,12"/>
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="ListBoxItem">
-                                            <Border x:Name="ItemBorder" Background="Transparent" CornerRadius="20">
-                                                <ContentPresenter/>
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsSelected" Value="True">
-                                                    <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource AppSelectionBrush}"/>
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </ListBox.ItemContainerStyle>
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <Border Style="{StaticResource ItemCardStyle}">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Name}" Style="{StaticResource ItemTitleStyle}"/>
-                                        <TextBlock Text="{Binding Phone, FallbackValue='未設定電話'}" Style="{StaticResource CaptionTextStyle}" Margin="0,4,0,0"/>
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </DockPanel>
-            </Border>
-
-            <!-- 編輯區 -->
-            <Grid Grid.Column="2">
+            <!-- ── 卡片模式（未展開編輯） ── -->
+            <Border Style="{StaticResource SectionCardStyle}"
+                    Visibility="{Binding ShowListCards, Converter={StaticResource BoolToVisibilityConverter}}">
+                <Grid>
+                <!-- 無資料提示 -->
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
-                            Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
-                    <md:PackIcon Kind="AccountEditOutline" Width="80" Height="80" Opacity="0.12" HorizontalAlignment="Center"/>
-                    <TextBlock Text="請從左側選擇員工，或點選上方「新增員工」進行編輯" Margin="0,20,0,0" Opacity="0.45" Style="{StaticResource ItemTitleStyle}" HorizontalAlignment="Center"/>
+                            Visibility="{Binding ShowEmptyHint, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <md:PackIcon Kind="AccountGroup" Width="80" Height="80" Opacity="0.12" HorizontalAlignment="Center"/>
+                    <TextBlock Text="尚未新增任何員工，點選右上角「新增員工」開始"
+                               Margin="0,20,0,0" Opacity="0.45"
+                               Style="{StaticResource ItemTitleStyle}" HorizontalAlignment="Center"/>
                 </StackPanel>
 
-                <ScrollViewer Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <Border Style="{StaticResource EditFormCardStyle}" HorizontalAlignment="Stretch">
-                        <StackPanel>
-                            <TextBlock Text="{Binding SelectedEmployee, Converter={StaticResource NullToStringConverter}, ConverterParameter='新增員工|編輯員工資料'}"
-                                       FontSize="{DynamicResource FontSizeListTitle}" FontWeight="SemiBold" Margin="0,0,0,24"/>
+                <!-- 員工卡片清單 -->
+                <ItemsControl ItemsSource="{Binding Employees}" Margin="0,0,0,8"
+                              Visibility="{Binding ShowEmptyHint, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <!-- 員工卡片：整體識別色底 + 內容置頂 -->
+                                <Border Width="280" Height="160" Margin="0,0,12,12"
+                                        CornerRadius="16"
+                                        Background="{Binding ColorHex, Converter={StaticResource HexToBrushConverter}}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
+                                        Cursor="Hand">
+                                    <Border.InputBindings>
+                                        <MouseBinding MouseAction="LeftClick"
+                                                      Command="{Binding DataContext.StartEditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                      CommandParameter="{Binding}"/>
+                                    </Border.InputBindings>
+                                    <Grid>
+                                        <!-- 刪除按鈕（右上角） -->
+                                        <Button Style="{StaticResource MaterialDesignIconButton}"
+                                                Width="30" Height="30"
+                                                HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                Margin="0,8,8,0"
+                                                Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}" ToolTip="刪除員工">
+                                            <md:PackIcon Kind="DeleteOutline" Width="15" Height="15" Opacity="0.45"/>
+                                        </Button>
 
+                                        <!-- 主內容（置頂） -->
+                                        <Grid Margin="14,14,44,0" VerticalAlignment="Top">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- 大頭貼（白色半透明底，強調輪廓） -->
+                                            <Border Grid.Column="0"
+                                                    Width="48" Height="48" CornerRadius="24" ClipToBounds="True"
+                                                    Background="#70FFFFFF"
+                                                    Margin="0,0,12,0" VerticalAlignment="Top">
+                                                <Grid>
+                                                    <Image Source="{Binding AvatarPhotoData, Converter={StaticResource BytesToImageConverter}}"
+                                                           Stretch="UniformToFill"
+                                                           Visibility="{Binding AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                    <TextBlock Text="{Binding Name, Converter={StaticResource NameInitialConverter}}"
+                                                               FontWeight="Bold" FontSize="18"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                               Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                                               Visibility="{Binding AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                                                </Grid>
+                                            </Border>
+
+                                            <!-- 姓名 + 聯繫 + 班別 -->
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding Name}"
+                                                               Style="{StaticResource ItemTitleStyle}"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <Border Background="#40C62828" CornerRadius="4" Padding="4,1"
+                                                            Margin="6,0,0,0" VerticalAlignment="Center"
+                                                            Visibility="{Binding IsResigned, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                        <TextBlock Text="已離職" FontSize="10" Foreground="#C62828"/>
+                                                    </Border>
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding PrimaryContact}"
+                                                           Style="{StaticResource CaptionTextStyle}"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           Margin="0,4,0,0"/>
+                                                <TextBlock Text="{Binding ShiftPreferenceLabel}"
+                                                           Style="{StaticResource CaptionTextStyle}"
+                                                           Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
+            </Border>
+
+            <!-- ── 清單 + 編輯模式（展開編輯） ── -->
+            <Grid Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="280"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- 窄版員工清單 -->
+                <Border Grid.Column="0" Style="{StaticResource SectionCardStyle}">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="員工清單" Style="{StaticResource SectionTitleStyle}"/>
+                        <ListBox x:Name="EmployeeListBox"
+                                 ItemsSource="{Binding Employees}"
+                                 SelectedItem="{Binding SelectedEmployee}"
+                                 SelectionChanged="EmployeeListBox_SelectionChanged"
+                                 Style="{StaticResource MaterialDesignListBox}">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem" BasedOn="{StaticResource MaterialDesignListBoxItem}">
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="Margin" Value="0,0,0,6"/>
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ListBoxItem">
+                                                <Border x:Name="ItemBorder"
+                                                        Background="{Binding ColorHex, Converter={StaticResource HexToBrushConverter}}"
+                                                        CornerRadius="12"
+                                                        BorderThickness="2" BorderBrush="Transparent">
+                                                    <ContentPresenter/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsSelected" Value="True">
+                                                        <Setter TargetName="ItemBorder" Property="BorderBrush" Value="#80000000"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="12,10,4,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}" Style="{StaticResource ItemTitleStyle}"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <Border Background="#40C62828" CornerRadius="4" Padding="4,1" Margin="0,3,0,0"
+                                                    HorizontalAlignment="Left"
+                                                    Visibility="{Binding IsResigned, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <TextBlock Text="已離職" FontSize="10" Foreground="#C62828"/>
+                                            </Border>
+                                        </StackPanel>
+                                        <Button Grid.Column="1"
+                                                Style="{StaticResource MaterialDesignIconButton}"
+                                                Width="32" Height="32" VerticalAlignment="Center"
+                                                Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                CommandParameter="{Binding}"
+                                                ToolTip="刪除員工">
+                                            <md:PackIcon Kind="DeleteOutline" Width="15" Height="15" Opacity="0.5"/>
+                                        </Button>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+                </Border>
+
+                <!-- 編輯表單 -->
+                <Border Grid.Column="2" Style="{StaticResource EditFormCardStyle}" HorizontalAlignment="Stretch"
+                        VerticalAlignment="Top">
+                        <StackPanel>
+
+                            <!-- 標題 -->
+                            <TextBlock Text="{Binding SelectedEmployee, Converter={StaticResource NullToStringConverter}, ConverterParameter='新增員工|編輯員工資料'}"
+                                       FontSize="{DynamicResource FontSizeListTitle}" FontWeight="SemiBold"
+                                       Margin="0,0,0,24"/>
+
+                            <!-- ── 基本資料 ── -->
                             <TextBlock Text="基本資料" Style="{StaticResource FormSectionStyle}"/>
+
+                            <!-- 大頭貼 + 姓名 + 英文名 -->
                             <Grid Margin="0,0,0,16">
-                                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="16"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="16"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Button Grid.Column="0" Width="80" Height="80" Padding="0"
+                                        Click="PickAvatar_Click" ToolTip="點擊選擇大頭貼"
+                                        VerticalAlignment="Center">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Width="80" Height="80" CornerRadius="40" ClipToBounds="True"
+                                                    Background="{DynamicResource AppPanelBrush}"
+                                                    BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="2"
+                                                    Cursor="Hand">
+                                                <Grid>
+                                                    <Image Source="{Binding EditAvatarPhotoData, Converter={StaticResource BytesToImageConverter}}"
+                                                           Stretch="UniformToFill"
+                                                           Visibility="{Binding EditAvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                    <md:PackIcon Kind="Camera" Width="32" Height="32" Opacity="0.4"
+                                                                 HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                 Visibility="{Binding EditAvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                                                </Grid>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+
+                                <StackPanel Grid.Column="2" VerticalAlignment="Center">
                                     <TextBlock Text="姓名 *" Style="{StaticResource FieldLabelStyle}"/>
                                     <TextBox Text="{Binding EditName}"/>
                                 </StackPanel>
-                                <StackPanel Grid.Column="2">
-                                    <TextBlock Text="身分證字號" Style="{StaticResource FieldLabelStyle}"/>
-                                    <TextBox Text="{Binding EditIdNumber}"/>
+
+                                <StackPanel Grid.Column="4" VerticalAlignment="Center">
+                                    <TextBlock Text="英文名" Style="{StaticResource FieldLabelStyle}"/>
+                                    <TextBox Text="{Binding EditEnglishName}"/>
                                 </StackPanel>
                             </Grid>
-                            <TextBlock Text="聯絡地址" Style="{StaticResource FieldLabelStyle}"/>
-                            <TextBox Text="{Binding EditAddress}" Margin="0,0,0,16" AcceptsReturn="True" MinHeight="60" VerticalContentAlignment="Top"/>
-                            <TextBlock Text="聯繫電話" Style="{StaticResource FieldLabelStyle}"/>
-                            <TextBox Text="{Binding EditPhone}" Margin="0,0,0,24"/>
 
-                            <StackPanel Orientation="Horizontal" Margin="0,24,0,0">
-                                <Button Style="{StaticResource MaterialDesignRaisedButton}" Command="{Binding SaveCommand}" Margin="0,0,12,0">
-                                    <StackPanel Orientation="Horizontal"><md:PackIcon Kind="ContentSave" Width="18" Height="18" Margin="0,0,8,0"/><TextBlock Text="儲存"/></StackPanel>
+                            <!-- 身分證 + 生日 -->
+                            <Grid Margin="0,0,0,24">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="16"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="身分證字號 *" Style="{StaticResource FieldLabelStyle}"/>
+                                    <TextBox Text="{Binding EditIdNumber, UpdateSourceTrigger=PropertyChanged}"
+                                             md:HintAssist.Hint="A123456789"
+                                             CharacterCasing="Upper"/>
+                                    <TextBlock Text="{Binding IdNumberError}"
+                                               Foreground="#C62828" FontSize="11" Margin="0,3,0,0"
+                                               Visibility="{Binding IdNumberError, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="生日" Style="{StaticResource FieldLabelStyle}"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="6"/>
+                                            <ColumnDefinition Width="76"/>
+                                            <ColumnDefinition Width="6"/>
+                                            <ColumnDefinition Width="68"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox Grid.Column="0"
+                                                  ItemsSource="{x:Static vm:EmployeeViewModel.BirthYears}"
+                                                  SelectedItem="{Binding EditBirthYear}"
+                                                  md:HintAssist.Hint="年"/>
+                                        <ComboBox Grid.Column="2"
+                                                  ItemsSource="{x:Static vm:EmployeeViewModel.BirthMonths}"
+                                                  SelectedItem="{Binding EditBirthMonth}"
+                                                  md:HintAssist.Hint="月">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding StringFormat={}{0} 月}"/>
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                        <ComboBox Grid.Column="4"
+                                                  ItemsSource="{Binding BirthDays}"
+                                                  SelectedItem="{Binding EditBirthDay}"
+                                                  md:HintAssist.Hint="日"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- ── 其他聯繫方式 ── -->
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="其他聯繫方式"
+                                           Style="{StaticResource FormSectionStyle}" Margin="0"/>
+                                <Button Grid.Column="1"
+                                        Style="{StaticResource MaterialDesignFlatButton}"
+                                        Command="{Binding AddContactInfoCommand}"
+                                        Padding="8,2">
+                                    <StackPanel Orientation="Horizontal">
+                                        <md:PackIcon Kind="Plus" Width="14" Height="14" Margin="0,0,4,0"/>
+                                        <TextBlock Text="新增" FontSize="{DynamicResource FontSizeSmall}"/>
+                                    </StackPanel>
                                 </Button>
-                                <Button Style="{StaticResource MaterialDesignOutlinedButton}" Content="取消" Command="{Binding CancelCommand}"/>
+                            </Grid>
+
+                            <ItemsControl ItemsSource="{Binding EditContactInfos}" Margin="0,0,0,24">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="8"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="4"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <ComboBox Grid.Column="0"
+                                                      SelectedItem="{Binding Type}"
+                                                      ItemsSource="{x:Static vm:EmployeeViewModel.EmployeeContactTypes}"/>
+                                            <TextBox Grid.Column="2" Text="{Binding Value}"/>
+                                            <Button Grid.Column="4"
+                                                    Style="{StaticResource MaterialDesignIconButton}"
+                                                    Width="36" Height="36"
+                                                    Command="{Binding DataContext.RemoveContactInfoCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}">
+                                                <md:PackIcon Kind="Close" Width="16" Height="16" Opacity="0.5"/>
+                                            </Button>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- ── 分隔線 ── -->
+                            <Separator Margin="0,0,0,20"/>
+
+                            <!-- ── 3 個設定按鈕 ── -->
+                            <Grid Margin="0,0,0,28">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
+                                    <Button HorizontalAlignment="Stretch"
+                                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                                            Command="{Binding OpenSalaryDialogCommand}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <md:PackIcon Kind="CurrencyUsd" Width="18" Height="18" Margin="0,0,6,0"/>
+                                            <TextBlock Text="薪資設定"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <TextBlock Text="{Binding SalarySummary}"
+                                               Style="{StaticResource CaptionTextStyle}"
+                                               TextWrapping="Wrap" TextAlignment="Center"
+                                               Margin="2,4,2,0"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2">
+                                    <Button HorizontalAlignment="Stretch"
+                                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                                            Command="{Binding OpenEmploymentDialogCommand}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <md:PackIcon Kind="CalendarMonth" Width="18" Height="18" Margin="0,0,6,0"/>
+                                            <TextBlock Text="到職設定"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <TextBlock Text="{Binding EmploymentSummary}"
+                                               Style="{StaticResource CaptionTextStyle}"
+                                               TextWrapping="Wrap" TextAlignment="Center"
+                                               Margin="2,4,2,0"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="4">
+                                    <Button HorizontalAlignment="Stretch"
+                                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                                            Command="{Binding OpenScheduleRulesDialogCommand}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <md:PackIcon Kind="CalendarCheck" Width="18" Height="18" Margin="0,0,6,0"/>
+                                            <TextBlock Text="排班規則"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <TextBlock Text="{Binding ScheduleRulesSummary}"
+                                               Style="{StaticResource CaptionTextStyle}"
+                                               TextWrapping="Wrap" TextAlignment="Center"
+                                               Margin="2,4,2,0"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- ── 儲存 / 取消 ── -->
+                            <StackPanel Orientation="Horizontal">
+                                <Button Style="{StaticResource MaterialDesignRaisedButton}"
+                                        Command="{Binding SaveCommand}" Margin="0,0,12,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <md:PackIcon Kind="ContentSave" Width="18" Height="18" Margin="0,0,8,0"/>
+                                        <TextBlock Text="儲存"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                                        Content="取消" Command="{Binding CancelCommand}"/>
                             </StackPanel>
+
                         </StackPanel>
                     </Border>
-                </ScrollViewer>
             </Grid>
+
         </Grid>
     </Grid>
 </UserControl>

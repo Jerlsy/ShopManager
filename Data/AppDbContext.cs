@@ -65,6 +65,20 @@ public class AppDbContext : DbContext
                 v => JsonSerializer.Deserialize<List<int>>(v, (JsonSerializerOptions?)null) ?? new List<int>()
             );
 
+        // Employee - 序列化 ContactInfos / PreferredShiftIds 為 JSON
+        modelBuilder.Entity<Employee>()
+            .Property(e => e.ContactInfos)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => JsonSerializer.Deserialize<List<ContactInfo>>(v, (JsonSerializerOptions?)null) ?? new List<ContactInfo>()
+            );
+        modelBuilder.Entity<Employee>()
+            .Property(e => e.PreferredShiftIds)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => JsonSerializer.Deserialize<List<int>>(v, (JsonSerializerOptions?)null) ?? new List<int>()
+            );
+
         // Employee 關聯
         modelBuilder.Entity<Employee>()
             .HasOne(e => e.DefaultShift)
@@ -78,12 +92,18 @@ public class AppDbContext : DbContext
             .HasForeignKey(e => e.DefaultSalaryId)
             .OnDelete(DeleteBehavior.SetNull);
 
-        // MonthlySchedule - 序列化 ClosedDays 為 JSON
+        // MonthlySchedule - 序列化 ClosedDays / ShiftDayConfigs 為 JSON
         modelBuilder.Entity<MonthlySchedule>()
             .Property(e => e.ClosedDays)
             .HasConversion(
                 v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
                 v => JsonSerializer.Deserialize<List<int>>(v, (JsonSerializerOptions?)null) ?? new List<int>()
+            );
+        modelBuilder.Entity<MonthlySchedule>()
+            .Property(e => e.ShiftDayConfigs)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => JsonSerializer.Deserialize<List<ShiftDayConfig>>(v, (JsonSerializerOptions?)null) ?? new List<ShiftDayConfig>()
             );
 
         // MonthlySchedule - 店鋪+年月唯一索引

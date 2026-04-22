@@ -10,9 +10,17 @@ public partial class ShiftSettingViewModel(
     IAppSnackbarService snackbarService,
     IAppDialogService dialogService) : ObservableObject
 {
-    [ObservableProperty] private List<ShiftSetting> _shifts = new();
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowEmptyHint))]
+    private List<ShiftSetting> _shifts = new();
+
     [ObservableProperty] private ShiftSetting? _selectedShift;
-    [ObservableProperty] private bool _isEditing;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowEmptyHint))]
+    private bool _isEditing;
+
+    public bool ShowEmptyHint => !IsEditing && Shifts.Count == 0;
 
     // 編輯用暫存欄位
     [ObservableProperty] private string _editAlias = string.Empty;

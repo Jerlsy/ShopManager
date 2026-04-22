@@ -5,6 +5,7 @@ using ShopManager.Services;
 using ShopManager.ViewModels;
 using ShopManager.Views.ShopSelection;
 using System.Windows;
+using System.Windows.Media.Imaging;
 
 namespace ShopManager.Views;
 
@@ -17,6 +18,12 @@ public partial class MainWindow : Window
         InitializeComponent();
         DataContext = viewModel;
         _snackbarService = snackbarService;
+
+        try
+        {
+            Icon = new BitmapImage(new Uri("pack://application:,,,/Resources/app.ico"));
+        }
+        catch { }
 
         // WindowStyle=None 最大化時需限制在工作區範圍內，避免蓋住工作列。
         MaxWidth = SystemParameters.WorkArea.Width;

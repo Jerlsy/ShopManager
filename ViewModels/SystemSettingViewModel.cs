@@ -20,6 +20,7 @@ public partial class SystemSettingViewModel(
     [ObservableProperty] private string _name = string.Empty;
     [ObservableProperty] private string _address = string.Empty;
     [ObservableProperty] private string _phone = string.Empty;
+    [ObservableProperty] private byte[]? _logoPhotoData;
     [ObservableProperty] private List<ContactInfo> _contactInfos = new();
 
     public static List<string> ContactTypes { get; } = new()
@@ -69,6 +70,7 @@ public partial class SystemSettingViewModel(
             Name = setting.Name;
             Address = setting.Address;
             Phone = setting.Phone;
+            LogoPhotoData = setting.LogoPhotoData;
             ContactInfos = new List<ContactInfo>(setting.ContactInfos);
             WeekStartDay = setting.WeekStartDay;
             NationalHolidaysOff = setting.NationalHolidaysOff;
@@ -100,6 +102,7 @@ public partial class SystemSettingViewModel(
             Name = Name,
             Address = Address,
             Phone = Phone,
+            LogoPhotoData = LogoPhotoData,
             ContactInfos = ContactInfos,
             WeekStartDay = WeekStartDay,
             ClosedDaysOfWeek = closedDays,
@@ -113,9 +116,11 @@ public partial class SystemSettingViewModel(
         if (SelectedFontFamily is not null)
             appearanceService.SetFontFamily(SelectedFontFamily.Name);
 
-        WeakReferenceMessenger.Default.Send(new SystemConfiguredMessage { ShopName = Name });
+        WeakReferenceMessenger.Default.Send(new SystemConfiguredMessage { ShopName = Name, LogoPhotoData = LogoPhotoData });
         snackbarService.ShowSuccess("店舖設定已儲存");
     }
+
+    public void SetLogoPhoto(byte[] data) => LogoPhotoData = data;
 
     [RelayCommand]
     public void AddContact()

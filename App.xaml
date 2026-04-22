@@ -98,6 +98,7 @@
             <helpers:HexToBrushConverter x:Key="HexToBrushConverter"/>
             <helpers:ColorMatchConverter x:Key="ColorMatchConverter"/>
             <helpers:BoolToOpacityConverter x:Key="BoolToOpacityConverter"/>
+            <helpers:BytesToImageConverter x:Key="BytesToImageConverter"/>
             <helpers:ViewModeVisibilityConverter x:Key="ViewModeVisibilityConverter"/>
 
             <!-- ── 統一 UI 樣式管理 (Refactor Plan) ── -->
@@ -183,6 +184,33 @@
                 <Setter Property="BorderBrush"     Value="{DynamicResource AppBorderBrush}"/>
                 <Setter Property="BorderThickness" Value="1"/>
                 <Setter Property="Padding"         Value="20"/>
+            </Style>
+            <!-- 漫畫對話框 ToolTip 樣式 -->
+            <Style x:Key="SpeechBubbleToolTip" TargetType="ToolTip">
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Placement" Value="Top"/>
+                <Setter Property="VerticalOffset" Value="-4"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ToolTip">
+                            <StackPanel>
+                                <Border Background="#FFF9C4" BorderBrush="#4E342E" BorderThickness="2.5"
+                                        CornerRadius="12" Padding="12,8">
+                                    <Border.Effect>
+                                        <DropShadowEffect ShadowDepth="3" BlurRadius="10" Opacity="0.25" Color="#000000"/>
+                                    </Border.Effect>
+                                    <ContentPresenter/>
+                                </Border>
+                                <Grid Height="12" Margin="0,-2,0,0">
+                                    <Path Fill="#4E342E" HorizontalAlignment="Center" Data="M 0,0 L 17,0 L 8.5,12 Z"/>
+                                    <Path Fill="#FFF9C4" HorizontalAlignment="Center" Data="M 2.5,0 L 14.5,0 L 8.5,9 Z"/>
+                                </Grid>
+                            </StackPanel>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
         </ResourceDictionary>
     </Application.Resources>

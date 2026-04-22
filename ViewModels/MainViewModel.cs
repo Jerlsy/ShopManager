@@ -16,6 +16,7 @@ namespace ShopManager.ViewModels;
 public class SystemConfiguredMessage
 {
     public string ShopName { get; init; } = string.Empty;
+    public byte[]? LogoPhotoData { get; init; }
 }
 
 /// <summary>店鋪關閉後發送的通知。</summary>
@@ -31,6 +32,7 @@ public partial class MainViewModel : ObservableObject
     private readonly NavigationService _navigation;
 
     [ObservableProperty] private string _shopName = "店鋪管理系統";
+    [ObservableProperty] private byte[]? _shopLogoData;
     [ObservableProperty] private bool _isSystemConfigured;
     [ObservableProperty] private NavItem? _selectedNavItem;
     [ObservableProperty] private bool _isNavExpanded = true;
@@ -73,6 +75,7 @@ public partial class MainViewModel : ObservableObject
             var vm = (MainViewModel)r;
             vm.IsSystemConfigured = true;
             vm.ShopName = m.ShopName;
+            vm.ShopLogoData = m.LogoPhotoData;
             vm.OnPropertyChanged(nameof(VisibleNavItems));
         });
     }
@@ -101,6 +104,7 @@ public partial class MainViewModel : ObservableObject
         if (shop is not null)
         {
             ShopName = shop.Name;
+            ShopLogoData = shop.LogoPhotoData;
             IsSystemConfigured = true;
             OnPropertyChanged(nameof(VisibleNavItems));
         }
