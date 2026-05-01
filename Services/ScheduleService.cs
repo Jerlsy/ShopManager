@@ -27,16 +27,17 @@ public class ScheduleService(AppDbContext db, ShopContext shopContext)
             .ThenBy(e => e.ShiftSettingId)
             .ToListAsync();
 
-    public async Task AddEntryAsync(ScheduleEntry entry)
+    public async Task<ScheduleEntry> AddEntryAsync(ScheduleEntry entry)
     {
         db.ScheduleEntries.Add(entry);
         await db.SaveChangesAsync();
+        return entry;
     }
 
-    /// <summary>批次新增多筆排班（自動略過重複）</summary>
-    public async Task<int> AddEntriesAsync(IEnumerable<ScheduleEntry> entries)
+    /// <summary>批次新增多筆排班（自動略過重複），回傳實際新增的項目</summary>
+    public async Task<List<ScheduleEntry>> AddEntriesAsync(IEnumerable<ScheduleEntry> entries)
     {
-        int count = 0;
+        var added = new List<ScheduleEntry>();
         foreach (var entry in entries)
         {
             var exists = await db.ScheduleEntries.AnyAsync(e =>
@@ -47,11 +48,11 @@ public class ScheduleService(AppDbContext db, ShopContext shopContext)
             if (!exists)
             {
                 db.ScheduleEntries.Add(entry);
-                count++;
+                added.Add(entry);
             }
         }
-        if (count > 0) await db.SaveChangesAsync();
-        return count;
+        if (added.Count > 0) await db.SaveChangesAsync();
+        return added;
     }
 
     public async Task RemoveEntryAsync(int entryId)
@@ -75,6 +76,22 @@ public class ScheduleService(AppDbContext db, ShopContext shopContext)
             await db.SaveChangesAsync();
         }
     }
+
+    public async Task RemoveEntriesAsync(IEnumerable<int> entryIds)
+    {
+        var ids = entryIds.ToList();
+        var entries = await db.ScheduleEntries.Where(e => ids.Contains(e.Id)).ToListAsync();
+        if (entries.Count > 0)
+        {
+            db.ScheduleEntries.RemoveRange(entries);
+            await db.SaveChangesAsync();
+        }
+    }
+
+    public async Task ClearAllEntriesAsync(int monthlyScheduleId) =>
+        await db.ScheduleEntries
+            .Where(e => e.MonthlyScheduleId == monthlyScheduleId)
+            .ExecuteDeleteAsync();
 
     /// <summary>查詢指定員工在某日期之後是否還有排班資料，回傳年月清單</summary>
     public async Task<List<string>> GetScheduledMonthsAfterDateAsync(int employeeId, DateOnly date) =>

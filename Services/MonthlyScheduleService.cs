@@ -15,6 +15,7 @@ public class MonthlyScheduleService(AppDbContext db, ShopContext shopContext)
 
     public async Task<MonthlySchedule?> GetAsync(int year, int month) =>
         await db.MonthlySchedules
+            .AsNoTracking()
             .Where(m => m.ShopId == shopContext.ShopId)
             .Include(m => m.Entries)
                 .ThenInclude(e => e.Employee)
@@ -77,12 +78,104 @@ public class MonthlyScheduleService(AppDbContext db, ShopContext shopContext)
         return schedule;
     }
 
+    public async Task UpdateStaffingGapDaysAsync(int id, List<int> gapDays)
+    {
+        var schedule = await db.MonthlySchedules.FindAsync(id);
+        if (schedule is not null)
+        {
+            schedule.StaffingGapDays = gapDays;
+            db.Entry(schedule).Property(e => e.StaffingGapDays).IsModified = true;
+            await db.SaveChangesAsync();
+        }
+    }
+
+    public async Task UpdateShiftDateOverridesAsync(int id, List<ShiftDateOverride> overrides)
+    {
+        var schedule = await db.MonthlySchedules.FindAsync(id);
+        if (schedule is not null)
+        {
+            schedule.ShiftDateOverrides = overrides;
+            db.Entry(schedule).Property(e => e.ShiftDateOverrides).IsModified = true;
+            await db.SaveChangesAsync();
+        }
+    }
+
+    public async Task UpdateAutoAssignConfigAsync(
+        int id,
+        List<WorkDayConditionConfig> conditionConfigs,
+        List<EmployeeDayOff> dayOffs,
+        List<EmployeeWorkDay> workDays,
+        List<int> excludeIds)
+    {
+        var schedule = await db.MonthlySchedules.FindAsync(id);
+        if (schedule is null) return;
+
+        schedule.WorkDayConditionConfigs  = conditionConfigs;
+        schedule.EmployeeDayOffs          = dayOffs;
+        schedule.EmployeeWorkDays         = workDays;
+        schedule.ExcludeFromAutoAssignIds = excludeIds;
+
+        // 明確標記：HasConversion 集合屬性的 change tracking 不可靠，必須強制 IsModified
+        var entry = db.Entry(schedule);
+        entry.Property(e => e.WorkDayConditionConfigs).IsModified  = true;
+        entry.Property(e => e.EmployeeDayOffs).IsModified          = true;
+        entry.Property(e => e.EmployeeWorkDays).IsModified         = true;
+        entry.Property(e => e.ExcludeFromAutoAssignIds).IsModified = true;
+
+        await db.SaveChangesAsync();
+    }
+
+    public async Task UpdateEmployeeDayOffsAsync(int id, List<EmployeeDayOff> dayOffs)
+    {
+        var schedule = await db.MonthlySchedules.FindAsync(id);
+        if (schedule is not null)
+        {
+            schedule.EmployeeDayOffs = dayOffs;
+            db.Entry(schedule).Property(e => e.EmployeeDayOffs).IsModified = true;
+            await db.SaveChangesAsync();
+        }
+    }
+
+    public async Task UpdateWorkDayConditionConfigsAsync(int id, List<WorkDayConditionConfig> configs)
+    {
+        var schedule = await db.MonthlySchedules.FindAsync(id);
+        if (schedule is not null)
+        {
+            schedule.WorkDayConditionConfigs = configs;
+            db.Entry(schedule).Property(e => e.WorkDayConditionConfigs).IsModified = true;
+            await db.SaveChangesAsync();
+        }
+    }
+
+    public async Task UpdateEmployeeWorkDaysAsync(int id, List<EmployeeWorkDay> workDays)
+    {
+        var schedule = await db.MonthlySchedules.FindAsync(id);
+        if (schedule is not null)
+        {
+            schedule.EmployeeWorkDays = workDays;
+            db.Entry(schedule).Property(e => e.EmployeeWorkDays).IsModified = true;
+            await db.SaveChangesAsync();
+        }
+    }
+
+    public async Task UpdateExcludeFromAutoAssignIdsAsync(int id, List<int> excludedIds)
+    {
+        var schedule = await db.MonthlySchedules.FindAsync(id);
+        if (schedule is not null)
+        {
+            schedule.ExcludeFromAutoAssignIds = excludedIds;
+            db.Entry(schedule).Property(e => e.ExcludeFromAutoAssignIds).IsModified = true;
+            await db.SaveChangesAsync();
+        }
+    }
+
     public async Task UpdateClosedDaysAsync(int id, List<int> closedDays)
     {
         var schedule = await db.MonthlySchedules.FindAsync(id);
         if (schedule is not null)
         {
             schedule.ClosedDays = closedDays;
+            db.Entry(schedule).Property(e => e.ClosedDays).IsModified = true;
             await db.SaveChangesAsync();
         }
     }
