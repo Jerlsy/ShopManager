@@ -11,7 +11,6 @@ public class EmployeeService(AppDbContext db, ShopContext shopContext)
             .Where(e => e.ShopId == shopContext.ShopId)
             .Include(e => e.DefaultShift)
             .Include(e => e.DefaultSalary)
-            .Include(e => e.CustomContacts)
             .Include(e => e.ScheduleRules)
             .Include(e => e.DefaultBonuses)
             .OrderBy(e => e.Name)
@@ -21,7 +20,6 @@ public class EmployeeService(AppDbContext db, ShopContext shopContext)
         await db.Employees
             .Include(e => e.DefaultShift)
             .Include(e => e.DefaultSalary)
-            .Include(e => e.CustomContacts)
             .Include(e => e.ScheduleRules)
             .Include(e => e.DefaultBonuses)
             .FirstOrDefaultAsync(e => e.Id == id);
@@ -39,6 +37,16 @@ public class EmployeeService(AppDbContext db, ShopContext shopContext)
         await db.SaveChangesAsync();
     }
 
+    public async Task UpdatePreferredShiftsAsync(int employeeId, List<int> shiftIds)
+    {
+        var emp = await db.Employees.FindAsync(employeeId);
+        if (emp is not null)
+        {
+            emp.PreferredShiftIds = shiftIds;
+            await db.SaveChangesAsync();
+        }
+    }
+
     public async Task DeleteAsync(int id)
     {
         var e = await db.Employees.FindAsync(id);
@@ -50,11 +58,15 @@ public class EmployeeService(AppDbContext db, ShopContext shopContext)
     /// </summary>
     public async Task<List<string>> CheckScheduleAfterResignAsync(int employeeId, DateOnly resignDate)
     {
-        return await db.ScheduleEntries
+        var dates = await db.ScheduleEntries
             .Where(e => e.EmployeeId == employeeId && e.Date > resignDate)
-            .Select(e => e.Date.ToString("yyyy-MM"))
+            .Select(e => e.Date)
+            .ToListAsync();
+
+        return dates
+            .Select(d => d.ToString("yyyy-MM"))
             .Distinct()
             .OrderBy(s => s)
-            .ToListAsync();
+            .ToList();
     }
 }

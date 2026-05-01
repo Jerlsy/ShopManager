@@ -2,37 +2,6 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ShopManager.Models;
 
-/// <summary>台灣勞基法出勤法規設定</summary>
-public class LaborLawSetting
-{
-    [Key] public int Id { get; set; }
-
-    // ── 時薪制 ──────────────────────────────
-    public decimal HourlyMinimumWage { get; set; } = 183m;          // 時薪最低薪資（2024）
-    public double HourlyDailyMaxHours { get; set; } = 8.0;          // 時薪制每日正常工時上限
-    public double HourlyWeeklyMaxHours { get; set; } = 40.0;        // 時薪制每周正常工時上限
-
-    // 時薪加班費率（正常工時後）
-    public decimal HourlyOT1Rate { get; set; } = 1.34m;             // 延長工時前2小時 × 4/3
-    public decimal HourlyOT2Rate { get; set; } = 1.67m;             // 延長工時第3小時起 × 5/3
-
-    // ── 月薪制 ──────────────────────────────
-    public decimal MonthlyMinimumWage { get; set; } = 27470m;       // 月薪最低薪資（2024）
-    public double MonthlyDailyMaxHours { get; set; } = 8.0;         // 月薪制每日正常工時上限
-    public double MonthlyWeeklyMaxHours { get; set; } = 40.0;       // 月薪制每周正常工時上限
-
-    // 月薪加班費率
-    public decimal MonthlyOT1Rate { get; set; } = 1.34m;
-    public decimal MonthlyOT2Rate { get; set; } = 1.67m;
-
-    // ── 假日加班 ────────────────────────────
-    public decimal HolidayOTRate { get; set; } = 2.0m;              // 假日出勤加倍
-
-    // ── 休假 ────────────────────────────────
-    public int WeeklyRestDays { get; set; } = 2;                     // 每周例休日數
-    public double MaxMonthlyOTHours { get; set; } = 46.0;           // 每月加班上限（小時）
-}
-
 /// <summary>預設薪資設定</summary>
 public class SalarySetting
 {

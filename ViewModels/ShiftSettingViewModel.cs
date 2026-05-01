@@ -1,12 +1,16 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using ShopManager.Models;
 using ShopManager.Services;
 
 namespace ShopManager.ViewModels;
 
+public record ShiftSettingChangedMessage;
+
 public partial class ShiftSettingViewModel(
     ShiftSettingService service,
+    ScheduleConflictService conflictService,
     IAppSnackbarService snackbarService,
     IAppDialogService dialogService) : ObservableObject
 {
@@ -115,6 +119,7 @@ public partial class ShiftSettingViewModel(
             !TryParseTime(EditEndTimeText, out var endTime))
             return;
 
+        int? updatedShiftId = null;
         if (SelectedShift is null)
         {
             await service.AddAsync(new ShiftSetting
@@ -128,6 +133,7 @@ public partial class ShiftSettingViewModel(
         }
         else
         {
+            updatedShiftId = SelectedShift.Id;
             SelectedShift.Alias = EditAlias;
             SelectedShift.StartTime = startTime;
             SelectedShift.EndTime = endTime;
@@ -137,7 +143,16 @@ public partial class ShiftSettingViewModel(
         }
         IsEditing = false;
         await LoadAsync();
+        WeakReferenceMessenger.Default.Send(new ShiftSettingChangedMessage());
         snackbarService.ShowSuccess("班別設定已儲存");
+
+        // 班別時間/設定變更 → 重新檢查含此班別的班表
+        if (updatedShiftId.HasValue)
+        {
+            var conflictCount = await conflictService.RecheckByShiftAsync(updatedShiftId.Value);
+            if (conflictCount > 0)
+                snackbarService.ShowWarning($"儲存後發現 {conflictCount} 條排班衝突，請至排班頁面調整");
+        }
     }
 
     [RelayCommand]

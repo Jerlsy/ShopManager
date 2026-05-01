@@ -10,8 +10,6 @@ public class Employee
     [Required] public string Name { get; set; } = string.Empty;
     public string? EnglishName { get; set; }
     public string IdNumber { get; set; } = string.Empty;
-    public string Address { get; set; } = string.Empty;
-    public string Phone { get; set; } = string.Empty;
     public DateOnly? BirthDate { get; set; }
     public byte[]? AvatarPhotoData { get; set; }
     public DateOnly? InterviewDate { get; set; }
@@ -22,11 +20,7 @@ public class Employee
     // 偏好班別 ID 清單（空 = 不限）
     public List<int> PreferredShiftIds { get; set; } = new();
 
-    // 通訊軟體（保留向下相容）
-    public string? MessengerType { get; set; }
-    public string? MessengerValue { get; set; }
-
-    // 自訂聯絡方式（保留向下相容）
+    // 自訂聯絡方式（保留舊資料相容；新增功能請用 ContactInfos）
     public List<CustomContact> CustomContacts { get; set; } = new();
 
     // 預設班別（FK）
@@ -49,6 +43,17 @@ public class Employee
     public string ColorHex { get; set; } = string.Empty;                // 識別色（Hex）
 
     public bool IsResigned => ResignDate.HasValue && ResignDate.Value <= DateOnly.FromDateTime(DateTime.Today);
+
+    public bool IsBirthdayThisMonth =>
+        BirthDate.HasValue && BirthDate.Value.Month == DateTime.Today.Month;
+
+    public bool HasPrimaryContact => ContactInfos.Count > 0;
+
+    public bool HasBirthDate => BirthDate.HasValue;
+
+    public string HireDateLabel => $"到職 {HireDate:yyyy/MM}";
+
+    public string BirthDateLabel => BirthDate.HasValue ? $"{BirthDate.Value:MM/dd}" : string.Empty;
 
     public string PrimaryContact =>
         ContactInfos.Count > 0 ? $"{ContactInfos[0].Type}：{ContactInfos[0].Value}" : string.Empty;
@@ -79,7 +84,7 @@ public class ScheduleRule
     // 排除班別：ShiftSetting.Id 清單
     public List<int> ExcludedShiftIds { get; set; } = new();
 
-    // 不與共事：Employee.Id 清單
+    // 不與同班 / 不與同天：Employee.Id 清單
     public List<int> ExcludedColleagueIds { get; set; } = new();
 }
 
@@ -87,7 +92,8 @@ public enum ScheduleRuleType
 {
     FixedOff = 0,       // 固定休假
     ExcludeShift = 1,   // 排除班別
-    NotWith = 2         // 不與共事
+    NotWith = 2,        // 不與同班
+    NotWithDay = 3      // 不與同天
 }
 
 /// <summary>預設獎金</summary>

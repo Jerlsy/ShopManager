@@ -7,18 +7,21 @@ namespace ShopManager.Views.Dialogs;
 public record ScheduleRulesDialogResult(
     List<int> FixedOffDays,
     List<int> ExcludedShiftIds,
-    List<int> NotWithEmployeeIds);
+    List<int> NotWithEmployeeIds,
+    List<int> NotWithDayEmployeeIds);
 
 public partial class ScheduleRulesDialog : UserControl
 {
     private readonly List<DayOfWeekItem> _fixedOffItems;
     private readonly List<ShiftCheckItem> _excludeItems;
     private readonly List<ColleagueCheckItem> _notWithItems;
+    private readonly List<ColleagueCheckItem> _notWithDayItems;
 
     public ScheduleRulesDialog(
         List<DayOfWeekItem> fixedOffDayItems,
         List<ShiftCheckItem> excludeShiftItems,
         List<ColleagueCheckItem> notWithItems,
+        List<ColleagueCheckItem> notWithDayItems,
         List<int> shopClosedDays)
     {
         InitializeComponent();
@@ -46,6 +49,10 @@ public partial class ScheduleRulesDialog : UserControl
             .Select(e => new ColleagueCheckItem { EmployeeId = e.EmployeeId, Name = e.Name, IsChecked = e.IsChecked })
             .ToList();
 
+        _notWithDayItems = notWithDayItems
+            .Select(e => new ColleagueCheckItem { EmployeeId = e.EmployeeId, Name = e.Name, IsChecked = e.IsChecked })
+            .ToList();
+
         FixedOffList.ItemsSource = _fixedOffItems;
 
         if (_excludeItems.Count == 0)
@@ -67,14 +74,25 @@ public partial class ScheduleRulesDialog : UserControl
         {
             NotWithList.ItemsSource = _notWithItems;
         }
+
+        if (_notWithDayItems.Count == 0)
+        {
+            NoColleaguesDayHint.Visibility = System.Windows.Visibility.Visible;
+            NotWithDayList.Visibility = System.Windows.Visibility.Collapsed;
+        }
+        else
+        {
+            NotWithDayList.ItemsSource = _notWithDayItems;
+        }
     }
 
     private void OkButton_Click(object sender, System.Windows.RoutedEventArgs e)
     {
         var result = new ScheduleRulesDialogResult(
-            FixedOffDays: _fixedOffItems.Where(d => d.IsChecked && !d.IsShopClosed).Select(d => (int)d.Day).ToList(),
-            ExcludedShiftIds: _excludeItems.Where(s => s.IsChecked).Select(s => s.ShiftId).ToList(),
-            NotWithEmployeeIds: _notWithItems.Where(e => e.IsChecked).Select(e => e.EmployeeId).ToList());
+            FixedOffDays:         _fixedOffItems.Where(d => d.IsChecked && !d.IsShopClosed).Select(d => (int)d.Day).ToList(),
+            ExcludedShiftIds:     _excludeItems.Where(s => s.IsChecked).Select(s => s.ShiftId).ToList(),
+            NotWithEmployeeIds:   _notWithItems.Where(e => e.IsChecked).Select(e => e.EmployeeId).ToList(),
+            NotWithDayEmployeeIds: _notWithDayItems.Where(e => e.IsChecked).Select(e => e.EmployeeId).ToList());
 
         DialogHost.CloseDialogCommand.Execute(result, this);
     }

@@ -56,6 +56,7 @@ public partial class EmployeeViewModel : ObservableObject
     private readonly ShiftSettingService _shiftService;
     private readonly SalarySettingService _salaryService;
     private readonly ShopSettingService _shopSettingService;
+    private readonly ScheduleConflictService _conflictService;
     private readonly IAppSnackbarService _snackbarService;
     private readonly IAppDialogService _dialogService;
 
@@ -66,6 +67,7 @@ public partial class EmployeeViewModel : ObservableObject
         ShiftSettingService shiftService,
         SalarySettingService salaryService,
         ShopSettingService shopSettingService,
+        ScheduleConflictService conflictService,
         IAppSnackbarService snackbarService,
         IAppDialogService dialogService)
     {
@@ -73,6 +75,7 @@ public partial class EmployeeViewModel : ObservableObject
         _shiftService = shiftService;
         _salaryService = salaryService;
         _shopSettingService = shopSettingService;
+        _conflictService = conflictService;
         _snackbarService = snackbarService;
         _dialogService = dialogService;
 
@@ -112,7 +115,8 @@ public partial class EmployeeViewModel : ObservableObject
     public List<DayOfWeekItem> FixedOffDayItems { get; }
     [ObservableProperty] private List<ShiftCheckItem> _excludeShiftItems = new();
     [ObservableProperty] private List<ColleagueCheckItem> _notWithItems = new();
-    public bool HasNoColleagues => NotWithItems.Count == 0;
+    [ObservableProperty] private List<ColleagueCheckItem> _notWithDayItems = new();
+    public bool HasNoColleagues => NotWithItems.Count == 0 && NotWithDayItems.Count == 0;
 
     // ── 基本編輯欄位 ───────────────────────────────────────
     [ObservableProperty]
@@ -150,16 +154,6 @@ public partial class EmployeeViewModel : ObservableObject
     [ObservableProperty] private bool _hasConflicts;
     [ObservableProperty] private List<string> _conflictMonths = new();
 
-    // ── 員工識別色色盤 ─────────────────────────────────────
-    private static readonly string[] _colorPalette =
-    [
-        "#A8D8EA", "#A8E6CF", "#FFCCB6", "#C6ADFF", "#FFD3B6",
-        "#B5EAD7", "#C7CEEA", "#FFB7C5", "#B5E7B0", "#FAE5A0",
-        "#F4C2C2", "#AEE1E1", "#F9D8A0", "#B8D8F8", "#D4EAB0",
-        "#F0B8D8", "#B8E8D0", "#E8D0F8", "#F8D0B8", "#C8E8F8",
-        "#F8E8B0", "#D0D8F8", "#B8F0D8", "#F8C8C8"
-    ];
-
     // ── 靜態資料 ──────────────────────────────────────────
     public static List<string> EmployeeContactTypes { get; } = new()
     {
@@ -171,9 +165,6 @@ public partial class EmployeeViewModel : ObservableObject
         Enumerable.Range(1940, DateTime.Today.Year - 1940 + 1).Reverse().ToList();
 
     public static List<int> BirthMonths { get; } = Enumerable.Range(1, 12).ToList();
-
-    public static List<string> BirthMonthLabels { get; } =
-        Enumerable.Range(1, 12).Select(m => $"{m} 月").ToList();
 
     public List<int> BirthDays =>
         (EditBirthYear.HasValue && EditBirthMonth.HasValue)
@@ -229,7 +220,9 @@ public partial class EmployeeViewModel : ObservableObject
             var excCount = ExcludeShiftItems.Count(s => s.IsChecked);
             if (excCount > 0) parts.Add($"排除 {excCount} 個班別");
             var nwCount = NotWithItems.Count(e => e.IsChecked);
-            if (nwCount > 0) parts.Add($"不與 {nwCount} 人共事");
+            if (nwCount > 0) parts.Add($"不與 {nwCount} 人同班");
+            var nwdCount = NotWithDayItems.Count(e => e.IsChecked);
+            if (nwdCount > 0) parts.Add($"不與 {nwdCount} 人同天");
             return parts.Count == 0 ? "未設定" : string.Join("・", parts);
         }
     }
@@ -268,10 +261,13 @@ public partial class EmployeeViewModel : ObservableObject
             .Select(s => new ShiftCheckItem { ShiftId = s.Id, Alias = s.Alias })
             .ToList();
 
-        NotWithItems = Employees
+        var colleagues = Employees
             .Where(e => !e.IsResigned && e.Id != (currentEmployeeId ?? -1))
             .Select(e => new ColleagueCheckItem { EmployeeId = e.Id, Name = e.Name })
             .ToList();
+
+        NotWithItems    = colleagues.Select(e => new ColleagueCheckItem { EmployeeId = e.EmployeeId, Name = e.Name }).ToList();
+        NotWithDayItems = colleagues.Select(e => new ColleagueCheckItem { EmployeeId = e.EmployeeId, Name = e.Name }).ToList();
 
         OnPropertyChanged(nameof(HasNoColleagues));
     }
@@ -329,11 +325,17 @@ public partial class EmployeeViewModel : ObservableObject
         foreach (var item in ExcludeShiftItems)
             item.IsChecked = excludedIds.Contains(item.ShiftId);
 
-        // 不與共事
+        // 不與同班
         var notWithRule = emp.ScheduleRules.FirstOrDefault(r => r.Type == ScheduleRuleType.NotWith);
-        var notWithIds = notWithRule?.ExcludedColleagueIds ?? new List<int>();
+        var notWithIds  = notWithRule?.ExcludedColleagueIds ?? new List<int>();
         foreach (var item in NotWithItems)
             item.IsChecked = notWithIds.Contains(item.EmployeeId);
+
+        // 不與同天
+        var notWithDayRule = emp.ScheduleRules.FirstOrDefault(r => r.Type == ScheduleRuleType.NotWithDay);
+        var notWithDayIds  = notWithDayRule?.ExcludedColleagueIds ?? new List<int>();
+        foreach (var item in NotWithDayItems)
+            item.IsChecked = notWithDayIds.Contains(item.EmployeeId);
 
         OnPropertyChanged(nameof(SalarySummary));
         OnPropertyChanged(nameof(EmploymentSummary));
@@ -387,7 +389,7 @@ public partial class EmployeeViewModel : ObservableObject
     [RelayCommand]
     private async Task OpenScheduleRulesDialogAsync()
     {
-        var dialog = new Views.Dialogs.ScheduleRulesDialog(FixedOffDayItems, ExcludeShiftItems, NotWithItems, _shopClosedDays);
+        var dialog = new Views.Dialogs.ScheduleRulesDialog(FixedOffDayItems, ExcludeShiftItems, NotWithItems, NotWithDayItems, _shopClosedDays);
         var result = await DialogHost.Show(dialog, "RootDialog");
         if (result is Views.Dialogs.ScheduleRulesDialogResult r)
         {
@@ -397,6 +399,8 @@ public partial class EmployeeViewModel : ObservableObject
                 s.IsChecked = r.ExcludedShiftIds.Contains(s.ShiftId);
             foreach (var e in NotWithItems)
                 e.IsChecked = r.NotWithEmployeeIds.Contains(e.EmployeeId);
+            foreach (var e in NotWithDayItems)
+                e.IsChecked = r.NotWithDayEmployeeIds.Contains(e.EmployeeId);
             OnPropertyChanged(nameof(ScheduleRulesSummary));
         }
     }
@@ -470,11 +474,16 @@ public partial class EmployeeViewModel : ObservableObject
         if (notWithIds.Any())
             rules.Add(new ScheduleRule { EmployeeId = emp.Id, Type = ScheduleRuleType.NotWith, ExcludedColleagueIds = notWithIds });
 
+        var notWithDayIds = NotWithDayItems.Where(e => e.IsChecked).Select(e => e.EmployeeId).ToList();
+        if (notWithDayIds.Any())
+            rules.Add(new ScheduleRule { EmployeeId = emp.Id, Type = ScheduleRuleType.NotWithDay, ExcludedColleagueIds = notWithDayIds });
+
         emp.ScheduleRules = rules;
 
-        if (SelectedEmployee is null)
+        bool isUpdate = SelectedEmployee is not null;
+        if (!isUpdate)
         {
-            emp.ColorHex = _colorPalette[Employees.Count % _colorPalette.Length];
+            emp.ColorHex = App.EmployeeColorPalette[Employees.Count % App.EmployeeColorPalette.Length];
             await _employeeService.AddAsync(emp);
         }
         else
@@ -486,6 +495,14 @@ public partial class EmployeeViewModel : ObservableObject
         IsEditing = false;
         await LoadAsync();
         _snackbarService.ShowSuccess("員工資料已儲存");
+
+        // 員工規則/離職日變更 → 重新檢查所有含此員工的班表
+        if (isUpdate)
+        {
+            var conflictCount = await _conflictService.RecheckByEmployeeAsync(emp.Id);
+            if (conflictCount > 0)
+                _snackbarService.ShowWarning($"儲存後發現 {conflictCount} 條排班衝突，請至排班頁面調整");
+        }
     }
 
     // ══════════════════════════════════════════════════════
@@ -549,9 +566,10 @@ public partial class EmployeeViewModel : ObservableObject
         HasConflicts       = false;
         ConflictMonths     = new();
 
-        foreach (var d in FixedOffDayItems)  d.IsChecked = false;
-        foreach (var s in ExcludeShiftItems) s.IsChecked = false;
-        foreach (var e in NotWithItems)      e.IsChecked = false;
+        foreach (var d in FixedOffDayItems)   d.IsChecked = false;
+        foreach (var s in ExcludeShiftItems)  s.IsChecked = false;
+        foreach (var e in NotWithItems)       e.IsChecked = false;
+        foreach (var e in NotWithDayItems)    e.IsChecked = false;
 
         OnPropertyChanged(nameof(SalarySummary));
         OnPropertyChanged(nameof(EmploymentSummary));

@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
         Title="ShopManager - 店鋪選取"
+        Icon="/Resources/app.ico"
         WindowStyle="None"
         AllowsTransparency="True"
         ResizeMode="NoResize"
@@ -23,12 +24,12 @@
 
         <Border HorizontalAlignment="Center"
                 VerticalAlignment="Center"
-                Width="480"
-                CornerRadius="20"
+                Width="420"
+                CornerRadius="16"
                 Background="{DynamicResource AppSurfaceBrush}"
                 BorderBrush="{DynamicResource AppBorderBrush}"
                 BorderThickness="1"
-                Padding="40">
+                Padding="28">
             <Border.Effect>
                 <DropShadowEffect BlurRadius="40" ShadowDepth="10" Opacity="0.15" Color="Black"/>
             </Border.Effect>
@@ -36,36 +37,36 @@
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="32"/>
+                    <RowDefinition Height="20"/>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="24"/>
+                    <RowDefinition Height="16"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <!-- 頂部圖示與歡迎文字 -->
                 <StackPanel Grid.Row="0">
-                    <Border Width="72"
-                            Height="72"
-                            CornerRadius="20"
+                    <Border Width="56"
+                            Height="56"
+                            CornerRadius="14"
                             Background="{DynamicResource AppPanelAltBrush}"
                             BorderBrush="{DynamicResource AppBorderBrush}"
                             BorderThickness="1"
                             HorizontalAlignment="Center"
-                            Margin="0,0,0,24">
+                            Margin="0,0,0,16">
                         <md:PackIcon Kind="StorefrontOutline"
-                                     Width="40"
-                                     Height="40"
+                                     Width="30"
+                                     Height="30"
                                      Foreground="{DynamicResource PrimaryHueMidBrush}"
                                      HorizontalAlignment="Center"
                                      VerticalAlignment="Center"/>
                     </Border>
                     <TextBlock Text="歡迎使用 ShopManager"
-                               FontSize="{DynamicResource FontSizeWindowTitle}"
+                               FontSize="{DynamicResource FontSizeSection}"
                                FontWeight="Bold"
                                HorizontalAlignment="Center"
-                               Margin="0,0,0,8"/>
+                               Margin="0,0,0,6"/>
                     <TextBlock Text="請選擇店鋪以進入管理系統"
-                               FontSize="{DynamicResource FontSizeBodyPlus}"
+                               FontSize="{DynamicResource FontSizeBody}"
                                HorizontalAlignment="Center"
                                Foreground="{DynamicResource AppSubtleForegroundBrush}"/>
                 </StackPanel>
@@ -101,10 +102,10 @@
                         Content="進入系統管理"
                         Style="{StaticResource MaterialDesignRaisedButton}"
                         HorizontalAlignment="Stretch"
-                        Height="56"
-                        FontSize="{DynamicResource FontSizeSubTitle}"
+                        Height="44"
+                        FontSize="{DynamicResource FontSizeHeading}"
                         FontWeight="Bold"
-                        md:ButtonAssist.CornerRadius="20"
+                        md:ButtonAssist.CornerRadius="14"
                         Command="{Binding EnterCommand}"/>
             </Grid>
         </Border>

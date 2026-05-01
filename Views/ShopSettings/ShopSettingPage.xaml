@@ -4,7 +4,7 @@
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:vm="clr-namespace:ShopManager.ViewModels">
 
-    <StackPanel Margin="{StaticResource PageMargin}">
+    <StackPanel Margin="{DynamicResource PageMargin}">
             <!-- 頁面標題 -->
             <Border Style="{StaticResource PageHeaderStyle}">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -28,13 +28,13 @@
                     <!-- 店鋪 Logo -->
                     <TextBlock Text="店鋪 Logo" Style="{StaticResource FieldLabelStyle}"/>
                     <Button x:Name="PickLogoButton" Click="PickLogo_Click"
-                            HorizontalAlignment="Left" Margin="0,4,0,20"
+                            HorizontalAlignment="Left" Margin="0,4,0,14"
                             Style="{StaticResource MaterialDesignIconButton}"
-                            Width="100" Height="100"
+                            Width="80" Height="80"
                             ToolTip="點擊上傳 Logo">
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
-                                <Border Width="100" Height="100" CornerRadius="16"
+                                <Border Width="80" Height="80" CornerRadius="14"
                                         Background="{DynamicResource AppPanelAltBrush}"
                                         BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="2"
                                         ClipToBounds="True" Cursor="Hand">
@@ -134,14 +134,14 @@
                         <StackPanel>
                             <TextBlock Text="配色主題" Style="{StaticResource FieldLabelStyle}" Margin="0,0,0,12"/>
                             <WrapPanel>
-                                <Button Width="46" Height="46" Margin="0,0,10,10" Command="{Binding SetSkyBlueAccentCommand}" ToolTip="晴空藍" Style="{StaticResource MaterialDesignFloatingActionMiniButton}" Background="#03A9F4" BorderBrush="#01579B"/>
-                                <Button Width="46" Height="46" Margin="0,0,10,10" Command="{Binding SetMintGreenAccentCommand}" ToolTip="薄荷綠" Style="{StaticResource MaterialDesignFloatingActionMiniButton}" Background="#00C853" BorderBrush="#00471F"/>
-                                <Button Width="46" Height="46" Margin="0,0,10,10" Command="{Binding SetAmberOrangeAccentCommand}" ToolTip="暖陽橘" Style="{StaticResource MaterialDesignFloatingActionMiniButton}" Background="#FFAB00" BorderBrush="#BF360C"/>
-                                <Button Width="46" Height="46" Margin="0,0,10,10" Command="{Binding SetRoyalPurpleAccentCommand}" ToolTip="皇家紫" Style="{StaticResource MaterialDesignFloatingActionMiniButton}" Background="#673AB7" BorderBrush="#311B92"/>
-                                <Button Width="46" Height="46" Margin="0,0,10,10" Command="{Binding SetSoftPinkAccentCommand}" ToolTip="櫻花粉" Style="{StaticResource MaterialDesignFloatingActionMiniButton}" Background="#E91E63" BorderBrush="#880E4F"/>
-                                <Button Width="46" Height="46" Margin="0,0,10,10" Command="{Binding SetVibrantRedAccentCommand}" ToolTip="熱情紅" Style="{StaticResource MaterialDesignFloatingActionMiniButton}" Background="#F44336" BorderBrush="#B71C1C"/>
-                                <Button Width="46" Height="46" Margin="0,0,10,10" Command="{Binding SetOceanBlueAccentCommand}" ToolTip="深海藍" Style="{StaticResource MaterialDesignFloatingActionMiniButton}" Background="#1565C0" BorderBrush="#0D47A1"/>
-                                <Button Width="46" Height="46" Margin="0,0,10,10" Command="{Binding SetMidnightCyanAccentCommand}" ToolTip="深夜模式" Style="{StaticResource MaterialDesignFloatingActionMiniButton}" Background="#141E30" BorderBrush="#47DCFF"/>
+                                <Button Width="36" Height="36" Margin="0,0,8,8" Command="{Binding SetSkyBlueAccentCommand}" ToolTip="晴空藍" Style="{StaticResource MaterialDesignFloatingActionMiniButton}" Background="#03A9F4" BorderBrush="#01579B"/>
+                                <Button Width="36" Height="36" Margin="0,0,8,8" Command="{Binding SetMintGreenAccentCommand}" ToolTip="薄荷綠" Style="{StaticResource MaterialDesignFloatingActionMiniButton}" Background="#00C853" BorderBrush="#00471F"/>
+                                <Button Width="36" Height="36" Margin="0,0,8,8" Command="{Binding SetAmberOrangeAccentCommand}" ToolTip="暖陽橘" Style="{StaticResource MaterialDesignFloatingActionMiniButton}" Background="#FFAB00" BorderBrush="#BF360C"/>
+                                <Button Width="36" Height="36" Margin="0,0,8,8" Command="{Binding SetRoyalPurpleAccentCommand}" ToolTip="皇家紫" Style="{StaticResource MaterialDesignFloatingActionMiniButton}" Background="#673AB7" BorderBrush="#311B92"/>
+                                <Button Width="36" Height="36" Margin="0,0,8,8" Command="{Binding SetSoftPinkAccentCommand}" ToolTip="櫻花粉" Style="{StaticResource MaterialDesignFloatingActionMiniButton}" Background="#E91E63" BorderBrush="#880E4F"/>
+                                <Button Width="36" Height="36" Margin="0,0,8,8" Command="{Binding SetVibrantRedAccentCommand}" ToolTip="熱情紅" Style="{StaticResource MaterialDesignFloatingActionMiniButton}" Background="#F44336" BorderBrush="#B71C1C"/>
+                                <Button Width="36" Height="36" Margin="0,0,8,8" Command="{Binding SetOceanBlueAccentCommand}" ToolTip="深海藍" Style="{StaticResource MaterialDesignFloatingActionMiniButton}" Background="#1565C0" BorderBrush="#0D47A1"/>
+                                <Button Width="36" Height="36" Margin="0,0,8,8" Command="{Binding SetMidnightCyanAccentCommand}" ToolTip="深夜模式" Style="{StaticResource MaterialDesignFloatingActionMiniButton}" Background="#141E30" BorderBrush="#47DCFF"/>
                             </WrapPanel>
                         </StackPanel>
                     </Border>

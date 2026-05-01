@@ -4,7 +4,7 @@
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:vm="clr-namespace:ShopManager.ViewModels">
 
-    <Grid Margin="{StaticResource PageMargin}">
+    <Grid Margin="{DynamicResource PageMargin}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -51,9 +51,9 @@
                 <!-- 無資料提示 -->
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
                             Visibility="{Binding ShowEmptyHint, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <md:PackIcon Kind="AccountGroup" Width="80" Height="80" Opacity="0.12" HorizontalAlignment="Center"/>
+                    <md:PackIcon Kind="AccountGroup" Width="60" Height="60" Opacity="0.12" HorizontalAlignment="Center"/>
                     <TextBlock Text="尚未新增任何員工，點選右上角「新增員工」開始"
-                               Margin="0,20,0,0" Opacity="0.45"
+                               Margin="0,14,0,0" Opacity="0.45"
                                Style="{StaticResource ItemTitleStyle}" HorizontalAlignment="Center"/>
                 </StackPanel>
 
@@ -67,9 +67,9 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <!-- 員工卡片：整體識別色底 + 內容置頂 -->
-                                <Border Width="280" Height="160" Margin="0,0,12,12"
-                                        CornerRadius="16"
+                                <!-- 員工卡片 -->
+                                <Border Width="{DynamicResource LayoutEmployeeCardWidth}" Margin="0,0,8,8"
+                                        CornerRadius="14"
                                         Background="{Binding ColorHex, Converter={StaticResource HexToBrushConverter}}"
                                         BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
                                         Cursor="Hand">
@@ -79,6 +79,11 @@
                                                       CommandParameter="{Binding}"/>
                                     </Border.InputBindings>
                                     <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
                                         <!-- 刪除按鈕（右上角） -->
                                         <Button Style="{StaticResource MaterialDesignIconButton}"
                                                 Width="30" Height="30"
@@ -89,51 +94,104 @@
                                             <md:PackIcon Kind="DeleteOutline" Width="15" Height="15" Opacity="0.45"/>
                                         </Button>
 
-                                        <!-- 主內容（置頂） -->
-                                        <Grid Margin="14,14,44,0" VerticalAlignment="Top">
+                                        <!-- 上半：大頭貼 + 姓名區塊 -->
+                                        <Grid Margin="10,10,36,10" VerticalAlignment="Top">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
 
-                                            <!-- 大頭貼（白色半透明底，強調輪廓） -->
+                                            <!-- 大頭貼 -->
                                             <Border Grid.Column="0"
-                                                    Width="48" Height="48" CornerRadius="24" ClipToBounds="True"
+                                                    Width="40" Height="40" CornerRadius="20" ClipToBounds="True"
                                                     Background="#70FFFFFF"
-                                                    Margin="0,0,12,0" VerticalAlignment="Top">
+                                                    Margin="0,0,10,0" VerticalAlignment="Top">
                                                 <Grid>
                                                     <Image Source="{Binding AvatarPhotoData, Converter={StaticResource BytesToImageConverter}}"
                                                            Stretch="UniformToFill"
                                                            Visibility="{Binding AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}}"/>
                                                     <TextBlock Text="{Binding Name, Converter={StaticResource NameInitialConverter}}"
-                                                               FontWeight="Bold" FontSize="18"
+                                                               FontWeight="Bold" FontSize="16"
                                                                HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                Foreground="{DynamicResource AppSubtleForegroundBrush}"
                                                                Visibility="{Binding AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"/>
                                                 </Grid>
                                             </Border>
 
-                                            <!-- 姓名 + 聯繫 + 班別 -->
+                                            <!-- 姓名 + 徽章 + 聯繫 -->
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <!-- 姓名行：名字 + 已離職 + 本月壽星 -->
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Text="{Binding Name}"
                                                                Style="{StaticResource ItemTitleStyle}"
-                                                               TextTrimming="CharacterEllipsis"/>
+                                                               TextTrimming="CharacterEllipsis"
+                                                               MaxWidth="100"/>
                                                     <Border Background="#40C62828" CornerRadius="4" Padding="4,1"
                                                             Margin="6,0,0,0" VerticalAlignment="Center"
                                                             Visibility="{Binding IsResigned, Converter={StaticResource BoolToVisibilityConverter}}">
                                                         <TextBlock Text="已離職" FontSize="10" Foreground="#C62828"/>
                                                     </Border>
+                                                    <!-- 本月壽星徽章 -->
+                                                    <Border Background="#28FF9800" CornerRadius="4" Padding="4,1"
+                                                            Margin="6,0,0,0" VerticalAlignment="Center"
+                                                            Visibility="{Binding IsBirthdayThisMonth, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <md:PackIcon Kind="CakeVariant" Width="11" Height="11"
+                                                                         Foreground="#C05A00"
+                                                                         VerticalAlignment="Center" Margin="0,0,3,0"/>
+                                                            <TextBlock Text="本月壽星" FontSize="10" Foreground="#C05A00"/>
+                                                        </StackPanel>
+                                                    </Border>
                                                 </StackPanel>
+                                                <!-- 聯繫方式（有才顯示） -->
                                                 <TextBlock Text="{Binding PrimaryContact}"
                                                            Style="{StaticResource CaptionTextStyle}"
                                                            TextTrimming="CharacterEllipsis"
-                                                           Margin="0,4,0,0"/>
-                                                <TextBlock Text="{Binding ShiftPreferenceLabel}"
-                                                           Style="{StaticResource CaptionTextStyle}"
-                                                           Margin="0,2,0,0"/>
+                                                           Margin="0,4,0,0"
+                                                           Visibility="{Binding HasPrimaryContact, Converter={StaticResource BoolToVisibilityConverter}}"/>
                                             </StackPanel>
                                         </Grid>
+
+                                        <!-- 下半：到職日 + 生日（可選） + 班別偏好 -->
+                                        <Border Grid.Row="1"
+                                                Background="#20000000"
+                                                CornerRadius="0,0,14,14"
+                                                Padding="10,6">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <!-- 左側：到職日 + 生日 -->
+                                                <StackPanel Grid.Column="0">
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <md:PackIcon Kind="CalendarMonth" Width="13" Height="13"
+                                                                     Opacity="0.6" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                        <TextBlock Text="{Binding HireDateLabel}"
+                                                                   FontSize="{DynamicResource FontSizeSmall}"
+                                                                   Opacity="0.7" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                    <!-- 生日（有設定才顯示） -->
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                                                                Visibility="{Binding HasBirthDate, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                                Margin="0,3,0,0">
+                                                        <md:PackIcon Kind="CakeVariant" Width="13" Height="13"
+                                                                     Opacity="0.6" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                        <TextBlock Text="{Binding BirthDateLabel}"
+                                                                   FontSize="{DynamicResource FontSizeSmall}"
+                                                                   Opacity="0.7" VerticalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                                <!-- 右側：班別偏好 -->
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <md:PackIcon Kind="ClockOutline" Width="13" Height="13"
+                                                                 Opacity="0.6" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                    <TextBlock Text="{Binding ShiftPreferenceLabel}"
+                                                               FontSize="{DynamicResource FontSizeSmall}"
+                                                               Opacity="0.7" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
                                     </Grid>
                                 </Border>
                             </DataTemplate>
@@ -145,8 +203,8 @@
             <!-- ── 清單 + 編輯模式（展開編輯） ── -->
             <Grid Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}}">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="280"/>
-                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="{DynamicResource LayoutSideListGridWidth}"/>
+                    <ColumnDefinition Width="8"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
@@ -222,27 +280,27 @@
                             <!-- 標題 -->
                             <TextBlock Text="{Binding SelectedEmployee, Converter={StaticResource NullToStringConverter}, ConverterParameter='新增員工|編輯員工資料'}"
                                        FontSize="{DynamicResource FontSizeListTitle}" FontWeight="SemiBold"
-                                       Margin="0,0,0,24"/>
+                                       Margin="0,0,0,16"/>
 
                             <!-- ── 基本資料 ── -->
                             <TextBlock Text="基本資料" Style="{StaticResource FormSectionStyle}"/>
 
                             <!-- 大頭貼 + 姓名 + 英文名 -->
-                            <Grid Margin="0,0,0,16">
+                            <Grid Margin="0,0,0,12">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="16"/>
+                                    <ColumnDefinition Width="12"/>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="16"/>
+                                    <ColumnDefinition Width="12"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
 
-                                <Button Grid.Column="0" Width="80" Height="80" Padding="0"
+                                <Button Grid.Column="0" Width="68" Height="68" Padding="0"
                                         Click="PickAvatar_Click" ToolTip="點擊選擇大頭貼"
                                         VerticalAlignment="Center">
                                     <Button.Template>
                                         <ControlTemplate TargetType="Button">
-                                            <Border Width="80" Height="80" CornerRadius="40" ClipToBounds="True"
+                                            <Border Width="68" Height="68" CornerRadius="34" ClipToBounds="True"
                                                     Background="{DynamicResource AppPanelBrush}"
                                                     BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="2"
                                                     Cursor="Hand">
@@ -271,7 +329,7 @@
                             </Grid>
 
                             <!-- 身分證 + 生日 -->
-                            <Grid Margin="0,0,0,24">
+                            <Grid Margin="0,0,0,16">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="16"/>
@@ -339,7 +397,7 @@
                                 </Button>
                             </Grid>
 
-                            <ItemsControl ItemsSource="{Binding EditContactInfos}" Margin="0,0,0,24">
+                            <ItemsControl ItemsSource="{Binding EditContactInfos}" Margin="0,0,0,16">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Grid Margin="0,0,0,8">
@@ -370,12 +428,12 @@
                             <Separator Margin="0,0,0,20"/>
 
                             <!-- ── 3 個設定按鈕 ── -->
-                            <Grid Margin="0,0,0,28">
+                            <Grid Margin="0,0,0,16">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="8"/>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="8"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
 

@@ -9,6 +9,7 @@ using ShopManager.Views.SalarySettings;
 using ShopManager.Views.Schedule;
 using ShopManager.Views.ShiftSettings;
 using ShopManager.Views.ShopSettings;
+using System.Windows;
 
 namespace ShopManager.ViewModels;
 
@@ -36,6 +37,13 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool _isSystemConfigured;
     [ObservableProperty] private NavItem? _selectedNavItem;
     [ObservableProperty] private bool _isNavExpanded = true;
+
+    public GridLength NavColumnWidth =>
+        IsNavExpanded
+            ? new GridLength((double)Application.Current.Resources["LayoutNavExpandedWidth"])
+            : new GridLength(44);
+
+    partial void OnIsNavExpandedChanged(bool value) => OnPropertyChanged(nameof(NavColumnWidth));
 
     [RelayCommand]
     private void ToggleNav() => IsNavExpanded = !IsNavExpanded;

@@ -7,6 +7,7 @@ namespace ShopManager.ViewModels;
 
 public partial class SalarySettingViewModel(
     SalarySettingService service,
+    ScheduleConflictService conflictService,
     IAppSnackbarService snackbarService,
     IAppDialogService dialogService) : ObservableObject
 {
@@ -64,6 +65,11 @@ public partial class SalarySettingViewModel(
         await service.SaveLaborLawAsync(LaborLaw);
         ShowLaborLaw = false;
         snackbarService.ShowSuccess("勞基法設定已儲存");
+
+        // 每日工時上限變更 → 重新檢查所有班表
+        var conflictCount = await conflictService.RecheckAllForShopAsync();
+        if (conflictCount > 0)
+            snackbarService.ShowWarning($"儲存後發現 {conflictCount} 條排班衝突，請至排班頁面調整");
     }
 
     /// <summary>新增時按類型帶入勞基法預設值</summary>
@@ -72,8 +78,8 @@ public partial class SalarySettingViewModel(
         EditOT1Rate = value == SalaryType.Hourly ? LaborLaw.HourlyOT1Rate : LaborLaw.MonthlyOT1Rate;
         EditOT2Rate = value == SalaryType.Hourly ? LaborLaw.HourlyOT2Rate : LaborLaw.MonthlyOT2Rate;
         EditHolidayRate = LaborLaw.HolidayOTRate;
-        EditDailyMaxHours = value == SalaryType.Hourly ? LaborLaw.HourlyDailyMaxHours : LaborLaw.MonthlyDailyMaxHours;
-        EditWeeklyMaxHours = value == SalaryType.Hourly ? LaborLaw.HourlyWeeklyMaxHours : LaborLaw.MonthlyWeeklyMaxHours;
+        EditDailyMaxHours = LaborLaw.DailyMaxHours;
+        EditWeeklyMaxHours = LaborLaw.WeeklyMaxHours;
     }
 
     [RelayCommand]

@@ -8,13 +8,17 @@
     <UseWPF>true</UseWPF>
     <AssemblyName>ShopManager</AssemblyName>
     <RootNamespace>ShopManager</RootNamespace>
-    <ApplicationIcon>Resources\app.ico</ApplicationIcon>
     <LangVersion>latest</LangVersion>
+    <ApplicationIcon>Resources\app.ico</ApplicationIcon>
+    <UseWindowsForms>False</UseWindowsForms>
   </PropertyGroup>
 
   <ItemGroup>
     <Resource Include="Fonts\*.ttf" />
-    <Resource Include="Resources\app.ico" />
+    <Content Include="Resources\app.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Resource Include="Resources\logo.png" />
   </ItemGroup>
 
   <ItemGroup>

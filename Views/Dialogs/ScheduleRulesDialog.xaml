@@ -45,13 +45,31 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
-            <!-- 不與共事 -->
-            <TextBlock Text="不與共事" Style="{StaticResource FieldLabelStyle}"/>
+            <!-- 不與同班 -->
+            <TextBlock Text="不與同班" Style="{StaticResource FieldLabelStyle}"/>
             <TextBlock x:Name="NoColleaguesHint"
                        Text="（目前無其他在職員工）"
                        Style="{StaticResource CaptionTextStyle}"
                        Margin="0,4,0,20" Visibility="Collapsed"/>
             <ItemsControl x:Name="NotWithList" Margin="0,4,0,20">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <CheckBox Content="{Binding Name}" IsChecked="{Binding IsChecked}"
+                                  Margin="0,0,16,6"/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- 不與同天 -->
+            <TextBlock Text="不與同天" Style="{StaticResource FieldLabelStyle}"/>
+            <TextBlock x:Name="NoColleaguesDayHint"
+                       Text="（目前無其他在職員工）"
+                       Style="{StaticResource CaptionTextStyle}"
+                       Margin="0,4,0,20" Visibility="Collapsed"/>
+            <ItemsControl x:Name="NotWithDayList" Margin="0,4,0,20">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>

@@ -97,35 +97,40 @@
             <helpers:MultiplyDoubleConverter x:Key="MultiplyDoubleConverter"/>
             <helpers:HexToBrushConverter x:Key="HexToBrushConverter"/>
             <helpers:ColorMatchConverter x:Key="ColorMatchConverter"/>
-            <helpers:BoolToOpacityConverter x:Key="BoolToOpacityConverter"/>
             <helpers:BytesToImageConverter x:Key="BytesToImageConverter"/>
             <helpers:ViewModeVisibilityConverter x:Key="ViewModeVisibilityConverter"/>
+            <helpers:ConstraintTypeToLabelConverter x:Key="ConstraintTypeToLabelConverter"/>
 
-            <!-- ── 統一 UI 樣式管理 (Refactor Plan) ── -->
-            <Thickness x:Key="PageMargin">28,8,28,28</Thickness>
+            <!-- ── 響應式佈局尺寸（由 App.xaml.cs ApplyLayoutScale 依螢幕寬度覆寫） ── -->
+            <sys:Double x:Key="LayoutNavExpandedWidth">200</sys:Double>
+            <GridLength x:Key="LayoutSideListGridWidth">220</GridLength>
+            <sys:Double x:Key="LayoutEmployeeCardWidth">240</sys:Double>
+
+            <!-- ── 統一 UI 樣式管理 ── -->
+            <Thickness x:Key="PageMargin">16,6,16,14</Thickness>
 
             <!-- TextBlock 語意樣式 -->
             <Style x:Key="PageTitleStyle" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-                <Setter Property="FontSize"   Value="{DynamicResource FontSizePageTitle}"/>
+                <Setter Property="FontSize"   Value="{DynamicResource FontSizeSection}"/>
                 <Setter Property="FontWeight" Value="SemiBold"/>
             </Style>
 
             <Style x:Key="SectionTitleStyle" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-                <Setter Property="FontSize"   Value="{DynamicResource FontSizeSectionAlt}"/>
+                <Setter Property="FontSize"   Value="{DynamicResource FontSizeHeading}"/>
                 <Setter Property="FontWeight" Value="SemiBold"/>
-                <Setter Property="Margin"     Value="0,0,0,20"/>
+                <Setter Property="Margin"     Value="0,0,0,10"/>
             </Style>
 
             <Style x:Key="ItemTitleStyle" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-                <Setter Property="FontSize"   Value="{DynamicResource FontSizeHeading}"/>
+                <Setter Property="FontSize"   Value="{DynamicResource FontSizeBodyPlus}"/>
                 <Setter Property="FontWeight" Value="SemiBold"/>
             </Style>
 
             <Style x:Key="FormSectionStyle" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-                <Setter Property="FontSize"   Value="{DynamicResource FontSizeSmallBody}"/>
+                <Setter Property="FontSize"   Value="{DynamicResource FontSizeSmall}"/>
                 <Setter Property="FontWeight" Value="Bold"/>
                 <Setter Property="Foreground" Value="{DynamicResource PrimaryHueMidBrush}"/>
-                <Setter Property="Margin"     Value="0,0,0,12"/>
+                <Setter Property="Margin"     Value="0,0,0,8"/>
             </Style>
 
             <Style x:Key="FieldLabelStyle" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
@@ -146,44 +151,44 @@
 
             <!-- Border 容器樣式 -->
             <Style x:Key="PageHeaderStyle" TargetType="Border">
-                <Setter Property="CornerRadius"    Value="20"/>
+                <Setter Property="CornerRadius"    Value="16"/>
                 <Setter Property="Background"      Value="{DynamicResource AppSurfaceAltBrush}"/>
                 <Setter Property="BorderBrush"     Value="{DynamicResource AppBorderBrush}"/>
                 <Setter Property="BorderThickness" Value="1"/>
-                <Setter Property="Padding"         Value="24"/>
-                <Setter Property="Margin"          Value="0,0,0,20"/>
+                <Setter Property="Padding"         Value="16,12"/>
+                <Setter Property="Margin"          Value="0,0,0,10"/>
             </Style>
 
             <Style x:Key="SectionCardStyle" TargetType="Border">
-                <Setter Property="CornerRadius"    Value="20"/>
+                <Setter Property="CornerRadius"    Value="16"/>
                 <Setter Property="Background"      Value="{DynamicResource AppSurfaceBrush}"/>
                 <Setter Property="BorderBrush"     Value="{DynamicResource AppBorderBrush}"/>
                 <Setter Property="BorderThickness" Value="1"/>
-                <Setter Property="Padding"         Value="20"/>
+                <Setter Property="Padding"         Value="14"/>
             </Style>
 
             <Style x:Key="ItemCardStyle" TargetType="Border">
-                <Setter Property="CornerRadius"    Value="20"/>
+                <Setter Property="CornerRadius"    Value="12"/>
                 <Setter Property="Background"      Value="{DynamicResource AppPanelAltBrush}"/>
                 <Setter Property="BorderBrush"     Value="{DynamicResource AppBorderBrush}"/>
                 <Setter Property="BorderThickness" Value="1"/>
-                <Setter Property="Padding"         Value="16"/>
+                <Setter Property="Padding"         Value="12,10"/>
             </Style>
 
             <Style x:Key="EditFormCardStyle" TargetType="Border">
-                <Setter Property="CornerRadius"    Value="20"/>
+                <Setter Property="CornerRadius"    Value="16"/>
                 <Setter Property="Background"      Value="{DynamicResource AppSurfaceBrush}"/>
                 <Setter Property="BorderBrush"     Value="{DynamicResource AppBorderBrush}"/>
                 <Setter Property="BorderThickness" Value="1"/>
-                <Setter Property="Padding"         Value="32"/>
+                <Setter Property="Padding"         Value="20"/>
             </Style>
 
             <Style x:Key="InfoBoxStyle" TargetType="Border">
-                <Setter Property="CornerRadius"    Value="16"/>
+                <Setter Property="CornerRadius"    Value="12"/>
                 <Setter Property="Background"      Value="{DynamicResource AppInfoBrush}"/>
                 <Setter Property="BorderBrush"     Value="{DynamicResource AppBorderBrush}"/>
                 <Setter Property="BorderThickness" Value="1"/>
-                <Setter Property="Padding"         Value="20"/>
+                <Setter Property="Padding"         Value="14,10"/>
             </Style>
             <!-- 漫畫對話框 ToolTip 樣式 -->
             <Style x:Key="SpeechBubbleToolTip" TargetType="ToolTip">

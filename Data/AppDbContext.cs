@@ -18,6 +18,7 @@ public class AppDbContext : DbContext
     public DbSet<DefaultBonus> DefaultBonuses { get; set; }
     public DbSet<MonthlySchedule> MonthlySchedules { get; set; }
     public DbSet<ScheduleEntry> ScheduleEntries { get; set; }
+    public DbSet<ScheduleConflict> ScheduleConflicts { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -106,10 +107,59 @@ public class AppDbContext : DbContext
                 v => JsonSerializer.Deserialize<List<ShiftDayConfig>>(v, (JsonSerializerOptions?)null) ?? new List<ShiftDayConfig>()
             );
 
+        modelBuilder.Entity<MonthlySchedule>()
+            .Property(e => e.ShiftDateOverrides)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => JsonSerializer.Deserialize<List<ShiftDateOverride>>(v, (JsonSerializerOptions?)null) ?? new List<ShiftDateOverride>()
+            );
+
+        modelBuilder.Entity<MonthlySchedule>()
+            .Property(e => e.StaffingGapDays)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => JsonSerializer.Deserialize<List<int>>(v, (JsonSerializerOptions?)null) ?? new List<int>()
+            );
+
+        modelBuilder.Entity<MonthlySchedule>()
+            .Property(e => e.EmployeeDayOffs)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => JsonSerializer.Deserialize<List<EmployeeDayOff>>(v, (JsonSerializerOptions?)null) ?? new List<EmployeeDayOff>()
+            );
+
+        modelBuilder.Entity<MonthlySchedule>()
+            .Property(e => e.WorkDayConditionConfigs)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => JsonSerializer.Deserialize<List<WorkDayConditionConfig>>(v, (JsonSerializerOptions?)null) ?? new List<WorkDayConditionConfig>()
+            );
+
+        modelBuilder.Entity<MonthlySchedule>()
+            .Property(e => e.EmployeeWorkDays)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => JsonSerializer.Deserialize<List<EmployeeWorkDay>>(v, (JsonSerializerOptions?)null) ?? new List<EmployeeWorkDay>()
+            );
+
+        modelBuilder.Entity<MonthlySchedule>()
+            .Property(e => e.ExcludeFromAutoAssignIds)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => JsonSerializer.Deserialize<List<int>>(v, (JsonSerializerOptions?)null) ?? new List<int>()
+            );
+
         // MonthlySchedule - 店鋪+年月唯一索引
         modelBuilder.Entity<MonthlySchedule>()
             .HasIndex(e => new { e.ShopId, e.Year, e.Month })
             .IsUnique();
+
+        // ScheduleConflict 關聯（Cascade：班表刪除時一併移除衝突紀錄）
+        modelBuilder.Entity<ScheduleConflict>()
+            .HasOne<MonthlySchedule>()
+            .WithMany()
+            .HasForeignKey(c => c.ScheduleId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         // ScheduleEntry 關聯
         modelBuilder.Entity<ScheduleEntry>()
@@ -136,17 +186,17 @@ public class AppDbContext : DbContext
             Id = 1,
             HourlyMinimumWage = 183m,
             MonthlyMinimumWage = 27470m,
-            HourlyDailyMaxHours = 8.0,
-            HourlyWeeklyMaxHours = 40.0,
-            MonthlyDailyMaxHours = 8.0,
-            MonthlyWeeklyMaxHours = 40.0,
             HourlyOT1Rate = 1.34m,
             HourlyOT2Rate = 1.67m,
             MonthlyOT1Rate = 1.34m,
             MonthlyOT2Rate = 1.67m,
             HolidayOTRate = 2.0m,
+            DailyNormalHours = 8.0,
+            DailyMaxHours = 12.0,
+            WeeklyMaxHours = 40.0,
             WeeklyRestDays = 2,
-            MaxMonthlyOTHours = 46.0
+            MaxMonthlyOTHours = 46.0,
+            MaxConsecutiveWorkDays = 6
         });
     }
 
@@ -158,15 +208,20 @@ public class AppDbContext : DbContext
     // ──────────────────────────────────────────────────────────────────────────
     public async Task DeleteShopDataAsync(Guid shopId)
     {
-        // 1. ScheduleEntry（子）→ MonthlySchedule（父）
+        // 1. ScheduleEntry / ScheduleConflict（子）→ MonthlySchedule（父）
         var monthlyIds = await MonthlySchedules
             .Where(m => m.ShopId == shopId)
             .Select(m => m.Id)
             .ToListAsync();
         if (monthlyIds.Count > 0)
+        {
             await ScheduleEntries
                 .Where(e => monthlyIds.Contains(e.MonthlyScheduleId))
                 .ExecuteDeleteAsync();
+            await ScheduleConflicts
+                .Where(c => monthlyIds.Contains(c.ScheduleId))
+                .ExecuteDeleteAsync();
+        }
         await MonthlySchedules.Where(m => m.ShopId == shopId).ExecuteDeleteAsync();
 
         // 2. Employee 子資料（CustomContact / ScheduleRule / DefaultBonus）→ Employee

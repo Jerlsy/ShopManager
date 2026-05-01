@@ -12,6 +12,7 @@ using ShopManager.Views.ShopSelection;
 using ShopManager.Views.ShopSettings;
 using ShopManager.Views.ShiftSettings;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace ShopManager;
 
@@ -33,8 +34,12 @@ public partial class App : Application
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Database.EnsureCreated();
             MigrateColumns(db);
+            MigrateTables(db);
             MigrateEmployeeColors(db);
         }
+
+        // 依螢幕寬度調整佈局尺寸。
+        ApplyLayoutScale();
 
         // 套用儲存中的主題偏好。
         var themeService = Services.GetRequiredService<ThemeService>();
@@ -61,6 +66,27 @@ public partial class App : Application
         mainWindow.Show();
     }
 
+    /// <summary>
+    /// 依主螢幕邏輯寬度（DIPs，已含 Windows 縮放比例）線性縮放佈局尺寸。
+    /// 基準 1366（11吋），上限 1920，夾在 [1.0, 1.4] 之間。
+    /// </summary>
+    private static void ApplyLayoutScale()
+    {
+        var screenW = SystemParameters.PrimaryScreenWidth;
+        var factor  = Math.Clamp(screenW / 1366.0, 1.0, 1.4);
+
+        var navW    = Math.Round(200 * factor);
+        var sideW   = Math.Round(220 * factor);
+        var cardW   = Math.Round(240 * factor);
+        var hMargin = Math.Round(16  * factor);
+        var vMargin = Math.Round(14  * factor);
+
+        Current.Resources["LayoutNavExpandedWidth"]  = navW;
+        Current.Resources["LayoutSideListGridWidth"] = new GridLength(sideW);
+        Current.Resources["LayoutEmployeeCardWidth"] = cardW;
+        Current.Resources["PageMargin"] = new Thickness(hMargin, 6, hMargin, vMargin);
+    }
+
     // 員工識別色色盤（中飽和度、淺色調，確保深色文字可讀）
     internal static readonly string[] EmployeeColorPalette =
     [
@@ -70,6 +96,31 @@ public partial class App : Application
         "#F0B8D8", "#B8E8D0", "#E8D0F8", "#F8D0B8", "#C8E8F8",
         "#F8E8B0", "#D0D8F8", "#B8F0D8", "#F8C8C8"
     ];
+
+    private static void MigrateTables(Data.AppDbContext db)
+    {
+        var conn = db.Database.GetDbConnection();
+        conn.Open();
+        try
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = """
+                CREATE TABLE IF NOT EXISTS "ScheduleConflicts" (
+                    "Id"           INTEGER PRIMARY KEY AUTOINCREMENT,
+                    "ScheduleId"   INTEGER NOT NULL,
+                    "EntryId"      INTEGER NOT NULL,
+                    "EmployeeId"   INTEGER NOT NULL,
+                    "EmployeeName" TEXT    NOT NULL DEFAULT '',
+                    "Date"         TEXT    NOT NULL DEFAULT '',
+                    "ShiftAlias"   TEXT    NOT NULL DEFAULT '',
+                    "Reason"       TEXT    NOT NULL DEFAULT '',
+                    FOREIGN KEY ("ScheduleId") REFERENCES "MonthlySchedules"("Id") ON DELETE CASCADE
+                )
+                """;
+            cmd.ExecuteNonQuery();
+        }
+        finally { conn.Close(); }
+    }
 
     private static void MigrateColumns(Data.AppDbContext db)
     {
@@ -86,8 +137,18 @@ public partial class App : Application
                 ("Employees",       "ContactInfos",      "TEXT NOT NULL DEFAULT '[]'"),
                 ("Employees",       "PreferredShiftIds", "TEXT NOT NULL DEFAULT '[]'"),
                 ("Employees",       "ColorHex",          "TEXT NOT NULL DEFAULT ''"),
-                ("MonthlySchedules","ShiftDayConfigs",   "TEXT NOT NULL DEFAULT '[]'"),
-                ("ShopSettings",    "LogoPhotoData",     "BLOB"),
+                ("MonthlySchedules","ShiftDayConfigs",       "TEXT NOT NULL DEFAULT '[]'"),
+                ("ShopSettings",    "LogoPhotoData",         "BLOB"),
+                ("LaborLawSettings",   "MaxConsecutiveWorkDays", "INTEGER NOT NULL DEFAULT 6"),
+                ("LaborLawSettings",   "DailyNormalHours",       "REAL NOT NULL DEFAULT 8.0"),
+                ("LaborLawSettings",   "DailyMaxHours",          "REAL NOT NULL DEFAULT 12.0"),
+                ("LaborLawSettings",   "WeeklyMaxHours",         "REAL NOT NULL DEFAULT 40.0"),
+                ("MonthlySchedules",   "ShiftDateOverrides",     "TEXT NOT NULL DEFAULT '[]'"),
+                ("MonthlySchedules",   "StaffingGapDays",        "TEXT NOT NULL DEFAULT '[]'"),
+                ("MonthlySchedules",   "EmployeeDayOffs",            "TEXT NOT NULL DEFAULT '[]'"),
+                ("MonthlySchedules",   "WorkDayConditionConfigs",    "TEXT NOT NULL DEFAULT '[]'"),
+                ("MonthlySchedules",   "EmployeeWorkDays",           "TEXT NOT NULL DEFAULT '[]'"),
+                ("MonthlySchedules",   "ExcludeFromAutoAssignIds",   "TEXT NOT NULL DEFAULT '[]'"),
             };
             foreach (var (table, col, type) in cols)
             {
@@ -111,7 +172,7 @@ public partial class App : Application
         if (employees.Count > 0) db.SaveChanges();
     }
 
-    private static void ConfigureServices(ServiceCollection services)
+private static void ConfigureServices(ServiceCollection services)
     {
         // 資料庫內容。
         services.AddDbContext<AppDbContext>(ServiceLifetime.Transient);
@@ -134,6 +195,7 @@ public partial class App : Application
         services.AddTransient<EmployeeService>();
         services.AddTransient<MonthlyScheduleService>();
         services.AddTransient<ScheduleService>();
+        services.AddTransient<ScheduleConflictService>();
 
         // ViewModel。
         services.AddTransient<MainViewModel>();

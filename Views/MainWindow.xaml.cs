@@ -5,7 +5,6 @@ using ShopManager.Services;
 using ShopManager.ViewModels;
 using ShopManager.Views.ShopSelection;
 using System.Windows;
-using System.Windows.Media.Imaging;
 
 namespace ShopManager.Views;
 
@@ -18,12 +17,6 @@ public partial class MainWindow : Window
         InitializeComponent();
         DataContext = viewModel;
         _snackbarService = snackbarService;
-
-        try
-        {
-            Icon = new BitmapImage(new Uri("pack://application:,,,/Resources/app.ico"));
-        }
-        catch { }
 
         // WindowStyle=None 最大化時需限制在工作區範圍內，避免蓋住工作列。
         MaxWidth = SystemParameters.WorkArea.Width;
@@ -38,6 +31,10 @@ public partial class MainWindow : Window
 
             _ = viewModel.InitializeAsync();
         };
+
+        // ContentRendered 在視窗完整渲染後才觸發，比 Loaded 更晚，
+        // 此時 WPF 不會再覆蓋圖示，是修正透明視窗 taskbar 圖示的正確時機。
+        ContentRendered += (_, _) => ForceRefreshTaskbarIcon();
 
         // 監聽店鋪關閉事件，重新顯示選擇視窗。
         WeakReferenceMessenger.Default.Register<ShopClosedMessage>(this, (r, _) =>
@@ -61,6 +58,13 @@ public partial class MainWindow : Window
         var vm = (MainViewModel)DataContext;
         vm.ResetAfterShopChange();
         _ = vm.InitializeAsync();
+    }
+
+    private void ForceRefreshTaskbarIcon()
+    {
+        var icon = Icon;
+        Icon = null;
+        Icon = icon;
     }
 
     private void MinimizeWindow_Click(object sender, RoutedEventArgs e) =>

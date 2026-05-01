@@ -4,7 +4,7 @@
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:models="clr-namespace:ShopManager.Models">
 
-    <Grid Margin="{StaticResource PageMargin}">
+    <Grid Margin="{DynamicResource PageMargin}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -51,8 +51,8 @@
         <Grid Grid.Row="1"
               Visibility="{Binding ShowLaborLaw, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="280"/>
-                <ColumnDefinition Width="10"/>
+                <ColumnDefinition Width="{DynamicResource LayoutSideListGridWidth}"/>
+                <ColumnDefinition Width="8"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
@@ -130,11 +130,11 @@
                             VerticalAlignment="Center"
                             Visibility="{Binding ShowEmptyHint, Converter={StaticResource BoolToVisibilityConverter}}">
                     <md:PackIcon Kind="CurrencyUsd"
-                                 Width="80" Height="80"
+                                 Width="60" Height="60"
                                  Opacity="0.12"
                                  HorizontalAlignment="Center"/>
                     <TextBlock Text="請點選左側方案，或點選「新增薪資」開始編輯"
-                               Margin="0,20,0,0"
+                               Margin="0,14,0,0"
                                Opacity="0.45"
                                Style="{StaticResource ItemTitleStyle}"
                                HorizontalAlignment="Center"/>
@@ -146,7 +146,7 @@
                         <StackPanel>
                             <TextBlock Text="{Binding SelectedSalary, Converter={StaticResource NullToStringConverter}, ConverterParameter='新增薪資方案|編輯薪資方案'}"
                                        FontSize="{DynamicResource FontSizeListTitle}" FontWeight="SemiBold"
-                                       Margin="0,0,0,24"/>
+                                       Margin="0,0,0,16"/>
 
                             <TextBlock Text="薪資方案名稱 *" Style="{StaticResource FieldLabelStyle}"/>
                             <TextBox Text="{Binding EditAlias, UpdateSourceTrigger=PropertyChanged}"
@@ -278,8 +278,6 @@
                             <StackPanel Margin="16,8,16,8">
                                 <TextBlock Text="法定最低時薪 (元)" Style="{StaticResource FieldLabelStyle}"/>
                                 <TextBox Text="{Binding LaborLaw.HourlyMinimumWage}" Margin="0,0,0,16"/>
-                                <TextBlock Text="每日工時上限 (小時)" Style="{StaticResource FieldLabelStyle}"/>
-                                <TextBox Text="{Binding LaborLaw.HourlyDailyMaxHours}" Margin="0,0,0,16"/>
                                 <TextBlock Text="加班倍率 1（第 2 小時起）" Style="{StaticResource FieldLabelStyle}"/>
                                 <TextBox Text="{Binding LaborLaw.HourlyOT1Rate}" Margin="0,0,0,16"/>
                                 <TextBlock Text="加班倍率 2（第 3 小時起）" Style="{StaticResource FieldLabelStyle}"/>
@@ -293,8 +291,6 @@
                             <StackPanel Margin="16,8,16,8">
                                 <TextBlock Text="法定最低月薪 (元)" Style="{StaticResource FieldLabelStyle}"/>
                                 <TextBox Text="{Binding LaborLaw.MonthlyMinimumWage}" Margin="0,0,0,16"/>
-                                <TextBlock Text="每日工時上限 (小時)" Style="{StaticResource FieldLabelStyle}"/>
-                                <TextBox Text="{Binding LaborLaw.MonthlyDailyMaxHours}" Margin="0,0,0,16"/>
                                 <TextBlock Text="加班倍率 1（第 2 小時起）" Style="{StaticResource FieldLabelStyle}"/>
                                 <TextBox Text="{Binding LaborLaw.MonthlyOT1Rate}" Margin="0,0,0,16"/>
                                 <TextBlock Text="加班倍率 2（第 3 小時起）" Style="{StaticResource FieldLabelStyle}"/>
@@ -305,17 +301,45 @@
                 </Grid>
 
                 <Expander Header="通用限制設定" IsExpanded="True" Style="{StaticResource MaterialDesignExpander}" Margin="0,0,0,24">
-                    <Grid Margin="16,8,16,8">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Text="假日加班費率 (×)" Style="{StaticResource FieldLabelStyle}"/>
-                            <TextBox Text="{Binding LaborLaw.HolidayOTRate}" Margin="0,0,0,8"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="2">
-                            <TextBlock Text="每月加班時數上限 (小時)" Style="{StaticResource FieldLabelStyle}"/>
-                            <TextBox Text="{Binding LaborLaw.MaxMonthlyOTHours}" Margin="0,0,0,8"/>
-                        </StackPanel>
-                    </Grid>
+                    <StackPanel Margin="16,8,16,8">
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="假日加班費率 (×)" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding LaborLaw.HolidayOTRate}" Margin="0,0,0,8"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="每月加班時數上限 (小時)" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding LaborLaw.MaxMonthlyOTHours}" Margin="0,0,0,8"/>
+                            </StackPanel>
+                        </Grid>
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="每日正常工時 (小時)" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding LaborLaw.DailyNormalHours}" Margin="0,0,0,8"
+                                         md:HintAssist.Hint="加班起算基準，預設8小時"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="每日最長工時 (小時)" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding LaborLaw.DailyMaxHours}" Margin="0,0,0,8"
+                                         md:HintAssist.Hint="含加班上限，預設12小時"/>
+                            </StackPanel>
+                        </Grid>
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="每週最長工時 (小時)" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding LaborLaw.WeeklyMaxHours}" Margin="0,0,0,8"
+                                         md:HintAssist.Hint="每週工時上限，預設40小時"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="最長連續上班日數 (天)" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding LaborLaw.MaxConsecutiveWorkDays}" Margin="0,0,0,8"
+                                         md:HintAssist.Hint="勞基法第36條，預設6天"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
                 </Expander>
 
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,32">

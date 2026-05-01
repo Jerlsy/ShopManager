@@ -99,28 +99,6 @@ public class ZeroToVisibilityConverter : IValueConverter
         throw new NotImplementedException();
 }
 
-/// <summary>bool → "是" / "否"（供 ToggleSwitch Content 顯示）</summary>
-[ValueConversion(typeof(bool), typeof(string))]
-public class BoolToToggleTextConverter : IValueConverter
-{
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
-        value is bool b && b ? "是" : "否";
-
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
-        value is string s && s == "是";
-}
-
-/// <summary>bool → Opacity（true=0.3 disabled, false=1.0）</summary>
-[ValueConversion(typeof(bool), typeof(double))]
-public class BoolToOpacityConverter : IValueConverter
-{
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
-        value is bool b && b ? 0.3 : 1.0;
-
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
-        throw new NotImplementedException();
-}
-
 /// <summary>
 /// CalendarViewMode → Visibility
 /// ConverterParameter: "Month", "Week", "Day", "WeekOrDay"
@@ -200,6 +178,24 @@ public class HexToBrushConverter : IValueConverter
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
         throw new NotImplementedException();
+}
+
+/// <summary>EmployeeConstraintType → 顯示文字（休假日 / 上班日 / 優先班別 / 不排班）</summary>
+[ValueConversion(typeof(ViewModels.EmployeeConstraintType), typeof(string))]
+public class ConstraintTypeToLabelConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
+        value is ViewModels.EmployeeConstraintType t ? t switch
+        {
+            ViewModels.EmployeeConstraintType.DayOff            => "休假日",
+            ViewModels.EmployeeConstraintType.WorkDay           => "上班日",
+            ViewModels.EmployeeConstraintType.ShiftPriority     => "優先班別",
+            ViewModels.EmployeeConstraintType.ExcludeAutoAssign => "不排班",
+            _ => value.ToString() ?? ""
+        } : "";
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
 }
 
 /// <summary>將數值乘上指定倍率，常用於視窗尺寸上限計算。支援單一綁定與多重綁定。</summary>

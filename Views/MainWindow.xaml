@@ -4,6 +4,7 @@
         xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:vm="clr-namespace:ShopManager.ViewModels"
         Title="ShopManager"
+        Icon="/Resources/app.ico"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
@@ -31,14 +32,14 @@
                     </Grid.RowDefinitions>
 
                     <!-- 頂部自定義標題列 -->
-                    <Grid Grid.Row="0" Background="Transparent" Height="40">
+                    <Grid Grid.Row="0" Background="Transparent" Height="36">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         
                         <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="24,0,0,0" VerticalAlignment="Center">
-                            <md:PackIcon Kind="Storefront" Width="18" Height="18" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                            <Image Source="/Resources/logo.png" Width="22" Height="22" RenderOptions.BitmapScalingMode="HighQuality"/>
                             <TextBlock Text="ShopManager" Margin="10,0,0,0" FontWeight="Bold" Opacity="0.7"/>
                             <TextBlock Text=" · " Margin="4,0" Opacity="0.3"/>
                             <TextBlock Text="{Binding ShopContext.CurrentShop.Name}" Opacity="0.5"/>
@@ -55,28 +56,28 @@
                     </Grid>
 
                     <!-- 主內容區 -->
-                    <Grid Grid.Row="1" Margin="12">
+                    <Grid Grid.Row="1" Margin="8">
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <!-- 導航欄：展開 260，收折 44（toggle 按鈕整合在導航面板內） -->
-                                <ColumnDefinition Width="{Binding IsNavExpanded, Converter={StaticResource BoolToGridLengthConverter}, ConverterParameter='260|44'}"/>
+                                <!-- 導航欄：依螢幕寬度縮放（NavColumnWidth） -->
+                                <ColumnDefinition Width="{Binding NavColumnWidth}"/>
                                 <!-- 間距 -->
-                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="8"/>
                                 <!-- 內容區 -->
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
 
                             <!-- 左側導航（展開狀態）-->
                             <Border Grid.Column="0"
-                                    Padding="16"
-                                    CornerRadius="20"
+                                    Padding="12"
+                                    CornerRadius="16"
                                     Background="{DynamicResource AppPanelBrush}"
                                     BorderBrush="{DynamicResource AppBorderBrush}"
                                     BorderThickness="1"
                                     Visibility="{Binding IsNavExpanded, Converter={StaticResource BoolToVisibilityConverter}}">
                                 <DockPanel LastChildFill="True">
                                     <!-- 頂部：標題 + 收折按鈕 -->
-                                    <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
+                                    <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
@@ -104,7 +105,7 @@
                                     </Grid>
 
                                     <md:PopupBox DockPanel.Dock="Bottom"
-                                                 Margin="0,16,0,0"
+                                                 Margin="0,8,0,0"
                                                  Foreground="{DynamicResource MaterialDesign.Brush.ValidationError}"
                                                  PopupMode="Click"
                                                  PlacementMode="TopAndAlignLeftEdges">
@@ -127,8 +128,8 @@
                                              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                                         <ListBox.ItemContainerStyle>
                                             <Style TargetType="ListBoxItem">
-                                                <Setter Property="Padding" Value="16,12"/>
-                                                <Setter Property="Margin" Value="0,0,0,6"/>
+                                                <Setter Property="Padding" Value="10,8"/>
+                                                <Setter Property="Margin" Value="0,0,0,4"/>
                                                 <Setter Property="Cursor" Value="Hand"/>
                                                 <Setter Property="Template">
                                                     <Setter.Value>
@@ -155,10 +156,10 @@
                                         <ListBox.ItemTemplate>
                                             <DataTemplate DataType="{x:Type vm:NavItem}">
                                                 <DockPanel LastChildFill="True">
-                                                    <Border Width="32" Height="32" CornerRadius="16" Background="{DynamicResource AppSurfaceBrush}" Margin="0,0,12,0">
-                                                        <md:PackIcon Kind="{Binding Icon}" Width="16" Height="16" Foreground="{DynamicResource PrimaryHueMidBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    <Border Width="28" Height="28" CornerRadius="14" Background="{DynamicResource AppSurfaceBrush}" Margin="0,0,10,0">
+                                                        <md:PackIcon Kind="{Binding Icon}" Width="15" Height="15" Foreground="{DynamicResource PrimaryHueMidBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                     </Border>
-                                                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center" FontSize="{DynamicResource FontSizeBody}" FontWeight="Medium"/>
+                                                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center" FontSize="{DynamicResource FontSizeSmallBody}" FontWeight="Medium"/>
                                                 </DockPanel>
                                             </DataTemplate>
                                         </ListBox.ItemTemplate>
@@ -168,7 +169,7 @@
 
                             <!-- 左側導航（收折狀態）-->
                             <Border Grid.Column="0"
-                                    CornerRadius="20"
+                                    CornerRadius="16"
                                     Background="{DynamicResource AppPanelBrush}"
                                     BorderBrush="{DynamicResource AppBorderBrush}"
                                     BorderThickness="1"

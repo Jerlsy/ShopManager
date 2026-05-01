@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes">
 
-    <Grid Margin="{StaticResource PageMargin}">
+    <Grid Margin="{DynamicResource PageMargin}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -39,8 +39,8 @@
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="280"/>
-                <ColumnDefinition Width="10"/>
+                <ColumnDefinition Width="{DynamicResource LayoutSideListGridWidth}"/>
+                <ColumnDefinition Width="8"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
@@ -148,11 +148,11 @@
                             VerticalAlignment="Center"
                             Visibility="{Binding ShowEmptyHint, Converter={StaticResource BoolToVisibilityConverter}}">
                     <md:PackIcon Kind="ClockOutline"
-                                 Width="80" Height="80"
+                                 Width="60" Height="60"
                                  Opacity="0.12"
                                  HorizontalAlignment="Center"/>
                     <TextBlock Text="請點選左側班別，或點選上方「新增班別」開始編輯"
-                               Margin="0,20,0,0"
+                               Margin="0,14,0,0"
                                Opacity="0.45"
                                Style="{StaticResource ItemTitleStyle}"
                                HorizontalAlignment="Center"/>
@@ -162,96 +162,122 @@
                 <Border Style="{StaticResource EditFormCardStyle}" HorizontalAlignment="Stretch"
                         Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}}"
                         VerticalAlignment="Top">
-                        <StackPanel>
-                            <TextBlock Text="{Binding SelectedShift, Converter={StaticResource NullToStringConverter}, ConverterParameter='新增班別|編輯班別'}"
+                    <StackPanel>
+                        <TextBlock Text="{Binding SelectedShift, Converter={StaticResource NullToStringConverter}, ConverterParameter='新增班別|編輯班別'}"
                                        FontSize="{DynamicResource FontSizeListTitle}"
                                        FontWeight="SemiBold"
-                                       Margin="0,0,0,24"/>
+                                       Margin="0,0,0,16"/>
 
-                            <TextBlock Text="班別名稱 *" Style="{StaticResource FieldLabelStyle}"/>
-                            <TextBox Text="{Binding EditAlias, UpdateSourceTrigger=PropertyChanged}"
+                        <TextBlock Text="班別名稱 *" Style="{StaticResource FieldLabelStyle}"/>
+                        <TextBox Text="{Binding EditAlias, UpdateSourceTrigger=PropertyChanged}"
                                     
                                      Margin="0,0,0,20"/>
 
-                            <Grid Margin="0,0,0,20">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="32"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
+                        <Grid Margin="0,0,0,20">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="32"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
 
-                                <StackPanel Grid.Column="0">
-                                    <TextBlock Text="上班時間" Style="{StaticResource FieldLabelStyle}" Margin="0,0,0,8"/>
-                                    <ComboBox ItemsSource="{Binding CommonTimes}"
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="上班時間" Style="{StaticResource FieldLabelStyle}" Margin="0,0,0,8"/>
+                                <ComboBox ItemsSource="{Binding CommonTimes}"
                                               Text="{Binding EditStartTimeText, UpdateSourceTrigger=PropertyChanged}"
                                               IsEditable="True"
                                              
                                               md:HintAssist.Hint="HH:mm"/>
-                                    <TextBlock Text="{Binding StartTimeError}"
+                                <TextBlock Text="{Binding StartTimeError}"
                                                Margin="0,6,0,0"
                                                FontSize="{DynamicResource FontSizeSmall}"
                                                Foreground="{DynamicResource MaterialDesign.Brush.ValidationError}"
                                                Visibility="{Binding StartTimeError, Converter={StaticResource NullToVisibilityConverter}}"/>
-                                </StackPanel>
+                            </StackPanel>
 
-                                <StackPanel Grid.Column="2">
-                                    <TextBlock Text="下班時間" Style="{StaticResource FieldLabelStyle}" Margin="0,0,0,8"/>
-                                    <ComboBox ItemsSource="{Binding CommonTimes}"
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="下班時間" Style="{StaticResource FieldLabelStyle}" Margin="0,0,0,8"/>
+                                <ComboBox ItemsSource="{Binding CommonTimes}"
                                               Text="{Binding EditEndTimeText, UpdateSourceTrigger=PropertyChanged}"
                                               IsEditable="True"
                                              
                                               md:HintAssist.Hint="HH:mm"/>
-                                    <TextBlock Text="{Binding EndTimeError}"
+                                <TextBlock Text="{Binding EndTimeError}"
                                                Margin="0,6,0,0"
                                                FontSize="{DynamicResource FontSizeSmall}"
                                                Foreground="{DynamicResource MaterialDesign.Brush.ValidationError}"
                                                Visibility="{Binding EndTimeError, Converter={StaticResource NullToVisibilityConverter}}"/>
-                                </StackPanel>
-                            </Grid>
+                            </StackPanel>
+                        </Grid>
 
-                            <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,24" Padding="16,14">
-                                <StackPanel Orientation="Horizontal">
-                                    <md:PackIcon Kind="ClockTimeFourOutline"
+                        <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,24" Padding="16,14">
+                            <StackPanel Orientation="Horizontal">
+                                <md:PackIcon Kind="ClockTimeFourOutline"
                                                  Width="20" Height="20"
                                                  Margin="0,0,10,0"
                                                  Foreground="{DynamicResource PrimaryHueMidBrush}"
                                                  VerticalAlignment="Center"/>
-                                    <TextBlock VerticalAlignment="Center">
+                                <TextBlock VerticalAlignment="Center">
                                         <Run Text="預估工作時數: " FontSize="{DynamicResource FontSizeBody}"/>
                                         <Run Text="{Binding WorkHoursDisplay, Mode=OneWay}"
                                              FontSize="{DynamicResource FontSizeHeading}"
                                              FontWeight="Bold"
                                              Foreground="{DynamicResource PrimaryHueMidBrush}"/>
-                                    </TextBlock>
-                                </StackPanel>
-                            </Border>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
 
-                            <TextBlock Text="識別顏色" Style="{StaticResource FormSectionStyle}"/>
-                            <ItemsControl ItemsSource="{Binding ColorPalette}"
-                                          Margin="0,0,0,24">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <WrapPanel/>
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Width="38"
-                                                Height="38"
-                                                Margin="0,0,10,10"
+                        <TextBlock Text="識別顏色" Style="{StaticResource FormSectionStyle}"/>
+                        <ItemsControl ItemsSource="{Binding ColorPalette}"
+                                          Margin="0,0,0,16">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Width="30"
+                                                Height="30"
+                                                Margin="0,0,8,8"
                                                 CornerRadius="12"
                                                 Cursor="Hand"
                                                 Background="{Binding Converter={StaticResource HexToBrushConverter}}"
                                                 BorderThickness="0"
                                                 MouseLeftButtonDown="ColorSwatch_Click">
-                                            <!-- 選取時顯示外框光環 -->
-                                            <Border.Style>
-                                                <Style TargetType="Border">
-                                                    <Setter Property="Effect">
-                                                        <Setter.Value>
-                                                            <DropShadowEffect BlurRadius="0" ShadowDepth="0" Opacity="0"/>
-                                                        </Setter.Value>
-                                                    </Setter>
+                                        <!-- 選取時顯示外框光環 -->
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Effect">
+                                                    <Setter.Value>
+                                                        <DropShadowEffect BlurRadius="0" ShadowDepth="0" Opacity="0"/>
+                                                    </Setter.Value>
+                                                </Setter>
+                                                <Style.Triggers>
+                                                    <DataTrigger Value="True">
+                                                        <DataTrigger.Binding>
+                                                            <MultiBinding Converter="{StaticResource ColorMatchConverter}">
+                                                                <Binding/>
+                                                                <Binding Path="DataContext.EditColor" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                                                            </MultiBinding>
+                                                        </DataTrigger.Binding>
+                                                        <Setter Property="Effect">
+                                                            <Setter.Value>
+                                                                <DropShadowEffect BlurRadius="8" ShadowDepth="0" Opacity="0.9" Color="Black"/>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <!-- 選取打勾 -->
+                                        <md:PackIcon Kind="Check"
+                                                         Width="20" Height="20"
+                                                         Foreground="White"
+                                                         HorizontalAlignment="Center"
+                                                         VerticalAlignment="Center">
+                                            <md:PackIcon.Style>
+                                                <Style TargetType="md:PackIcon">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
                                                     <Style.Triggers>
                                                         <DataTrigger Value="True">
                                                             <DataTrigger.Binding>
@@ -260,71 +286,45 @@
                                                                     <Binding Path="DataContext.EditColor" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
                                                                 </MultiBinding>
                                                             </DataTrigger.Binding>
-                                                            <Setter Property="Effect">
-                                                                <Setter.Value>
-                                                                    <DropShadowEffect BlurRadius="8" ShadowDepth="0" Opacity="0.9" Color="Black"/>
-                                                                </Setter.Value>
-                                                            </Setter>
+                                                            <Setter Property="Visibility" Value="Visible"/>
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
-                                            </Border.Style>
-                                            <!-- 選取打勾 -->
-                                            <md:PackIcon Kind="Check"
-                                                         Width="20" Height="20"
-                                                         Foreground="White"
-                                                         HorizontalAlignment="Center"
-                                                         VerticalAlignment="Center">
-                                                <md:PackIcon.Style>
-                                                    <Style TargetType="md:PackIcon">
-                                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Value="True">
-                                                                <DataTrigger.Binding>
-                                                                    <MultiBinding Converter="{StaticResource ColorMatchConverter}">
-                                                                        <Binding/>
-                                                                        <Binding Path="DataContext.EditColor" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
-                                                                    </MultiBinding>
-                                                                </DataTrigger.Binding>
-                                                                <Setter Property="Visibility" Value="Visible"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </md:PackIcon.Style>
-                                            </md:PackIcon>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                                            </md:PackIcon.Style>
+                                        </md:PackIcon>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
 
-                            <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,28" Padding="16,12">
-                                <DockPanel>
-                                    <TextBlock Text="啟用此班別"
+                        <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,28" Padding="16,12">
+                            <DockPanel>
+                                <TextBlock Text="啟用此班別"
                                                FontWeight="SemiBold"
                                                VerticalAlignment="Center"/>
-                                    <ToggleButton DockPanel.Dock="Right"
+                                <ToggleButton DockPanel.Dock="Right"
                                                   IsChecked="{Binding EditIsEnabled}"
                                                   Style="{StaticResource MaterialDesignSwitchToggleButton}"
                                                   HorizontalAlignment="Right"/>
-                                </DockPanel>
-                            </Border>
+                            </DockPanel>
+                        </Border>
 
-                            <StackPanel Orientation="Horizontal">
-                                <Button Style="{StaticResource MaterialDesignRaisedButton}"
+                        <StackPanel Orientation="Horizontal">
+                            <Button Style="{StaticResource MaterialDesignRaisedButton}"
                                         Margin="0,0,12,0"
                                         Command="{Binding SaveCommand}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <md:PackIcon Kind="ContentSave" Width="18" Height="18" Margin="0,0,8,0"/>
-                                        <TextBlock Text="儲存班別"/>
-                                    </StackPanel>
-                                </Button>
-                                <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                                <StackPanel Orientation="Horizontal">
+                                    <md:PackIcon Kind="ContentSave" Width="18" Height="18" Margin="0,0,8,0"/>
+                                    <TextBlock Text="儲存班別"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource MaterialDesignOutlinedButton}"
                                         Content="取消"
                                         Width="100"
                                         Command="{Binding CancelCommand}"/>
-                            </StackPanel>
                         </StackPanel>
-                    </Border>
+                    </StackPanel>
+                </Border>
             </Grid>
         </Grid>
     </Grid>

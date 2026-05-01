@@ -15,17 +15,47 @@ public partial class SchedulePage : UserControl
         Loaded += async (_, _) => await viewModel.LoadAsync();
     }
 
-    // ── 員工拖放開始（從員工清單） ──────────────────────
-    private void Employee_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    // ── 員工拖放開始（從員工清單）：點擊 → 開啟詳情，拖曳 → 排班 ──────
+    private Point _empDragStartPoint;
+    private EmployeeWorkloadItem? _empDragCandidate;
+
+    private void Employee_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (sender is FrameworkElement fe && fe.DataContext is Employee employee
-            && DataContext is ScheduleViewModel vm)
+        _empDragStartPoint = e.GetPosition(null);
+        _empDragCandidate  = (sender as FrameworkElement)?.DataContext as EmployeeWorkloadItem;
+    }
+
+    private void Employee_MouseMove(object sender, MouseEventArgs e)
+    {
+        if (e.LeftButton != MouseButtonState.Pressed || _empDragCandidate is null) return;
+
+        var pos  = e.GetPosition(null);
+        var diff = _empDragStartPoint - pos;
+        if (Math.Abs(diff.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(diff.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+
+        if (DataContext is not ScheduleViewModel vm) return;
+
+        var item = _empDragCandidate;
+        _empDragCandidate = null;
+
+        vm.SelectedEmployee = item.Employee;
+        var data = new DataObject("Employee", item.Employee);
+        DragDrop.DoDragDrop((DependencyObject)sender, data, DragDropEffects.Copy);
+        vm.SelectedEmployee = null;
+        DragTooltipPopup.IsOpen = false;
+    }
+
+    private void Employee_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_empDragCandidate is null) return;
+        var item = _empDragCandidate;
+        _empDragCandidate = null;
+
+        if (DataContext is ScheduleViewModel vm)
         {
-            vm.SelectedEmployee = employee;
-            var data = new DataObject("Employee", employee);
-            DragDrop.DoDragDrop(fe, data, DragDropEffects.Copy);
-            vm.SelectedEmployee = null;
-            DragTooltipPopup.IsOpen = false;
+            vm.OpenEmployeeDetailCommand.Execute(item);
+            e.Handled = true;
         }
     }
 
@@ -53,11 +83,16 @@ public partial class SchedulePage : UserControl
         var entry = _dragEntryCandidate;
         _dragEntryCandidate = null;
 
+        // 使用 ActiveEmployees 中的完整員工物件（含 ScheduleRules），
+        // 避免排班表 ThenInclude 載入的員工缺少規則資料導致 NotWith 誤判
+        var fullEmployee = vm.ActiveEmployees.FirstOrDefault(e => e.Id == entry.Employee.Id)
+                           ?? entry.Employee;
         vm.DragSourceEntryId = entry.EntryId;
-        vm.SelectedEmployee = entry.Employee;
-        var data = new DataObject("Employee", entry.Employee);
+        vm.SelectedEmployee = fullEmployee;
+        var data = new DataObject("Employee", fullEmployee);
         data.SetData("EntryId", entry.EntryId);
-        DragDrop.DoDragDrop((DependencyObject)sender, data, DragDropEffects.Move);
+        // Move | Copy：讓來源同時宣告支援兩種操作，DragOver 才能依 Ctrl 鍵切換效果
+        DragDrop.DoDragDrop((DependencyObject)sender, data, DragDropEffects.Move | DragDropEffects.Copy);
         vm.DragSourceEntryId = -1;
         vm.SelectedEmployee = null;
         DragTooltipPopup.IsOpen = false;
@@ -76,7 +111,13 @@ public partial class SchedulePage : UserControl
         }
     }
 
-    // ── 拖放到班別格子 ────────────────────
+    // ── 拖放到班別格子（移動 / 複製 / 新增）────────────────────────────
+    // DragOver：
+    //   Ctrl+EntryDrag → 複製模式，用 IsDisabledForCopy 判斷
+    //   EntryDrag      → 移動模式，用 IsDisabled 判斷
+    //   EmployeeDrag   → 新增模式，用 IsDisabled 判斷
+    // Drop：isCopy=true 時走複製路徑；否則走移動/新增路徑
+    // 注意：交換（Swap）改由 EntryChip_Drop 處理，不再在此判斷
     private void ShiftBlock_DragOver(object sender, DragEventArgs e)
     {
         if (!e.Data.GetDataPresent("Employee"))
@@ -93,13 +134,34 @@ public partial class SchedulePage : UserControl
             else if (fe.DataContext is ShiftBlock b2) block = b2;
         }
 
-        if (block is not null && block.IsDisabled)
+        bool isEntryDrag  = e.Data.GetDataPresent("EntryId");
+        bool ctrlHeld     = (e.KeyStates & DragDropKeyStates.ControlKey) != 0;
+        bool isCopyIntent = isEntryDrag && ctrlHeld;
+        bool isMoveIntent = isEntryDrag && !ctrlHeld;
+
+        bool isBlocked = false;
+        string blockedReason = string.Empty;
+        if (block is not null)
+        {
+            if (isCopyIntent)
+            {
+                isBlocked     = block.IsDisabledForCopy;
+                blockedReason = block.DisabledReasonForCopy;
+            }
+            else
+            {
+                isBlocked     = block.IsDisabled;
+                blockedReason = block.DisabledReason;
+            }
+        }
+
+        if (isBlocked)
         {
             e.Effects = DragDropEffects.None;
             e.Handled = true;
-            if (!string.IsNullOrEmpty(block.DisabledReason))
+            if (!string.IsNullOrEmpty(blockedReason))
             {
-                DragTooltipText.Text = block.DisabledReason;
+                DragTooltipText.Text = blockedReason;
                 DragTooltipPopup.IsOpen = true;
             }
             else
@@ -109,7 +171,7 @@ public partial class SchedulePage : UserControl
         }
         else
         {
-            e.Effects = e.Data.GetDataPresent("EntryId") ? DragDropEffects.Move : DragDropEffects.Copy;
+            e.Effects = isMoveIntent ? DragDropEffects.Move : DragDropEffects.Copy;
             e.Handled = true;
             DragTooltipPopup.IsOpen = false;
         }
@@ -123,6 +185,7 @@ public partial class SchedulePage : UserControl
 
         var employee = (Employee)e.Data.GetData("Employee");
         int? sourceEntryId = e.Data.GetDataPresent("EntryId") ? (int?)e.Data.GetData("EntryId") : null;
+        bool isCopy = sourceEntryId.HasValue && (e.KeyStates & DragDropKeyStates.ControlKey) != 0;
 
         ShiftBlock? block = null;
         if (sender is FrameworkElement fe)
@@ -131,9 +194,51 @@ public partial class SchedulePage : UserControl
             else if (fe.DataContext is ShiftBlock b2) block = b2;
         }
 
-        if (block is null || block.IsDisabled) return;
+        if (block is null) return;
 
-        await vm.DropEmployeeAsync(employee, block.Date, block.ShiftSetting, sourceEntryId);
+        bool isBlocked = isCopy ? block.IsDisabledForCopy : block.IsDisabled;
+        if (isBlocked) return;
+
+        await vm.DropEmployeeAsync(employee, block.Date, block.ShiftSetting, sourceEntryId, isCopy);
+        e.Handled = true;
+    }
+
+    // ── 拖放到員工頭像（交換）────────────────────────────────────────
+    // 只接受 EntryDrag（非 Ctrl）；Ctrl+拖曳讓事件冒泡到 ShiftBlock_DragOver 走複製路徑
+    private void EntryChip_DragOver(object sender, DragEventArgs e)
+    {
+        bool isEntryDrag = e.Data.GetDataPresent("EntryId");
+        bool ctrlHeld    = (e.KeyStates & DragDropKeyStates.ControlKey) != 0;
+
+        if (!isEntryDrag || ctrlHeld)
+            return; // 不處理 → 冒泡到 ShiftBlock_DragOver
+
+        if (sender is FrameworkElement fe && fe.DataContext is EntryItem targetEntry
+            && e.Data.GetData("Employee") is Employee dragEmp
+            && targetEntry.Employee?.Id != dragEmp.Id)
+        {
+            e.Effects = DragDropEffects.Move;
+            e.Handled = true;
+            DragTooltipPopup.IsOpen = false;
+        }
+    }
+
+    private async void EntryChip_Drop(object sender, DragEventArgs e)
+    {
+        bool isEntryDrag = e.Data.GetDataPresent("EntryId");
+        bool ctrlHeld    = (e.KeyStates & DragDropKeyStates.ControlKey) != 0;
+
+        if (!isEntryDrag || ctrlHeld)
+            return; // 不處理 → 冒泡到 ShiftBlock_Drop
+
+        if (DataContext is not ScheduleViewModel vm) return;
+        if (sender is not FrameworkElement fe || fe.DataContext is not EntryItem targetEntry) return;
+        if (e.Data.GetData("Employee") is not Employee dragEmp) return;
+        if (e.Data.GetData("EntryId") is not int sourceEntryId) return;
+        if (targetEntry.Employee?.Id == dragEmp.Id) return;
+
+        DragTooltipPopup.IsOpen = false;
+        await vm.SwapEmployeeAsync(dragEmp, sourceEntryId, targetEntry);
         e.Handled = true;
     }
 
@@ -162,11 +267,12 @@ public partial class SchedulePage : UserControl
         }
     }
 
-    // ── 周視圖日期標題點擊 → 開啟日期詳情 ──
+    // ── 周視圖日期標題點擊 → 開啟日期詳情（跨月無班表不處理）──
     private void WeekDayHeader_Click(object sender, MouseButtonEventArgs e)
     {
         if (sender is FrameworkElement fe
             && fe.DataContext is CalendarDay day
+            && !day.IsOutOfScope
             && DataContext is ScheduleViewModel vm)
         {
             vm.OpenDayDetailCommand.Execute(day);
@@ -200,6 +306,26 @@ public partial class SchedulePage : UserControl
         if (e.Source == sender && DataContext is ScheduleViewModel vm)
         {
             vm.CloseEntryCardCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
+    // ── 衝突面板背景點擊 → 關閉 ──
+    private void ConflictPanelOverlay_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (e.Source == sender && DataContext is ScheduleViewModel vm)
+        {
+            vm.CloseConflictPanelCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
+    // ── 員工排班詳情背景點擊 → 關閉 ──
+    private void EmployeeDetailOverlay_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (e.Source == sender && DataContext is ScheduleViewModel vm)
+        {
+            vm.CloseEmployeeDetailCommand.Execute(null);
             e.Handled = true;
         }
     }

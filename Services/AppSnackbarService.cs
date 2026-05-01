@@ -13,4 +13,7 @@ public class AppSnackbarService : IAppSnackbarService
 
     public void ShowError(string message) =>
         _queue?.Enqueue("⚠ " + message, null, null, null, false, true, TimeSpan.FromSeconds(4));
+
+    public void ShowWarning(string message) =>
+        _queue?.Enqueue("⚠ " + message, null, null, null, false, true, TimeSpan.FromSeconds(5));
 }
