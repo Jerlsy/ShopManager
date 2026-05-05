@@ -1,3 +1,5 @@
+using ShopManager.Models;
+using System.Diagnostics;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
@@ -171,7 +173,10 @@ public class HexToBrushConverter : IValueConverter
                 var color = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hex);
                 return new System.Windows.Media.SolidColorBrush(color);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[HexToBrushConverter] 無效色碼 '{hex}': {ex.Message}");
+            }
         }
         return new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Gray);
     }
@@ -235,5 +240,60 @@ public class MultiplyDoubleConverter : IValueConverter, IMultiValueConverter
     }
 
     public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture) =>
+        throw new NotImplementedException();
+}
+
+/// <summary>bool 取反（true → false, false → true）</summary>
+[ValueConversion(typeof(bool), typeof(bool))]
+public class BoolInverseConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
+        value is bool b && !b;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        value is bool b && !b;
+}
+
+/// <summary>double/decimal != 0 → Visible，= 0 → Collapsed</summary>
+[ValueConversion(typeof(double), typeof(Visibility))]
+public class NonZeroToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        var nonZero = value switch
+        {
+            double d   => d != 0,
+            decimal dc => dc != 0,
+            int i      => i != 0,
+            _          => false,
+        };
+        return nonZero ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotImplementedException();
+}
+
+/// <summary>BonusPresetType == Custom → Visible（用於自訂名稱欄位顯示）</summary>
+[ValueConversion(typeof(Models.BonusPresetType), typeof(Visibility))]
+public class BonusTypeToCustomLabelVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
+        value is Models.BonusPresetType t && t == Models.BonusPresetType.Custom
+            ? Visibility.Visible : Visibility.Collapsed;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotImplementedException();
+}
+
+/// <summary>BonusPresetType != Custom → Visible（用於預設名稱文字顯示）</summary>
+[ValueConversion(typeof(Models.BonusPresetType), typeof(Visibility))]
+public class BonusTypeToPresetLabelVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
+        value is Models.BonusPresetType t && t != Models.BonusPresetType.Custom
+            ? Visibility.Visible : Visibility.Collapsed;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
         throw new NotImplementedException();
 }

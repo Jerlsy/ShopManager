@@ -1,8 +1,12 @@
 using ShopManager.Models;
 using ShopManager.ViewModels;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace ShopManager.Views.Schedule;
 
@@ -13,6 +17,24 @@ public partial class SchedulePage : UserControl
         InitializeComponent();
         DataContext = viewModel;
         Loaded += async (_, _) => await viewModel.LoadAsync();
+        viewModel.PropertyChanged += OnOverlayPropertyChanged;
+    }
+
+    // 浮層關閉後清除鍵盤焦點，防止 WPF 焦點轉移到 ScrollViewer 內元素
+    // 並透過 RequestBringIntoView 導致卷軸跳到底部
+    private void OnOverlayPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (sender is not ScheduleViewModel vm) return;
+        bool closing = e.PropertyName switch
+        {
+            nameof(ScheduleViewModel.IsEntryCardOpen)      => !vm.IsEntryCardOpen,
+            nameof(ScheduleViewModel.IsDayDetailOpen)      => !vm.IsDayDetailOpen,
+            nameof(ScheduleViewModel.IsConflictPanelOpen)  => !vm.IsConflictPanelOpen,
+            nameof(ScheduleViewModel.IsEmployeeDetailOpen) => !vm.IsEmployeeDetailOpen,
+            _ => false
+        };
+        if (closing)
+            Dispatcher.BeginInvoke(Keyboard.ClearFocus, DispatcherPriority.Loaded);
     }
 
     // ── 員工拖放開始（從員工清單）：點擊 → 開啟詳情，拖曳 → 排班 ──────
@@ -118,6 +140,19 @@ public partial class SchedulePage : UserControl
     //   EmployeeDrag   → 新增模式，用 IsDisabled 判斷
     // Drop：isCopy=true 時走複製路徑；否則走移動/新增路徑
     // 注意：交換（Swap）改由 EntryChip_Drop 處理，不再在此判斷
+    private void ShiftBlock_ToolTipOpening(object sender, ToolTipEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.ToolTip is ToolTip tt)
+            tt.CustomPopupPlacementCallback = PlaceTooltipCenterAbove;
+    }
+
+    private static CustomPopupPlacement[] PlaceTooltipCenterAbove(Size popupSize, Size targetSize, Point _)
+    {
+        double x = (targetSize.Width - popupSize.Width) / 2;
+        double y = -popupSize.Height - 6;
+        return [new CustomPopupPlacement(new Point(x, y), PopupPrimaryAxis.Horizontal)];
+    }
+
     private void ShiftBlock_DragOver(object sender, DragEventArgs e)
     {
         if (!e.Data.GetDataPresent("Employee"))
@@ -328,5 +363,29 @@ public partial class SchedulePage : UserControl
             vm.CloseEmployeeDetailCommand.Execute(null);
             e.Handled = true;
         }
+    }
+
+    // ── 滾輪事件修正 ────────────────────────────────────────────────────────
+    // 問題根源：section card 內的元素（AllowDrop 班表色塊、員工卡片等）攔截了
+    // MouseWheel 事件，導致事件無法冒泡到 PageScrollViewer（背景捲動正常的原因）。
+    // 修法：在 section Border 的 PreviewMouseWheel（隧道事件）最先觸發時，
+    //        向上走訪找到 PageScrollViewer 並直接捲動，複製游標在背景時的行為。
+
+    private ScrollViewer? _pageScrollViewer;
+
+    private void Section_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (_pageScrollViewer is null)
+        {
+            var current = VisualTreeHelper.GetParent((DependencyObject)sender);
+            while (current is not null)
+            {
+                if (current is ScrollViewer sv) { _pageScrollViewer = sv; break; }
+                current = VisualTreeHelper.GetParent(current);
+            }
+        }
+        if (_pageScrollViewer is null) return;
+        e.Handled = true;
+        _pageScrollViewer.ScrollToVerticalOffset(_pageScrollViewer.VerticalOffset - e.Delta / 3.0);
     }
 }

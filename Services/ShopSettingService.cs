@@ -27,6 +27,11 @@ public class ShopSettingService(AppDbContext db, ShopContext shopContext)
             existing.WeekStartDay = setting.WeekStartDay;
             existing.ClosedDaysOfWeek = setting.ClosedDaysOfWeek;
             existing.NationalHolidaysOff = setting.NationalHolidaysOff;
+            existing.LineChannelAccessToken = setting.LineChannelAccessToken;
+            existing.LineWorkerUrl = setting.LineWorkerUrl;
+            existing.LineWorkerApiKey = setting.LineWorkerApiKey;
+            existing.LineWelcomeMessage = setting.LineWelcomeMessage;
+            existing.LineResignMessage = setting.LineResignMessage;
         }
         await db.SaveChangesAsync();
     }

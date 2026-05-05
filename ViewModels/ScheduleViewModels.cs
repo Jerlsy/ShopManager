@@ -166,6 +166,7 @@ public class EmployeeDetailEntry
     public string DayOfWeekText { get; init; } = string.Empty;
     public string ShiftAlias    { get; init; } = string.Empty;
     public string TimeRange     { get; init; } = string.Empty;
+    public IReadOnlyList<Employee> Colleagues { get; init; } = [];
 }
 
 public class EmployeeRuleDisplayItem

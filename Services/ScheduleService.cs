@@ -37,20 +37,29 @@ public class ScheduleService(AppDbContext db, ShopContext shopContext)
     /// <summary>批次新增多筆排班（自動略過重複），回傳實際新增的項目</summary>
     public async Task<List<ScheduleEntry>> AddEntriesAsync(IEnumerable<ScheduleEntry> entries)
     {
+        var list = entries.ToList();
+        if (list.Count == 0) return list;
+
+        var scheduleIds = list.Select(e => e.MonthlyScheduleId).Distinct().ToList();
+        var existing = await db.ScheduleEntries
+            .Where(e => scheduleIds.Contains(e.MonthlyScheduleId))
+            .Select(e => new { e.MonthlyScheduleId, e.EmployeeId, e.Date, e.ShiftSettingId })
+            .ToListAsync();
+
+        var existingSet = existing
+            .Select(e => (e.MonthlyScheduleId, e.EmployeeId, e.Date, e.ShiftSettingId))
+            .ToHashSet();
+
         var added = new List<ScheduleEntry>();
-        foreach (var entry in entries)
+        foreach (var entry in list)
         {
-            var exists = await db.ScheduleEntries.AnyAsync(e =>
-                e.MonthlyScheduleId == entry.MonthlyScheduleId &&
-                e.EmployeeId == entry.EmployeeId &&
-                e.Date == entry.Date &&
-                e.ShiftSettingId == entry.ShiftSettingId);
-            if (!exists)
+            if (existingSet.Add((entry.MonthlyScheduleId, entry.EmployeeId, entry.Date, entry.ShiftSettingId)))
             {
                 db.ScheduleEntries.Add(entry);
                 added.Add(entry);
             }
         }
+
         if (added.Count > 0) await db.SaveChangesAsync();
         return added;
     }
@@ -91,6 +100,11 @@ public class ScheduleService(AppDbContext db, ShopContext shopContext)
     public async Task ClearAllEntriesAsync(int monthlyScheduleId) =>
         await db.ScheduleEntries
             .Where(e => e.MonthlyScheduleId == monthlyScheduleId)
+            .ExecuteDeleteAsync();
+
+    public async Task ClearFutureEntriesAsync(int monthlyScheduleId, DateOnly fromDate) =>
+        await db.ScheduleEntries
+            .Where(e => e.MonthlyScheduleId == monthlyScheduleId && e.Date >= fromDate)
             .ExecuteDeleteAsync();
 
     /// <summary>查詢指定員工在某日期之後是否還有排班資料，回傳年月清單</summary>

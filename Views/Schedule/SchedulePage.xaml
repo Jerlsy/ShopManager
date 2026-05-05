@@ -118,10 +118,11 @@
             </Grid.ColumnDefinitions>
 
             <!-- 左側員工列表 (支援拖曳) -->
-            <Border Grid.Column="0" Style="{StaticResource SectionCardStyle}">
+            <Border Grid.Column="0" Style="{StaticResource SectionCardStyle}"
+                    PreviewMouseWheel="Section_PreviewMouseWheel">
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top" Text="員工清單" Style="{StaticResource SectionTitleStyle}"/>
-                    <ListBox ItemsSource="{Binding EmployeeWorkloads}" Background="Transparent"
+                    <ListBox x:Name="EmployeeList" ItemsSource="{Binding EmployeeWorkloads}" Background="Transparent"
                              BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                         <ListBox.ItemContainerStyle>
                             <Style TargetType="ListBoxItem">
@@ -193,7 +194,8 @@
                     Background="{DynamicResource AppSurfaceBrush}"
                     BorderBrush="{DynamicResource AppBorderBrush}"
                     BorderThickness="1"
-                    Padding="8">
+                    Padding="8"
+                    PreviewMouseWheel="Section_PreviewMouseWheel">
                 <Grid>
                     <!-- 行事曆（非建立/自動排班模式） -->
                     <Grid Visibility="{Binding IsViewingCalendar, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -230,7 +232,7 @@
                             </Grid>
 
                             <!-- 周列 -->
-                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <ScrollViewer x:Name="MonthScrollViewer" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                                 <ItemsControl ItemsSource="{Binding CalendarWeeks}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate DataType="{x:Type vm:CalendarWeekRow}">
@@ -510,7 +512,7 @@
                             </Grid>
 
                             <!-- 時間格線 + 班別長條 -->
-                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <ScrollViewer x:Name="WeekScrollViewer" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="52"/>
@@ -587,7 +589,8 @@
                                                                             AllowDrop="True"
                                                                             DragOver="ShiftBlock_DragOver"
                                                                             Drop="ShiftBlock_Drop"
-                                                                            ClipToBounds="True">
+                                                                            ClipToBounds="True"
+                                                                            ToolTipOpening="ShiftBlock_ToolTipOpening">
                                                                         <Border.Style>
                                                                             <Style TargetType="Border">
                                                                                 <Setter Property="Background" Value="{Binding ShiftSetting.Color, Converter={StaticResource HexToBrushConverter}}"/>
@@ -599,7 +602,7 @@
                                                                             </Style>
                                                                         </Border.Style>
                                                                         <Border.ToolTip>
-                                                                            <ToolTip Style="{StaticResource SpeechBubbleToolTip}">
+                                                                            <ToolTip Style="{StaticResource SpeechBubbleCustomToolTip}">
                                                                                 <Grid>
                                                                                     <StackPanel Orientation="Horizontal"
                                                                                                 Visibility="{Binding IsDisabled, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -640,42 +643,56 @@
                                                                                 </Grid>
                                                                             </ToolTip>
                                                                         </Border.ToolTip>
-                                                                        <StackPanel Margin="6,5">
-                                                                            <TextBlock Text="{Binding ShiftSetting.Alias}"
-                                                                                       FontSize="11" Foreground="White" FontWeight="Bold"/>
-                                                                            <TextBlock FontSize="10" Foreground="White" Opacity="0.85">
+                                                                        <Grid Margin="6,5,6,5">
+                                                                            <Grid.RowDefinitions>
+                                                                                <RowDefinition Height="Auto"/>
+                                                                                <RowDefinition Height="Auto"/>
+                                                                                <RowDefinition Height="*"/>
+                                                                            </Grid.RowDefinitions>
+                                                                            <TextBlock Grid.Row="0" Text="{Binding ShiftSetting.Alias}"
+                                                                                       FontSize="11" Foreground="White" FontWeight="Bold"
+                                                                                       TextTrimming="CharacterEllipsis"/>
+                                                                            <TextBlock Grid.Row="1" FontSize="10" Foreground="White" Opacity="0.85"
+                                                                                       TextTrimming="CharacterEllipsis">
                                                                                 <Run Text="{Binding ShiftSetting.StartTime, StringFormat=HH:mm, Mode=OneWay}"/>
                                                                                 <Run Text="–"/>
                                                                                 <Run Text="{Binding ShiftSetting.EndTime, StringFormat=HH:mm, Mode=OneWay}"/>
                                                                             </TextBlock>
-                                                                            <ItemsControl ItemsSource="{Binding EntryItems}" Margin="0,3,0,0">
+                                                                            <!-- 員工縮圖：垂直堆疊，Viewbox 等比放大 -->
+                                                                            <ItemsControl Grid.Row="2" ItemsSource="{Binding EntryItems}" Margin="0,4,0,0">
                                                                                 <ItemsControl.ItemsPanel>
-                                                                                    <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                                                                    <ItemsPanelTemplate>
+                                                                                        <StackPanel Orientation="Vertical"/>
+                                                                                    </ItemsPanelTemplate>
                                                                                 </ItemsControl.ItemsPanel>
                                                                                 <ItemsControl.ItemTemplate>
                                                                                     <DataTemplate DataType="{x:Type vm:EntryItem}">
-                                                                                        <Border Width="20" Height="20" CornerRadius="10" ClipToBounds="True" Margin="0,0,2,2"
-                                                                                                Background="{Binding Employee.ColorHex, Converter={StaticResource HexToBrushConverter}}"
-                                                                                                AllowDrop="True"
-                                                                                                DragOver="EntryChip_DragOver"
-                                                                                                Drop="EntryChip_Drop"
-                                                                                                PreviewMouseLeftButtonDown="EntryRow_PreviewMouseLeftButtonDown"
-                                                                                                MouseMove="EntryRow_MouseMove"
-                                                                                                MouseLeftButtonUp="EntryRow_MouseLeftButtonUp"
-                                                                                                Cursor="Hand">
-                                                                                            <Grid>
-                                                                                                <Image Source="{Binding Employee.AvatarPhotoData, Converter={StaticResource BytesToImageConverter}}" Stretch="UniformToFill"
-                                                                                                       Visibility="{Binding Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}}"/>
-                                                                                                <TextBlock Text="{Binding Employee.Name, Converter={StaticResource NameInitialConverter}}"
-                                                                                                           FontSize="8" FontWeight="Bold" Foreground="White"
-                                                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                                                                           Visibility="{Binding Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"/>
-                                                                                            </Grid>
-                                                                                        </Border>
+                                                                                        <Viewbox Stretch="Uniform" MaxHeight="48" HorizontalAlignment="Stretch" VerticalAlignment="Top" Margin="1,0">
+                                                                                            <Border Width="36" Height="36" CornerRadius="18" ClipToBounds="True"
+                                                                                                    BorderThickness="2" BorderBrush="White"
+                                                                                                    Background="{Binding Employee.ColorHex, Converter={StaticResource HexToBrushConverter}}"
+                                                                                                    AllowDrop="True"
+                                                                                                    DragOver="EntryChip_DragOver"
+                                                                                                    Drop="EntryChip_Drop"
+                                                                                                    PreviewMouseLeftButtonDown="EntryRow_PreviewMouseLeftButtonDown"
+                                                                                                    MouseMove="EntryRow_MouseMove"
+                                                                                                    MouseLeftButtonUp="EntryRow_MouseLeftButtonUp"
+                                                                                                    Cursor="Hand">
+                                                                                                <Grid>
+                                                                                                    <Image Source="{Binding Employee.AvatarPhotoData, Converter={StaticResource BytesToImageConverter}}"
+                                                                                                           Stretch="UniformToFill"
+                                                                                                           Visibility="{Binding Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                                                                    <TextBlock Text="{Binding Employee.Name, Converter={StaticResource NameInitialConverter}}"
+                                                                                                               FontSize="13" FontWeight="Bold" Foreground="White"
+                                                                                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                                                               Visibility="{Binding Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                                                                                                </Grid>
+                                                                                            </Border>
+                                                                                        </Viewbox>
                                                                                     </DataTemplate>
                                                                                 </ItemsControl.ItemTemplate>
                                                                             </ItemsControl>
-                                                                        </StackPanel>
+                                                                        </Grid>
                                                                     </Border>
                                                                 </DataTemplate>
                                                             </ItemsControl.ItemTemplate>
@@ -803,7 +820,7 @@
                                 </StackPanel>
 
                                 <!-- 時間表格 -->
-                                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                <ScrollViewer x:Name="DayScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                                               Visibility="{Binding DayViewDayIsClosed, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
@@ -854,7 +871,8 @@
                                                         AllowDrop="True"
                                                         DragOver="ShiftBlock_DragOver"
                                                         Drop="ShiftBlock_Drop"
-                                                        ClipToBounds="True">
+                                                        ClipToBounds="True"
+                                                        ToolTipOpening="ShiftBlock_ToolTipOpening">
                                                     <Border.Style>
                                                         <Style TargetType="Border">
                                                             <Setter Property="Background" Value="{Binding ShiftSetting.Color, Converter={StaticResource HexToBrushConverter}}"/>
@@ -866,7 +884,7 @@
                                                         </Style>
                                                     </Border.Style>
                                                     <Border.ToolTip>
-                                                        <ToolTip Style="{StaticResource SpeechBubbleToolTip}">
+                                                        <ToolTip Style="{StaticResource SpeechBubbleCustomToolTip}">
                                                             <Grid>
                                                                 <StackPanel Orientation="Horizontal"
                                                                             Visibility="{Binding IsDisabled, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -2014,7 +2032,8 @@
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="60"/>
                                                             <ColumnDefinition Width="*"/>
-                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="130"/>
+                                                            <ColumnDefinition Width="110"/>
                                                         </Grid.ColumnDefinitions>
                                                         <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                                             <TextBlock Text="{Binding DateText}" FontWeight="Medium" FontSize="13"/>
@@ -2027,6 +2046,52 @@
                                                         <TextBlock Grid.Column="2" Text="{Binding TimeRange}"
                                                                    VerticalAlignment="Center" FontSize="11"
                                                                    Foreground="{DynamicResource AppSubtleForegroundBrush}"/>
+                                                        <!-- 同天排班同仁頭像 -->
+                                                        <ItemsControl Grid.Column="3" ItemsSource="{Binding Colleagues}"
+                                                                      VerticalAlignment="Center">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate>
+                                                                    <StackPanel Orientation="Horizontal"/>
+                                                                </ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate DataType="{x:Type models:Employee}">
+                                                                    <Border Width="32" Height="32" CornerRadius="16"
+                                                                            ClipToBounds="True" Margin="4,0,0,0"
+                                                                            BorderThickness="2" BorderBrush="{DynamicResource AppSurfaceBrush}"
+                                                                            Background="{Binding ColorHex, Converter={StaticResource HexToBrushConverter}}">
+                                                                        <Border.ToolTip>
+                                                                            <ToolTip Style="{StaticResource SpeechBubbleToolTip}">
+                                                                                <StackPanel Orientation="Horizontal" Margin="0,2">
+                                                                                    <Border Width="22" Height="22" CornerRadius="11" ClipToBounds="True" Margin="0,0,6,0"
+                                                                                            Background="{Binding ColorHex, Converter={StaticResource HexToBrushConverter}}">
+                                                                                        <Grid>
+                                                                                            <Image Source="{Binding AvatarPhotoData, Converter={StaticResource BytesToImageConverter}}"
+                                                                                                   Stretch="UniformToFill"
+                                                                                                   Visibility="{Binding AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                                                            <TextBlock Text="{Binding Name, Converter={StaticResource NameInitialConverter}}"
+                                                                                                       FontSize="9" FontWeight="Bold" Foreground="White"
+                                                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                                                       Visibility="{Binding AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                                                                                        </Grid>
+                                                                                    </Border>
+                                                                                    <TextBlock Text="{Binding Name}" FontSize="12" VerticalAlignment="Center"/>
+                                                                                </StackPanel>
+                                                                            </ToolTip>
+                                                                        </Border.ToolTip>
+                                                                        <Grid>
+                                                                            <Image Source="{Binding AvatarPhotoData, Converter={StaticResource BytesToImageConverter}}"
+                                                                                   Stretch="UniformToFill"
+                                                                                   Visibility="{Binding AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                                            <TextBlock Text="{Binding Name, Converter={StaticResource NameInitialConverter}}"
+                                                                                       FontSize="11" FontWeight="Bold" Foreground="White"
+                                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                                       Visibility="{Binding AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                                                                        </Grid>
+                                                                    </Border>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
                                                     </Grid>
                                                 </Border>
                                             </DataTemplate>

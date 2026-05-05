@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using ShopManager.Data;
+using System.Net.Http;
 using ShopManager.Models;
 using ShopManager.Services;
 using ShopManager.ViewModels;
@@ -105,6 +106,19 @@ public partial class App : Application
         {
             using var cmd = conn.CreateCommand();
             cmd.CommandText = """
+                CREATE TABLE IF NOT EXISTS "LineFollowers" (
+                    "Id"                INTEGER PRIMARY KEY AUTOINCREMENT,
+                    "ShopId"            TEXT    NOT NULL DEFAULT '',
+                    "UserId"            TEXT    NOT NULL DEFAULT '',
+                    "DisplayName"       TEXT    NOT NULL DEFAULT '',
+                    "PictureUrl"        TEXT,
+                    "BoundEmployeeId"   INTEGER,
+                    "IsBindingDisabled" INTEGER NOT NULL DEFAULT 0,
+                    "LastSyncAt"        TEXT    NOT NULL DEFAULT ''
+                )
+                """;
+            cmd.ExecuteNonQuery();
+            cmd.CommandText = """
                 CREATE TABLE IF NOT EXISTS "ScheduleConflicts" (
                     "Id"           INTEGER PRIMARY KEY AUTOINCREMENT,
                     "ScheduleId"   INTEGER NOT NULL,
@@ -115,6 +129,55 @@ public partial class App : Application
                     "ShiftAlias"   TEXT    NOT NULL DEFAULT '',
                     "Reason"       TEXT    NOT NULL DEFAULT '',
                     FOREIGN KEY ("ScheduleId") REFERENCES "MonthlySchedules"("Id") ON DELETE CASCADE
+                )
+                """;
+            cmd.ExecuteNonQuery();
+            cmd.CommandText = """
+                CREATE TABLE IF NOT EXISTS "SalaryRecords" (
+                    "Id"                  INTEGER PRIMARY KEY AUTOINCREMENT,
+                    "ShopId"              TEXT    NOT NULL DEFAULT '',
+                    "MonthlyScheduleId"   INTEGER NOT NULL,
+                    "Year"                INTEGER NOT NULL,
+                    "Month"               INTEGER NOT NULL,
+                    "HolidayDates"        TEXT    NOT NULL DEFAULT '[]',
+                    "CreatedAt"           TEXT    NOT NULL DEFAULT '',
+                    "UpdatedAt"           TEXT    NOT NULL DEFAULT ''
+                )
+                """;
+            cmd.ExecuteNonQuery();
+            cmd.CommandText = """
+                CREATE TABLE IF NOT EXISTS "SalaryEmployeeRecords" (
+                    "Id"              INTEGER PRIMARY KEY AUTOINCREMENT,
+                    "SalaryRecordId"  INTEGER NOT NULL,
+                    "EmployeeId"      INTEGER NOT NULL,
+                    "SalaryType"      INTEGER NOT NULL DEFAULT 0,
+                    "HourlyRate"      TEXT    NOT NULL DEFAULT '0',
+                    "MonthlyBase"     TEXT    NOT NULL DEFAULT '0',
+                    "ContractAmount"  TEXT    NOT NULL DEFAULT '0',
+                    "NormalHours"     REAL    NOT NULL DEFAULT 0,
+                    "OT1Hours"        REAL    NOT NULL DEFAULT 0,
+                    "OT2Hours"        REAL    NOT NULL DEFAULT 0,
+                    "RestDayHours"    REAL    NOT NULL DEFAULT 0,
+                    "HolidayHours"    REAL    NOT NULL DEFAULT 0,
+                    "NormalPay"       TEXT    NOT NULL DEFAULT '0',
+                    "OT1Pay"          TEXT    NOT NULL DEFAULT '0',
+                    "OT2Pay"          TEXT    NOT NULL DEFAULT '0',
+                    "RestDayPay"      TEXT    NOT NULL DEFAULT '0',
+                    "HolidayPay"      TEXT    NOT NULL DEFAULT '0',
+                    "BaseAmount"      TEXT    NOT NULL DEFAULT '0',
+                    FOREIGN KEY ("SalaryRecordId") REFERENCES "SalaryRecords"("Id") ON DELETE CASCADE,
+                    FOREIGN KEY ("EmployeeId")     REFERENCES "Employees"("Id")      ON DELETE CASCADE
+                )
+                """;
+            cmd.ExecuteNonQuery();
+            cmd.CommandText = """
+                CREATE TABLE IF NOT EXISTS "SalaryBonusItems" (
+                    "Id"                      INTEGER PRIMARY KEY AUTOINCREMENT,
+                    "SalaryEmployeeRecordId"  INTEGER NOT NULL,
+                    "Label"                   TEXT    NOT NULL DEFAULT '',
+                    "Amount"                  TEXT    NOT NULL DEFAULT '0',
+                    "PresetType"              INTEGER NOT NULL DEFAULT 0,
+                    FOREIGN KEY ("SalaryEmployeeRecordId") REFERENCES "SalaryEmployeeRecords"("Id") ON DELETE CASCADE
                 )
                 """;
             cmd.ExecuteNonQuery();
@@ -149,6 +212,12 @@ public partial class App : Application
                 ("MonthlySchedules",   "WorkDayConditionConfigs",    "TEXT NOT NULL DEFAULT '[]'"),
                 ("MonthlySchedules",   "EmployeeWorkDays",           "TEXT NOT NULL DEFAULT '[]'"),
                 ("MonthlySchedules",   "ExcludeFromAutoAssignIds",   "TEXT NOT NULL DEFAULT '[]'"),
+                ("ShopSettings",       "LineChannelAccessToken",      "TEXT"),
+                ("ShopSettings",       "LineWorkerUrl",               "TEXT"),
+                ("ShopSettings",       "LineWorkerApiKey",            "TEXT"),
+                ("ShopSettings",       "LineWelcomeMessage",          "TEXT"),
+                ("ShopSettings",       "LineResignMessage",           "TEXT"),
+                ("Employees",          "LineUserId",                  "TEXT"),
             };
             foreach (var (table, col, type) in cols)
             {
@@ -177,6 +246,9 @@ private static void ConfigureServices(ServiceCollection services)
         // 資料庫內容。
         services.AddDbContext<AppDbContext>(ServiceLifetime.Transient);
 
+        // 共用 HttpClient（跨 ViewModel / Service 複用，避免 socket 耗盡）。
+        services.AddSingleton<HttpClient>();
+
         // 應用程式共用服務。
         services.AddSingleton<AppSnackbarService>();
         services.AddSingleton<IAppSnackbarService>(p => p.GetRequiredService<AppSnackbarService>());
@@ -190,12 +262,18 @@ private static void ConfigureServices(ServiceCollection services)
 
         // 商業邏輯服務。
         services.AddTransient<ShopSettingService>();
+        services.AddTransient<LineService>();
+        services.AddTransient<LineFollowerService>();
+        services.AddTransient<LineFollowerDialogViewModel>();
+        services.AddTransient<Views.Line.LineFollowerWindow>();
         services.AddTransient<ShiftSettingService>();
         services.AddTransient<SalarySettingService>();
         services.AddTransient<EmployeeService>();
         services.AddTransient<MonthlyScheduleService>();
         services.AddTransient<ScheduleService>();
         services.AddTransient<ScheduleConflictService>();
+        services.AddTransient<SalaryCalculationService>();
+        services.AddTransient<AutoScheduleService>();
 
         // ViewModel。
         services.AddTransient<MainViewModel>();
@@ -205,6 +283,7 @@ private static void ConfigureServices(ServiceCollection services)
         services.AddTransient<EmployeeViewModel>();
         services.AddTransient<ScheduleViewModel>();
         services.AddTransient<ShopSelectionViewModel>();
+        services.AddTransient<SalaryViewModel>();
 
         // 頁面。
         services.AddTransient<ShopSettingPage>();
@@ -212,6 +291,7 @@ private static void ConfigureServices(ServiceCollection services)
         services.AddTransient<SalarySettingPage>();
         services.AddTransient<EmployeeListPage>();
         services.AddTransient<SchedulePage>();
+        services.AddTransient<Views.Salary.SalaryPage>();
 
         // 視窗。
         services.AddSingleton<MainWindow>();

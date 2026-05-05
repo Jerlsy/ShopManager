@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MaterialDesignThemes.Wpf;
+using ShopManager.Helpers;
 using ShopManager.Models;
 using ShopManager.Services;
 using ShopManager.Views.Dialogs;
@@ -57,6 +58,8 @@ public partial class EmployeeViewModel : ObservableObject
     private readonly SalarySettingService _salaryService;
     private readonly ShopSettingService _shopSettingService;
     private readonly ScheduleConflictService _conflictService;
+    private readonly LineFollowerService _lineFollowerService;
+    private readonly LineService _lineService;
     private readonly IAppSnackbarService _snackbarService;
     private readonly IAppDialogService _dialogService;
 
@@ -68,6 +71,8 @@ public partial class EmployeeViewModel : ObservableObject
         SalarySettingService salaryService,
         ShopSettingService shopSettingService,
         ScheduleConflictService conflictService,
+        LineFollowerService lineFollowerService,
+        LineService lineService,
         IAppSnackbarService snackbarService,
         IAppDialogService dialogService)
     {
@@ -76,6 +81,8 @@ public partial class EmployeeViewModel : ObservableObject
         _salaryService = salaryService;
         _shopSettingService = shopSettingService;
         _conflictService = conflictService;
+        _lineFollowerService = lineFollowerService;
+        _lineService = lineService;
         _snackbarService = snackbarService;
         _dialogService = dialogService;
 
@@ -145,6 +152,36 @@ public partial class EmployeeViewModel : ObservableObject
 
     [ObservableProperty] private List<ContactInfo> _editContactInfos = new();
 
+    // ── LINE 推播綁定 ──────────────────────────────────────
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasLineBinding))]
+    private string? _editLineUserId;
+
+    [ObservableProperty] private string? _editLineDisplayName;
+    [ObservableProperty] private string? _editLinePictureUrl;
+
+    public bool HasLineBinding => !string.IsNullOrEmpty(EditLineUserId);
+
+    /// <summary>點擊綁定按鈕時觸發，View 負責開啟 LineFollowerWindow 並回傳 userId/displayName</summary>
+    public event EventHandler? OpenLineBindingRequested;
+
+    [RelayCommand]
+    public void RequestLineBinding() => OpenLineBindingRequested?.Invoke(this, EventArgs.Empty);
+
+    [RelayCommand]
+    public void ClearLineBinding()
+    {
+        EditLineUserId = null;
+        EditLineDisplayName = null;
+    }
+
+    public void ApplyLineBinding(string userId, string displayName, string? pictureUrl)
+    {
+        EditLineUserId = userId;
+        EditLineDisplayName = displayName;
+        EditLinePictureUrl = pictureUrl;
+    }
+
     [ObservableProperty] private SalarySetting? _editDefaultSalary;
     [ObservableProperty] private DateOnly? _editInterviewDate;
     [ObservableProperty] private DateOnly _editHireDate = DateOnly.FromDateTime(DateTime.Today);
@@ -157,7 +194,7 @@ public partial class EmployeeViewModel : ObservableObject
     // ── 靜態資料 ──────────────────────────────────────────
     public static List<string> EmployeeContactTypes { get; } = new()
     {
-        "電話", "Email", "Line", "WhatsApp", "Telegram",
+        "電話", "Email", "WhatsApp", "Telegram",
         "WeChat", "Facebook", "Instagram", "其他"
     };
 
@@ -177,34 +214,10 @@ public partial class EmployeeViewModel : ObservableObject
         get
         {
             if (string.IsNullOrWhiteSpace(EditIdNumber)) return "身分證為必填";
-            return ValidateTaiwanId(EditIdNumber) ? null : "身分證格式不正確";
+            return TaiwanIdValidator.Validate(EditIdNumber) ? null : "身分證格式不正確";
         }
     }
     public bool IsIdValid => IdNumberError == null;
-
-    private static readonly Dictionary<char, int> _idLetterMap = new()
-    {
-        {'A',10},{'B',11},{'C',12},{'D',13},{'E',14},{'F',15},{'G',16},{'H',17},
-        {'I',34},{'J',18},{'K',19},{'L',20},{'M',21},{'N',22},{'O',35},{'P',23},
-        {'Q',24},{'R',25},{'S',26},{'T',27},{'U',28},{'V',29},{'W',32},{'X',30},
-        {'Y',31},{'Z',33}
-    };
-
-    public static bool ValidateTaiwanId(string id)
-    {
-        if (string.IsNullOrWhiteSpace(id)) return false;
-        id = id.Trim().ToUpper();
-        if (id.Length != 10) return false;
-        if (!_idLetterMap.TryGetValue(id[0], out int code)) return false;
-        for (int i = 1; i < 10; i++)
-            if (!char.IsDigit(id[i])) return false;
-        int[] weights = { 1, 9, 8, 7, 6, 5, 4, 3, 2, 1, 1 };
-        int[] digits = new int[11];
-        digits[0] = code / 10;
-        digits[1] = code % 10;
-        for (int i = 2; i <= 10; i++) digits[i] = id[i - 1] - '0';
-        return digits.Zip(weights, (d, w) => d * w).Sum() % 10 == 0;
-    }
 
     // ── 摘要顯示（對話框按鈕用） ──────────────────────────
     public string SalarySummary =>
@@ -308,34 +321,24 @@ public partial class EmployeeViewModel : ObservableObject
         }
 
         EditContactInfos   = new List<ContactInfo>(emp.ContactInfos);
+        EditLineUserId = emp.LineUserId;
+        if (!string.IsNullOrEmpty(emp.LineUserId))
+        {
+            var follower = await _lineFollowerService.GetByEmployeeIdAsync(emp.Id);
+            EditLineDisplayName = follower?.DisplayName;
+            EditLinePictureUrl = follower?.PictureUrl;
+        }
+        else
+        {
+            EditLineDisplayName = null;
+            EditLinePictureUrl = null;
+        }
         EditDefaultSalary  = AvailableSalaries.FirstOrDefault(s => s.Id == emp.DefaultSalaryId);
         EditInterviewDate  = emp.InterviewDate;
         EditHireDate       = emp.HireDate == default ? DateOnly.FromDateTime(DateTime.Today) : emp.HireDate;
         EditResignDate     = emp.ResignDate;
 
-        // 固定休假
-        var fixedOffRule = emp.ScheduleRules.FirstOrDefault(r => r.Type == ScheduleRuleType.FixedOff);
-        var fixedOffDays = fixedOffRule?.FixedOffDays ?? new List<int>();
-        foreach (var item in FixedOffDayItems)
-            item.IsChecked = fixedOffDays.Contains((int)item.Day);
-
-        // 排除班別
-        var excludeRule = emp.ScheduleRules.FirstOrDefault(r => r.Type == ScheduleRuleType.ExcludeShift);
-        var excludedIds = excludeRule?.ExcludedShiftIds ?? new List<int>();
-        foreach (var item in ExcludeShiftItems)
-            item.IsChecked = excludedIds.Contains(item.ShiftId);
-
-        // 不與同班
-        var notWithRule = emp.ScheduleRules.FirstOrDefault(r => r.Type == ScheduleRuleType.NotWith);
-        var notWithIds  = notWithRule?.ExcludedColleagueIds ?? new List<int>();
-        foreach (var item in NotWithItems)
-            item.IsChecked = notWithIds.Contains(item.EmployeeId);
-
-        // 不與同天
-        var notWithDayRule = emp.ScheduleRules.FirstOrDefault(r => r.Type == ScheduleRuleType.NotWithDay);
-        var notWithDayIds  = notWithDayRule?.ExcludedColleagueIds ?? new List<int>();
-        foreach (var item in NotWithDayItems)
-            item.IsChecked = notWithDayIds.Contains(item.EmployeeId);
+        ApplyRulesToVm(emp.ScheduleRules);
 
         OnPropertyChanged(nameof(SalarySummary));
         OnPropertyChanged(nameof(EmploymentSummary));
@@ -445,6 +448,7 @@ public partial class EmployeeViewModel : ObservableObject
 
     private async Task DoSaveAsync()
     {
+        var oldLineUserId = SelectedEmployee?.LineUserId;
         var emp = SelectedEmployee ?? new Employee();
         emp.Name         = EditName;
         emp.EnglishName  = string.IsNullOrWhiteSpace(EditEnglishName) ? null : EditEnglishName.Trim();
@@ -454,31 +458,13 @@ public partial class EmployeeViewModel : ObservableObject
             ? new DateOnly(EditBirthYear.Value, EditBirthMonth.Value, EditBirthDay.Value)
             : null;
         emp.ContactInfos    = EditContactInfos;
+        emp.LineUserId      = string.IsNullOrEmpty(EditLineUserId) ? null : EditLineUserId;
         emp.DefaultSalaryId = EditDefaultSalary?.Id;
         emp.InterviewDate   = EditInterviewDate;
         emp.HireDate        = EditHireDate;
         emp.ResignDate      = EditResignDate;
 
-        // 排班規則
-        var rules = new List<ScheduleRule>();
-
-        var offDays = FixedOffDayItems.Where(d => d.IsChecked).Select(d => (int)d.Day).ToList();
-        if (offDays.Any())
-            rules.Add(new ScheduleRule { EmployeeId = emp.Id, Type = ScheduleRuleType.FixedOff, FixedOffDays = offDays });
-
-        var excludedShifts = ExcludeShiftItems.Where(s => s.IsChecked).Select(s => s.ShiftId).ToList();
-        if (excludedShifts.Any())
-            rules.Add(new ScheduleRule { EmployeeId = emp.Id, Type = ScheduleRuleType.ExcludeShift, ExcludedShiftIds = excludedShifts });
-
-        var notWithIds = NotWithItems.Where(e => e.IsChecked).Select(e => e.EmployeeId).ToList();
-        if (notWithIds.Any())
-            rules.Add(new ScheduleRule { EmployeeId = emp.Id, Type = ScheduleRuleType.NotWith, ExcludedColleagueIds = notWithIds });
-
-        var notWithDayIds = NotWithDayItems.Where(e => e.IsChecked).Select(e => e.EmployeeId).ToList();
-        if (notWithDayIds.Any())
-            rules.Add(new ScheduleRule { EmployeeId = emp.Id, Type = ScheduleRuleType.NotWithDay, ExcludedColleagueIds = notWithDayIds });
-
-        emp.ScheduleRules = rules;
+        emp.ScheduleRules = BuildRulesFromVm(emp.Id);
 
         bool isUpdate = SelectedEmployee is not null;
         if (!isUpdate)
@@ -489,6 +475,27 @@ public partial class EmployeeViewModel : ObservableObject
         else
         {
             await _employeeService.UpdateAsync(emp);
+        }
+
+        // 同步 LineFollower 綁定狀態
+        if (!string.IsNullOrEmpty(emp.LineUserId))
+            await _lineFollowerService.BindAsync(emp.LineUserId, emp.Id);
+        else if (!string.IsNullOrEmpty(oldLineUserId))
+            await _lineFollowerService.UnbindAsync(emp.Id);
+
+        // 新綁定時發送歡迎訊息
+        bool isNewBinding = !string.IsNullOrEmpty(emp.LineUserId) && emp.LineUserId != oldLineUserId;
+        if (isNewBinding)
+        {
+            var shopSetting = await _shopSettingService.GetAsync();
+            var token = shopSetting?.LineChannelAccessToken;
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                var welcomeMsg = string.IsNullOrWhiteSpace(shopSetting?.LineWelcomeMessage)
+                    ? "✅ 綁定成功！您的 LINE 帳號已與店鋪排班系統連結，後續班表通知將透過此帳號發送。"
+                    : shopSetting.LineWelcomeMessage.Replace("{name}", EditLineDisplayName ?? emp.Name);
+                await _lineService.PushMessageAsync(token, emp.LineUserId, welcomeMsg);
+            }
         }
 
         SelectedEmployee = null;
@@ -558,7 +565,10 @@ public partial class EmployeeViewModel : ObservableObject
         EditBirthYear      = null;
         EditBirthMonth     = null;
         EditBirthDay       = null;
-        EditContactInfos   = new();
+        EditContactInfos    = new();
+        EditLineUserId      = null;
+        EditLineDisplayName = null;
+        EditLinePictureUrl  = null;
         EditDefaultSalary  = null;
         EditInterviewDate  = null;
         EditHireDate       = DateOnly.FromDateTime(DateTime.Today);
@@ -574,5 +584,43 @@ public partial class EmployeeViewModel : ObservableObject
         OnPropertyChanged(nameof(SalarySummary));
         OnPropertyChanged(nameof(EmploymentSummary));
         OnPropertyChanged(nameof(ScheduleRulesSummary));
+    }
+
+    private void ApplyRulesToVm(IEnumerable<ScheduleRule> rules)
+    {
+        var lookup = rules.ToDictionary(r => r.Type);
+
+        var fixedOffDays = lookup.TryGetValue(ScheduleRuleType.FixedOff,      out var fo)  ? fo.FixedOffDays          : new();
+        var excludedIds  = lookup.TryGetValue(ScheduleRuleType.ExcludeShift,  out var ex)  ? ex.ExcludedShiftIds      : new();
+        var notWithIds   = lookup.TryGetValue(ScheduleRuleType.NotWith,       out var nw)  ? nw.ExcludedColleagueIds  : new();
+        var notWithDayIds= lookup.TryGetValue(ScheduleRuleType.NotWithDay,    out var nwd) ? nwd.ExcludedColleagueIds : new();
+
+        foreach (var item in FixedOffDayItems)  item.IsChecked = fixedOffDays.Contains((int)item.Day);
+        foreach (var item in ExcludeShiftItems) item.IsChecked = excludedIds.Contains(item.ShiftId);
+        foreach (var item in NotWithItems)      item.IsChecked = notWithIds.Contains(item.EmployeeId);
+        foreach (var item in NotWithDayItems)   item.IsChecked = notWithDayIds.Contains(item.EmployeeId);
+    }
+
+    private List<ScheduleRule> BuildRulesFromVm(int empId)
+    {
+        var rules = new List<ScheduleRule>();
+
+        var offDays = FixedOffDayItems.Where(d => d.IsChecked).Select(d => (int)d.Day).ToList();
+        if (offDays.Any())
+            rules.Add(new ScheduleRule { EmployeeId = empId, Type = ScheduleRuleType.FixedOff, FixedOffDays = offDays });
+
+        var excludedShifts = ExcludeShiftItems.Where(s => s.IsChecked).Select(s => s.ShiftId).ToList();
+        if (excludedShifts.Any())
+            rules.Add(new ScheduleRule { EmployeeId = empId, Type = ScheduleRuleType.ExcludeShift, ExcludedShiftIds = excludedShifts });
+
+        var notWithIds = NotWithItems.Where(e => e.IsChecked).Select(e => e.EmployeeId).ToList();
+        if (notWithIds.Any())
+            rules.Add(new ScheduleRule { EmployeeId = empId, Type = ScheduleRuleType.NotWith, ExcludedColleagueIds = notWithIds });
+
+        var notWithDayIds = NotWithDayItems.Where(e => e.IsChecked).Select(e => e.EmployeeId).ToList();
+        if (notWithDayIds.Any())
+            rules.Add(new ScheduleRule { EmployeeId = empId, Type = ScheduleRuleType.NotWithDay, ExcludedColleagueIds = notWithDayIds });
+
+        return rules;
     }
 }

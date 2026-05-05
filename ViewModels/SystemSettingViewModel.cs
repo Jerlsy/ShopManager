@@ -8,6 +8,8 @@ using System.Collections.ObjectModel;
 
 namespace ShopManager.ViewModels;
 
+public enum LineTestState { None, Testing, Success, Failed }
+
 public partial class SystemSettingViewModel(
     ShopSettingService service,
     IAppSnackbarService snackbarService,
@@ -15,7 +17,8 @@ public partial class SystemSettingViewModel(
     AppDbContext db,
     ShopContext shopContext,
     ThemeService themeService,
-    AppearanceService appearanceService) : ObservableObject
+    AppearanceService appearanceService,
+    LineService lineService) : ObservableObject
 {
     [ObservableProperty] private string _name = string.Empty;
     [ObservableProperty] private string _address = string.Empty;
@@ -32,6 +35,24 @@ public partial class SystemSettingViewModel(
 
     [ObservableProperty] private int _weekStartDay = 1;
     [ObservableProperty] private bool _nationalHolidaysOff = true;
+
+    // ── LINE 推播設定 ────────────────────────────────────────────────────────
+    [ObservableProperty] private string _lineChannelAccessToken = string.Empty;
+    [ObservableProperty] private string _lineWorkerUrl = string.Empty;
+    [ObservableProperty] private string _lineWorkerApiKey = string.Empty;
+    [ObservableProperty] private string _lineWelcomeMessage = string.Empty;
+    [ObservableProperty] private string _lineResignMessage = string.Empty;
+    [ObservableProperty] private bool _isLineConfigUnlocked;
+    [ObservableProperty] private LineTestState _lineTestState = LineTestState.None;
+    [ObservableProperty] private string _lineTestMessage = string.Empty;
+
+    /// <summary>測試成功後觸發，View 負責開啟 LineFollowerWindow</summary>
+    public event EventHandler<string>? LineTestSucceeded;
+
+    public bool IsLineTesting => LineTestState == LineTestState.Testing;
+    public bool IsLineTestResultVisible => LineTestState != LineTestState.None;
+    public bool IsLineTestSuccess => LineTestState == LineTestState.Success;
+    public bool IsLineTestFailed => LineTestState == LineTestState.Failed;
     [ObservableProperty] private string _customPrimaryHex = "#546E7A";
     [ObservableProperty] private string _customSecondaryHex = "#29B6F6";
 
@@ -77,6 +98,13 @@ public partial class SystemSettingViewModel(
 
             foreach (var option in ClosedDayOptions)
                 option.IsChecked = setting.ClosedDaysOfWeek.Contains((int)option.Day);
+
+            LineChannelAccessToken = setting.LineChannelAccessToken ?? string.Empty;
+            LineWorkerUrl = setting.LineWorkerUrl ?? string.Empty;
+            LineWorkerApiKey = setting.LineWorkerApiKey ?? string.Empty;
+            LineWelcomeMessage = setting.LineWelcomeMessage ?? string.Empty;
+            LineResignMessage = setting.LineResignMessage ?? string.Empty;
+            IsLineConfigUnlocked = !string.IsNullOrWhiteSpace(setting.LineChannelAccessToken);
         }
 
         CustomPrimaryHex = themeService.CustomPrimaryHex;
@@ -107,6 +135,11 @@ public partial class SystemSettingViewModel(
             WeekStartDay = WeekStartDay,
             ClosedDaysOfWeek = closedDays,
             NationalHolidaysOff = NationalHolidaysOff,
+            LineChannelAccessToken = string.IsNullOrWhiteSpace(LineChannelAccessToken) ? null : LineChannelAccessToken,
+            LineWorkerUrl = string.IsNullOrWhiteSpace(LineWorkerUrl) ? null : LineWorkerUrl,
+            LineWorkerApiKey = string.IsNullOrWhiteSpace(LineWorkerApiKey) ? null : LineWorkerApiKey,
+            LineWelcomeMessage = string.IsNullOrWhiteSpace(LineWelcomeMessage) ? null : LineWelcomeMessage,
+            LineResignMessage = string.IsNullOrWhiteSpace(LineResignMessage) ? null : LineResignMessage,
         };
 
         await service.SaveAsync(setting);
@@ -121,6 +154,35 @@ public partial class SystemSettingViewModel(
     }
 
     public void SetLogoPhoto(byte[] data) => LogoPhotoData = data;
+
+    [RelayCommand]
+    public async Task TestLineConnectionAsync()
+    {
+        if (string.IsNullOrWhiteSpace(LineChannelAccessToken))
+        {
+            LineTestState = LineTestState.Failed;
+            LineTestMessage = "請先輸入 Channel Access Token";
+            return;
+        }
+        LineTestState = LineTestState.Testing;
+        LineTestMessage = "測試中...";
+        OnPropertyChanged(nameof(IsLineTesting));
+        OnPropertyChanged(nameof(IsLineTestResultVisible));
+        OnPropertyChanged(nameof(IsLineTestSuccess));
+        OnPropertyChanged(nameof(IsLineTestFailed));
+        var (success, message) = await lineService.TestConnectionAsync(LineChannelAccessToken);
+        LineTestState = success ? LineTestState.Success : LineTestState.Failed;
+        LineTestMessage = message;
+        if (success)
+        {
+            IsLineConfigUnlocked = true;
+            LineTestSucceeded?.Invoke(this, LineChannelAccessToken);
+        }
+        OnPropertyChanged(nameof(IsLineTesting));
+        OnPropertyChanged(nameof(IsLineTestResultVisible));
+        OnPropertyChanged(nameof(IsLineTestSuccess));
+        OnPropertyChanged(nameof(IsLineTestFailed));
+    }
 
     [RelayCommand]
     public void AddContact()

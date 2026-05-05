@@ -56,6 +56,32 @@
                 <Setter Property="md:TextFieldAssist.HasOutlinedTextField" Value="True"/>
             </Style>
 
+            <!-- ── 可選取文字（模擬 TextBlock，無外框） ── -->
+            <Style x:Key="SelectableTextStyle" TargetType="{x:Type TextBox}">
+                <Setter Property="IsReadOnly"              Value="True"/>
+                <Setter Property="Background"              Value="Transparent"/>
+                <Setter Property="BorderThickness"         Value="0"/>
+                <Setter Property="Padding"                 Value="0"/>
+                <Setter Property="IsTabStop"               Value="False"/>
+                <Setter Property="FocusVisualStyle"        Value="{x:Null}"/>
+                <Setter Property="TextWrapping"            Value="Wrap"/>
+                <Setter Property="VerticalContentAlignment" Value="Top"/>
+                <Setter Property="FontFamily"              Value="{DynamicResource AppFontFamily}"/>
+                <Setter Property="FontSize"                Value="{DynamicResource AppFontSize}"/>
+                <Setter Property="Foreground"              Value="{DynamicResource MaterialDesign.Brush.Foreground}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type TextBox}">
+                            <ScrollViewer x:Name="PART_ContentHost"
+                                          Focusable="False"
+                                          HorizontalScrollBarVisibility="Hidden"
+                                          VerticalScrollBarVisibility="Hidden"
+                                          Background="Transparent"/>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
             <!-- ── PasswordBox 全域樣式 ── -->
             <Style TargetType="{x:Type PasswordBox}" BasedOn="{StaticResource MaterialDesignOutlinedPasswordBox}">
                 <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
@@ -100,6 +126,10 @@
             <helpers:BytesToImageConverter x:Key="BytesToImageConverter"/>
             <helpers:ViewModeVisibilityConverter x:Key="ViewModeVisibilityConverter"/>
             <helpers:ConstraintTypeToLabelConverter x:Key="ConstraintTypeToLabelConverter"/>
+            <helpers:BoolInverseConverter x:Key="BoolInverseConverter"/>
+            <helpers:NonZeroToVisibilityConverter x:Key="NonZeroToVisibilityConverter"/>
+            <helpers:BonusTypeToCustomLabelVisibilityConverter x:Key="BonusTypeToCustomLabelVisibilityConverter"/>
+            <helpers:BonusTypeToPresetLabelVisibilityConverter x:Key="BonusTypeToPresetLabelVisibilityConverter"/>
 
             <!-- ── 響應式佈局尺寸（由 App.xaml.cs ApplyLayoutScale 依螢幕寬度覆寫） ── -->
             <sys:Double x:Key="LayoutNavExpandedWidth">200</sys:Double>
@@ -144,12 +174,30 @@
                 <Setter Property="Foreground" Value="{DynamicResource AppSubtleForegroundBrush}"/>
             </Style>
 
+            <Style x:Key="BodyTextStyle" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                <Setter Property="FontSize" Value="{DynamicResource FontSizeBody}"/>
+            </Style>
+
+            <Style x:Key="SectionHeaderStyle" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                <Setter Property="FontSize"   Value="{DynamicResource FontSizeSmall}"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Foreground" Value="{DynamicResource PrimaryHueMidBrush}"/>
+            </Style>
+
             <Style x:Key="CaptionTextStyle" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
                 <Setter Property="FontSize"   Value="{DynamicResource FontSizeSmall}"/>
                 <Setter Property="Foreground" Value="{DynamicResource AppSubtleForegroundBrush}"/>
             </Style>
 
-            <!-- Border 容器樣式 -->
+            <!-- Border 容器樣式（CardBorderStyle = 員工薪資卡片用，等同 SectionCardStyle + 較小 padding） -->
+            <Style x:Key="CardBorderStyle" TargetType="Border">
+                <Setter Property="CornerRadius"    Value="12"/>
+                <Setter Property="Background"      Value="{DynamicResource AppSurfaceBrush}"/>
+                <Setter Property="BorderBrush"     Value="{DynamicResource AppBorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding"         Value="16,12"/>
+            </Style>
+
             <Style x:Key="PageHeaderStyle" TargetType="Border">
                 <Setter Property="CornerRadius"    Value="16"/>
                 <Setter Property="Background"      Value="{DynamicResource AppSurfaceAltBrush}"/>
@@ -191,12 +239,39 @@
                 <Setter Property="Padding"         Value="14,10"/>
             </Style>
             <!-- 漫畫對話框 ToolTip 樣式 -->
+            <!-- 用於靜態佈局元素（月視圖）：tooltip 在元素上方，箭頭朝下 -->
             <Style x:Key="SpeechBubbleToolTip" TargetType="ToolTip">
                 <Setter Property="Padding" Value="0"/>
                 <Setter Property="Background" Value="Transparent"/>
                 <Setter Property="BorderThickness" Value="0"/>
                 <Setter Property="Placement" Value="Top"/>
                 <Setter Property="VerticalOffset" Value="-4"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ToolTip">
+                            <StackPanel>
+                                <Border Background="#FFF9C4" BorderBrush="#4E342E" BorderThickness="2.5"
+                                        CornerRadius="12" Padding="12,8">
+                                    <Border.Effect>
+                                        <DropShadowEffect ShadowDepth="3" BlurRadius="10" Opacity="0.25" Color="#000000"/>
+                                    </Border.Effect>
+                                    <ContentPresenter/>
+                                </Border>
+                                <Grid Height="12" Margin="0,-2,0,0">
+                                    <Path Fill="#4E342E" HorizontalAlignment="Center" Data="M 0,0 L 17,0 L 8.5,12 Z"/>
+                                    <Path Fill="#FFF9C4" HorizontalAlignment="Center" Data="M 2.5,0 L 14.5,0 L 8.5,9 Z"/>
+                                </Grid>
+                            </StackPanel>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <!-- 用於週/日視圖 BlockMargin 絕對定位元素：Custom 定位由 code-behind 計算，tooltip 在 block 正上方置中，箭頭朝下 -->
+            <Style x:Key="SpeechBubbleCustomToolTip" TargetType="ToolTip">
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Placement" Value="Custom"/>
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="ToolTip">

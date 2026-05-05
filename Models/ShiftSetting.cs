@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ShopManager.Models;
 
@@ -7,7 +8,8 @@ public class ShiftSetting
 {
     [Key] public int Id { get; set; }
     public Guid ShopId { get; set; }
-    [Required] public string Alias { get; set; } = string.Empty;   // 班別別名
+    [Required] public string Alias { get; set; } = string.Empty;   // 班別別名（短碼）
+    [NotMapped] public string Name => Alias;                        // Alias 的顯示別名，供 XAML 繫結
     public TimeOnly StartTime { get; set; }                         // 上班時間
     public TimeOnly EndTime { get; set; }                           // 下班時間
     public bool IsEnabled { get; set; } = true;                     // 啟用/停用

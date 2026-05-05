@@ -1,0 +1,401 @@
+<Window x:Class="ShopManager.Views.Line.CloudflareWorkerHelpWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="如何設定 Cloudflare Worker"
+        Width="580" Height="720"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        TextElement.Foreground="{DynamicResource MaterialDesign.Brush.Foreground}"
+        TextElement.FontFamily="{DynamicResource AppFontFamily}"
+        FontSize="{DynamicResource AppFontSize}"
+        Background="{DynamicResource AppBackgroundBrush}">
+
+    <Border BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- 標頭 -->
+            <Border Grid.Row="0" Padding="20,14" Background="{DynamicResource AppSurfaceBrush}"
+                    BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1">
+                <StackPanel Orientation="Horizontal">
+                    <md:PackIcon Kind="CloudOutline" Width="20" Height="20"
+                                 Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                 VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <StackPanel>
+                        <TextBlock Text="設定 Cloudflare Worker" FontWeight="SemiBold" FontSize="15"/>
+                        <TextBlock Text="用於接收 LINE 好友追蹤事件，取代需認證帳號才能使用的 API" FontSize="11"
+                                   Foreground="{DynamicResource AppSubtleForegroundBrush}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- 步驟內容 -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="20,16">
+                <StackPanel>
+
+                    <!-- Step 1 -->
+                    <Border Margin="0,0,0,10" CornerRadius="8" Background="{DynamicResource AppSurfaceBrush}"
+                            BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="14,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="36"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Width="28" Height="28" CornerRadius="14"
+                                    Background="{DynamicResource PrimaryHueMidBrush}" VerticalAlignment="Top">
+                                <TextBlock Text="1" Foreground="White" FontWeight="Bold" FontSize="13"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                <TextBlock Text="建立 Cloudflare 帳號並登入" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <TextBox Style="{StaticResource SelectableTextStyle}" FontSize="12"
+                                         Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                         Text="前往 cloudflare.com 免費註冊帳號，或直接登入已有帳號。"/>
+                                <Border Margin="0,8,0,0" CornerRadius="4" Padding="8,5"
+                                        Background="{DynamicResource AppInfoBrush}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <md:PackIcon Kind="Link" Width="13" Height="13"
+                                                     Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                                     VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                        <TextBox Style="{StaticResource SelectableTextStyle}" FontSize="11"
+                                                 FontFamily="Consolas"
+                                                 Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                                 Text="https://dash.cloudflare.com"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Step 2 -->
+                    <Border Margin="0,0,0,10" CornerRadius="8" Background="{DynamicResource AppSurfaceBrush}"
+                            BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="14,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="36"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Width="28" Height="28" CornerRadius="14"
+                                    Background="{DynamicResource PrimaryHueMidBrush}" VerticalAlignment="Top">
+                                <TextBlock Text="2" Foreground="White" FontWeight="Bold" FontSize="13"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                <TextBlock Text="建立 Worker" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <TextBox Style="{StaticResource SelectableTextStyle}" FontSize="12"
+                                         Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                         Text="左側選單點「Workers &amp; Pages」→「Create」→「Create Worker」，自訂名稱後按「Deploy」完成建立。"/>
+                                <Border Margin="0,8,0,0" CornerRadius="4" Padding="10,8"
+                                        Background="{DynamicResource AppBackgroundBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+                                    <StackPanel>
+                                        <TextBlock Text="頁面路徑" FontSize="10" Opacity="0.5" Margin="0,0,0,3"/>
+                                        <TextBlock FontSize="12" FontFamily="Consolas">
+                                            <Run Text="Workers &amp; Pages" Foreground="{DynamicResource AppSubtleForegroundBrush}"/>
+                                            <Run Text=" › "/>
+                                            <Run Text="Create" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                                            <Run Text=" › "/>
+                                            <Run Text="Create Worker" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Step 3 -->
+                    <Border Margin="0,0,0,10" CornerRadius="8" Background="{DynamicResource AppSurfaceBrush}"
+                            BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="14,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="36"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Width="28" Height="28" CornerRadius="14"
+                                    Background="{DynamicResource PrimaryHueMidBrush}" VerticalAlignment="Top">
+                                <TextBlock Text="3" Foreground="White" FontWeight="Bold" FontSize="13"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                <TextBlock Text="貼入 Worker 程式碼" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <TextBox Style="{StaticResource SelectableTextStyle}" FontSize="12"
+                                         Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                         Text="進入 Worker 後點右上角「編輯代碼」，複製下方程式碼貼入編輯器，取代所有原有內容，再點右上角「部署」。"/>
+
+                                <!-- 路徑提示 -->
+                                <Border Margin="0,8,0,6" CornerRadius="4" Padding="10,6"
+                                        Background="{DynamicResource AppBackgroundBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+                                    <TextBlock FontSize="12" FontFamily="Consolas">
+                                        <Run Text="[你的 Worker]" Foreground="{DynamicResource AppSubtleForegroundBrush}"/>
+                                        <Run Text=" › "/>
+                                        <Run Text="編輯代碼" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                                        <Run Text=" › "/>
+                                        <Run Text="部署" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                                    </TextBlock>
+                                </Border>
+
+                                <!-- 程式碼區 -->
+                                <Border CornerRadius="4"
+                                        Background="{DynamicResource AppBackgroundBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+                                    <StackPanel>
+                                        <Grid Margin="8,5,4,0">
+                                            <TextBlock Text="worker.js" FontSize="10" FontFamily="Consolas"
+                                                       Opacity="0.5" VerticalAlignment="Center"/>
+                                            <Button x:Name="CopyCodeButton" HorizontalAlignment="Right"
+                                                    Style="{StaticResource MaterialDesignFlatButton}"
+                                                    Height="24" Padding="8,0" FontSize="11"
+                                                    Click="CopyCode_Click">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <md:PackIcon Kind="ContentCopy" Width="13" Height="13"
+                                                                 Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                                    <TextBlock x:Name="CopyCodeLabel" Text="複製程式碼"/>
+                                                </StackPanel>
+                                            </Button>
+                                        </Grid>
+                                        <TextBox x:Name="WorkerCodeBox"
+                                                 Style="{x:Null}"
+                                                 IsReadOnly="True" AcceptsReturn="True"
+                                                 TextWrapping="NoWrap"
+                                                 FontFamily="Consolas" FontSize="11"
+                                                 Foreground="{DynamicResource MaterialDesign.Brush.Foreground}"
+                                                 Background="Transparent"
+                                                 BorderThickness="1,1,0,0"
+                                                 BorderBrush="{DynamicResource AppBorderBrush}"
+                                                 VerticalScrollBarVisibility="Auto"
+                                                 HorizontalScrollBarVisibility="Auto"
+                                                 MaxHeight="200"
+                                                 Padding="8,6"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Step 4 -->
+                    <Border Margin="0,0,0,10" CornerRadius="8" Background="{DynamicResource AppSurfaceBrush}"
+                            BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="14,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="36"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Width="28" Height="28" CornerRadius="14"
+                                    Background="{DynamicResource PrimaryHueMidBrush}" VerticalAlignment="Top">
+                                <TextBlock Text="4" Foreground="White" FontWeight="Bold" FontSize="13"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                <TextBlock Text="建立 KV 命名空間並繫結" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <TextBox Style="{StaticResource SelectableTextStyle}" FontSize="12"
+                                         Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                         Text="KV 用於儲存好友資料。先建立 KV namespace，再綁定到 Worker。"/>
+                                <Border Margin="0,8,0,0" CornerRadius="4" Padding="10,8"
+                                        Background="{DynamicResource AppBackgroundBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                            <Border CornerRadius="10" Width="18" Height="18"
+                                                    Background="{DynamicResource PrimaryHueMidBrush}" Margin="0,0,6,0">
+                                                <TextBlock Text="a" FontSize="10" Foreground="White"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBox Style="{StaticResource SelectableTextStyle}" FontSize="12"
+                                                     Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                                     Text="Workers &amp; Pages › KV › 建立 namespace"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Border CornerRadius="10" Width="18" Height="18"
+                                                    Background="{DynamicResource PrimaryHueMidBrush}" Margin="0,0,6,0">
+                                                <TextBlock Text="b" FontSize="10" Foreground="White"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBox Style="{StaticResource SelectableTextStyle}" FontSize="12"
+                                                     Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                                     Text="Worker › 繫結 › 新增繫結 › KV 命名空間&#x0a;Variable name = FOLLOWERS_KV"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Step 5 -->
+                    <Border Margin="0,0,0,10" CornerRadius="8" Background="{DynamicResource AppSurfaceBrush}"
+                            BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="14,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="36"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Width="28" Height="28" CornerRadius="14"
+                                    Background="{DynamicResource PrimaryHueMidBrush}" VerticalAlignment="Top">
+                                <TextBlock Text="5" Foreground="White" FontWeight="Bold" FontSize="13"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                <TextBlock Text="設定環境變數（Secrets）" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <TextBox Style="{StaticResource SelectableTextStyle}" FontSize="12"
+                                         Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                         Text="Worker › 設定 › 變數和祕密，新增以下三個 Secret："/>
+                                <Border Margin="0,8,0,0" CornerRadius="4" Padding="10,8"
+                                        Background="{DynamicResource AppBackgroundBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+                                    <StackPanel>
+                                        <Grid Margin="0,0,0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Grid.Column="0" Style="{StaticResource SelectableTextStyle}"
+                                                     FontSize="11" FontFamily="Consolas"
+                                                     Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                                     Margin="0,0,8,0" Text="LINE_CHANNEL_SECRET"/>
+                                            <TextBox Grid.Column="1" Style="{StaticResource SelectableTextStyle}"
+                                                     FontSize="11" Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                                     Text="LINE Developers → Basic settings → Channel secret"/>
+                                        </Grid>
+                                        <Grid Margin="0,0,0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Grid.Column="0" Style="{StaticResource SelectableTextStyle}"
+                                                     FontSize="11" FontFamily="Consolas"
+                                                     Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                                     Margin="0,0,8,0" Text="LINE_CHANNEL_ACCESS_TOKEN"/>
+                                            <TextBox Grid.Column="1" Style="{StaticResource SelectableTextStyle}"
+                                                     FontSize="11" Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                                     Text="LINE Developers → Messaging API → Channel access token"/>
+                                        </Grid>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Grid.Column="0" Style="{StaticResource SelectableTextStyle}"
+                                                     FontSize="11" FontFamily="Consolas"
+                                                     Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                                     Margin="0,0,8,0" Text="API_KEY"/>
+                                            <TextBox Grid.Column="1" Style="{StaticResource SelectableTextStyle}"
+                                                     FontSize="11" Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                                     Text="自訂任意字串，用來保護 Worker API，同時填入下方 API Key 欄位"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Step 6 -->
+                    <Border Margin="0,0,0,10" CornerRadius="8" Background="{DynamicResource AppSurfaceBrush}"
+                            BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="14,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="36"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Width="28" Height="28" CornerRadius="14"
+                                    Background="{DynamicResource PrimaryHueMidBrush}" VerticalAlignment="Top">
+                                <TextBlock Text="6" Foreground="White" FontWeight="Bold" FontSize="13"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                <TextBlock Text="設定 LINE Webhook URL" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <TextBox Style="{StaticResource SelectableTextStyle}" FontSize="12"
+                                         Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                         Text="到 LINE OA Manager 或 LINE Developers Console 填入 Webhook URL，開啟 Use webhook 並點「Verify」確認連線成功。"/>
+                                <Border Margin="0,8,0,0" CornerRadius="4" Padding="8,6"
+                                        Background="{DynamicResource AppBackgroundBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+                                    <StackPanel>
+                                        <TextBlock Text="Webhook URL 格式" FontSize="10" Opacity="0.5" Margin="0,0,0,3"/>
+                                        <TextBox Style="{StaticResource SelectableTextStyle}" FontSize="12"
+                                                 FontFamily="Consolas"
+                                                 Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                                 Text="https://[Worker名稱].[帳號].workers.dev/webhook"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Step 7 -->
+                    <Border Margin="0,0,0,10" CornerRadius="8" Background="{DynamicResource AppSurfaceBrush}"
+                            BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="14,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="36"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Width="28" Height="28" CornerRadius="14"
+                                    Background="#4CAF50" VerticalAlignment="Top">
+                                <md:PackIcon Kind="Check" Width="16" Height="16" Foreground="White"
+                                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                <TextBlock Text="填入 ShopManager" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <TextBox Style="{StaticResource SelectableTextStyle}" FontSize="12"
+                                         Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                         Text="回到 ShopManager 店鋪設定，填入 Worker URL（不含 /webhook）與 API Key，儲存即完成。員工追蹤官方帳號後傳送訊息，好友清單就會自動更新。"/>
+                                <Border Margin="0,8,0,0" CornerRadius="4" Padding="8,6"
+                                        Background="{DynamicResource AppBackgroundBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+                                    <StackPanel>
+                                        <TextBlock Text="Worker URL（填這個）" FontSize="10" Opacity="0.5" Margin="0,0,0,3"/>
+                                        <TextBox Style="{StaticResource SelectableTextStyle}" FontSize="12"
+                                                 FontFamily="Consolas"
+                                                 Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                                 Text="https://[Worker名稱].[帳號].workers.dev"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- 注意事項 -->
+                    <Border CornerRadius="8" Padding="14,10" Margin="0,4,0,0"
+                            Background="{DynamicResource AppInfoBrush}"
+                            BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+                        <StackPanel Orientation="Horizontal">
+                            <md:PackIcon Kind="AlertOutline" Width="16" Height="16"
+                                         Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                         VerticalAlignment="Top" Margin="0,1,8,0"/>
+                            <TextBox Style="{StaticResource SelectableTextStyle}" FontSize="12"
+                                     Foreground="{DynamicResource AppInfoForegroundBrush}" MaxWidth="460"
+                                     Text="Cloudflare Workers 免費方案每天有 100,000 次請求限制，一般店鋪使用量遠低於此上限，無需付費。"/>
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- 底部按鈕 -->
+            <Border Grid.Row="2" Padding="20,12"
+                    Background="{DynamicResource AppSurfaceBrush}"
+                    BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,1,0,0">
+                <Grid>
+                    <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                            HorizontalAlignment="Left"
+                            Click="OpenBrowser_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <md:PackIcon Kind="OpenInNew" Width="15" Height="15" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="前往 Cloudflare Dashboard"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource MaterialDesignFlatButton}"
+                            HorizontalAlignment="Right"
+                            IsCancel="True" Click="Close_Click">
+                        <TextBlock Text="關閉"/>
+                    </Button>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

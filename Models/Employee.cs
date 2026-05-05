@@ -41,6 +41,7 @@ public class Employee
     public DateOnly? ResignDate { get; set; }                            // 離職日（null = 在職）
 
     public string ColorHex { get; set; } = string.Empty;                // 識別色（Hex）
+    public string? LineUserId { get; set; }                             // LINE 推播綁定 userId
 
     public bool IsResigned => ResignDate.HasValue && ResignDate.Value <= DateOnly.FromDateTime(DateTime.Today);
 

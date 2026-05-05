@@ -24,6 +24,13 @@ public class ShopSetting
 
     /// <summary>國定假日是否休假</summary>
     public bool NationalHolidaysOff { get; set; } = true;
+
+    // ── LINE 推播設定 ─────────────────────────────
+    public string? LineChannelAccessToken { get; set; }
+    public string? LineWorkerUrl { get; set; }
+    public string? LineWorkerApiKey { get; set; }
+    public string? LineWelcomeMessage { get; set; }
+    public string? LineResignMessage { get; set; }
 }
 
 /// <summary>聯絡方式（Email、FB、IG、Line 等）</summary>

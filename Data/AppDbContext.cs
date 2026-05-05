@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ShopManager.Models;
 using System.IO;
 using System.Text.Json;
@@ -19,6 +20,10 @@ public class AppDbContext : DbContext
     public DbSet<MonthlySchedule> MonthlySchedules { get; set; }
     public DbSet<ScheduleEntry> ScheduleEntries { get; set; }
     public DbSet<ScheduleConflict> ScheduleConflicts { get; set; }
+    public DbSet<LineFollower> LineFollowers { get; set; }
+    public DbSet<SalaryRecord> SalaryRecords { get; set; }
+    public DbSet<SalaryEmployeeRecord> SalaryEmployeeRecords { get; set; }
+    public DbSet<SalaryBonusItem> SalaryBonusItems { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -30,55 +35,18 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        // ShopSetting - 序列化 ContactInfos 為 JSON
-        modelBuilder.Entity<ShopSetting>()
-            .Property(e => e.ContactInfos)
-            .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<List<ContactInfo>>(v, (JsonSerializerOptions?)null) ?? new List<ContactInfo>()
-            );
+        // ShopSetting
+        modelBuilder.Entity<ShopSetting>().Property(e => e.ContactInfos)    .HasConversion(JsonConv<ContactInfo>());
+        modelBuilder.Entity<ShopSetting>().Property(e => e.ClosedDaysOfWeek).HasConversion(JsonConv<int>());
 
-        // ShopSetting - 序列化 ClosedDaysOfWeek 為 JSON
-        modelBuilder.Entity<ShopSetting>()
-            .Property(e => e.ClosedDaysOfWeek)
-            .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<List<int>>(v, (JsonSerializerOptions?)null) ?? new List<int>()
-            );
+        // ScheduleRule
+        modelBuilder.Entity<ScheduleRule>().Property(e => e.FixedOffDays)         .HasConversion(JsonConv<int>());
+        modelBuilder.Entity<ScheduleRule>().Property(e => e.ExcludedShiftIds)     .HasConversion(JsonConv<int>());
+        modelBuilder.Entity<ScheduleRule>().Property(e => e.ExcludedColleagueIds) .HasConversion(JsonConv<int>());
 
-        // ScheduleRule - 序列化 List<int> 欄位為 JSON
-        modelBuilder.Entity<ScheduleRule>()
-            .Property(e => e.FixedOffDays)
-            .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<List<int>>(v, (JsonSerializerOptions?)null) ?? new List<int>()
-            );
-        modelBuilder.Entity<ScheduleRule>()
-            .Property(e => e.ExcludedShiftIds)
-            .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<List<int>>(v, (JsonSerializerOptions?)null) ?? new List<int>()
-            );
-        modelBuilder.Entity<ScheduleRule>()
-            .Property(e => e.ExcludedColleagueIds)
-            .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<List<int>>(v, (JsonSerializerOptions?)null) ?? new List<int>()
-            );
-
-        // Employee - 序列化 ContactInfos / PreferredShiftIds 為 JSON
-        modelBuilder.Entity<Employee>()
-            .Property(e => e.ContactInfos)
-            .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<List<ContactInfo>>(v, (JsonSerializerOptions?)null) ?? new List<ContactInfo>()
-            );
-        modelBuilder.Entity<Employee>()
-            .Property(e => e.PreferredShiftIds)
-            .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<List<int>>(v, (JsonSerializerOptions?)null) ?? new List<int>()
-            );
+        // Employee
+        modelBuilder.Entity<Employee>().Property(e => e.ContactInfos)    .HasConversion(JsonConv<ContactInfo>());
+        modelBuilder.Entity<Employee>().Property(e => e.PreferredShiftIds).HasConversion(JsonConv<int>());
 
         // Employee 關聯
         modelBuilder.Entity<Employee>()
@@ -93,61 +61,15 @@ public class AppDbContext : DbContext
             .HasForeignKey(e => e.DefaultSalaryId)
             .OnDelete(DeleteBehavior.SetNull);
 
-        // MonthlySchedule - 序列化 ClosedDays / ShiftDayConfigs 為 JSON
-        modelBuilder.Entity<MonthlySchedule>()
-            .Property(e => e.ClosedDays)
-            .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<List<int>>(v, (JsonSerializerOptions?)null) ?? new List<int>()
-            );
-        modelBuilder.Entity<MonthlySchedule>()
-            .Property(e => e.ShiftDayConfigs)
-            .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<List<ShiftDayConfig>>(v, (JsonSerializerOptions?)null) ?? new List<ShiftDayConfig>()
-            );
-
-        modelBuilder.Entity<MonthlySchedule>()
-            .Property(e => e.ShiftDateOverrides)
-            .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<List<ShiftDateOverride>>(v, (JsonSerializerOptions?)null) ?? new List<ShiftDateOverride>()
-            );
-
-        modelBuilder.Entity<MonthlySchedule>()
-            .Property(e => e.StaffingGapDays)
-            .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<List<int>>(v, (JsonSerializerOptions?)null) ?? new List<int>()
-            );
-
-        modelBuilder.Entity<MonthlySchedule>()
-            .Property(e => e.EmployeeDayOffs)
-            .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<List<EmployeeDayOff>>(v, (JsonSerializerOptions?)null) ?? new List<EmployeeDayOff>()
-            );
-
-        modelBuilder.Entity<MonthlySchedule>()
-            .Property(e => e.WorkDayConditionConfigs)
-            .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<List<WorkDayConditionConfig>>(v, (JsonSerializerOptions?)null) ?? new List<WorkDayConditionConfig>()
-            );
-
-        modelBuilder.Entity<MonthlySchedule>()
-            .Property(e => e.EmployeeWorkDays)
-            .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<List<EmployeeWorkDay>>(v, (JsonSerializerOptions?)null) ?? new List<EmployeeWorkDay>()
-            );
-
-        modelBuilder.Entity<MonthlySchedule>()
-            .Property(e => e.ExcludeFromAutoAssignIds)
-            .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<List<int>>(v, (JsonSerializerOptions?)null) ?? new List<int>()
-            );
+        // MonthlySchedule
+        modelBuilder.Entity<MonthlySchedule>().Property(e => e.ClosedDays)               .HasConversion(JsonConv<int>());
+        modelBuilder.Entity<MonthlySchedule>().Property(e => e.ShiftDayConfigs)          .HasConversion(JsonConv<ShiftDayConfig>());
+        modelBuilder.Entity<MonthlySchedule>().Property(e => e.ShiftDateOverrides)       .HasConversion(JsonConv<ShiftDateOverride>());
+        modelBuilder.Entity<MonthlySchedule>().Property(e => e.StaffingGapDays)          .HasConversion(JsonConv<int>());
+        modelBuilder.Entity<MonthlySchedule>().Property(e => e.EmployeeDayOffs)          .HasConversion(JsonConv<EmployeeDayOff>());
+        modelBuilder.Entity<MonthlySchedule>().Property(e => e.WorkDayConditionConfigs)  .HasConversion(JsonConv<WorkDayConditionConfig>());
+        modelBuilder.Entity<MonthlySchedule>().Property(e => e.EmployeeWorkDays)         .HasConversion(JsonConv<EmployeeWorkDay>());
+        modelBuilder.Entity<MonthlySchedule>().Property(e => e.ExcludeFromAutoAssignIds) .HasConversion(JsonConv<int>());
 
         // MonthlySchedule - 店鋪+年月唯一索引
         modelBuilder.Entity<MonthlySchedule>()
@@ -180,6 +102,28 @@ public class AppDbContext : DbContext
             .HasForeignKey(e => e.ShiftSettingId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        // SalaryRecord
+        modelBuilder.Entity<SalaryRecord>().Property(e => e.HolidayDates).HasConversion(JsonConv<DateOnly>());
+
+        // SalaryRecord 關聯（Cascade：班表刪除時一併移除薪資紀錄）
+        modelBuilder.Entity<SalaryRecord>()
+            .HasMany(r => r.EmployeeRecords)
+            .WithOne()
+            .HasForeignKey(e => e.SalaryRecordId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<SalaryEmployeeRecord>()
+            .HasOne(e => e.Employee)
+            .WithMany()
+            .HasForeignKey(e => e.EmployeeId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<SalaryEmployeeRecord>()
+            .HasMany(e => e.BonusItems)
+            .WithOne()
+            .HasForeignKey(b => b.SalaryEmployeeRecordId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         // 種子資料 - 預設勞基法設定
         modelBuilder.Entity<LaborLawSetting>().HasData(new LaborLawSetting
         {
@@ -208,7 +152,7 @@ public class AppDbContext : DbContext
     // ──────────────────────────────────────────────────────────────────────────
     public async Task DeleteShopDataAsync(Guid shopId)
     {
-        // 1. ScheduleEntry / ScheduleConflict（子）→ MonthlySchedule（父）
+        // 1. ScheduleEntry / ScheduleConflict / SalaryRecord（子）→ MonthlySchedule（父）
         var monthlyIds = await MonthlySchedules
             .Where(m => m.ShopId == shopId)
             .Select(m => m.Id)
@@ -220,6 +164,9 @@ public class AppDbContext : DbContext
                 .ExecuteDeleteAsync();
             await ScheduleConflicts
                 .Where(c => monthlyIds.Contains(c.ScheduleId))
+                .ExecuteDeleteAsync();
+            await SalaryRecords
+                .Where(r => monthlyIds.Contains(r.MonthlyScheduleId))
                 .ExecuteDeleteAsync();
         }
         await MonthlySchedules.Where(m => m.ShopId == shopId).ExecuteDeleteAsync();
@@ -248,4 +195,8 @@ public class AppDbContext : DbContext
         // 4. Shop 本體（最後刪除）
         await Shops.Where(s => s.Id == shopId).ExecuteDeleteAsync();
     }
+
+    private static ValueConverter<List<T>, string> JsonConv<T>() => new(
+        v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+        v => JsonSerializer.Deserialize<List<T>>(v, (JsonSerializerOptions?)null) ?? new List<T>());
 }

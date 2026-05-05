@@ -14,7 +14,32 @@
       "WebSearch",
       "WebFetch(domain:github.com)",
       "Bash(python -m json.tool)",
-      "Bash(python -c \"import json,sys; data=json.load\\(sys.stdin\\); holidays=[d for d in data if d['isHoliday'] and d['date'].startswith\\('202604'\\)]; print\\(json.dumps\\(holidays, ensure_ascii=False, indent=2\\)\\)\")"
+      "Bash(python -c \"import json,sys; data=json.load\\(sys.stdin\\); holidays=[d for d in data if d['isHoliday'] and d['date'].startswith\\('202604'\\)]; print\\(json.dumps\\(holidays, ensure_ascii=False, indent=2\\)\\)\")",
+      "Bash(magick --version)",
+      "Bash(python -c \"import PIL; print\\(PIL.__version__\\)\")",
+      "Bash(python -c \"import rembg; print\\('rembg ok'\\)\")",
+      "PowerShell($f = 'Z:\\\\Developer\\\\ShopManager\\\\Resources\\\\app.ico'; $bytes = [System.IO.File]::ReadAllBytes\\($f\\); Write-Host 'Size:' $bytes.Length; Write-Host 'Header hex:' \\(\\($bytes[0..7] | ForEach-Object { $_.ToString\\('X2'\\) }\\) -join ' '\\))",
+      "PowerShell(Get-Command *)",
+      "PowerShell(dotnet tool list *)",
+      "Bash(grep -r \"//.*TODO\\\\|//.*FIXME\\\\|//.*XXX\\\\|/\\\\*.*\\\\*/\\\\|^\\\\s*//.*\" \"Z:\\\\Developer\\\\ShopManager\" --include=\"*.cs\")",
+      "Bash(grep -v \"///\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git rm *)",
+      "PowerShell($lines = Get-Content 'C:\\\\Users\\\\Jerlsy\\\\.claude\\\\projects\\\\Z--Developer-ShopManager\\\\30d40516-7772-461d-be02-dd15f4d8066d.jsonl' -Tail 5; $lines | ForEach-Object { $_.Substring\\(0, [Math]::Min\\(200, $_.Length\\)\\) })",
+      "PowerShell($lines = Get-Content 'C:\\\\Users\\\\Jerlsy\\\\.claude\\\\projects\\\\Z--Developer-ShopManager\\\\30d40516-7772-461d-be02-dd15f4d8066d.jsonl' -Tail 10; foreach \\($line in $lines\\) { try { $obj = $line | ConvertFrom-Json; $msg = $obj.message; if \\($msg -and $msg.content\\) { foreach \\($c in $msg.content\\) { if \\($c.type -eq 'text' -and $c.text\\) { $text = $c.text; $role = $msg.role; Write-Output \"=== [$role] ===\"; Write-Output $text.Substring\\(0, [Math]::Min\\(600, $text.Length\\)\\); Write-Output \"\" } } } } catch { Write-Output \"parse error\" } })",
+      "PowerShell(Get-Content *)",
+      "PowerShell($lines = Get-Content 'C:\\\\Users\\\\Jerlsy\\\\.claude\\\\projects\\\\Z--Developer-ShopManager\\\\30d40516-7772-461d-be02-dd15f4d8066d.jsonl'; $count = $lines.Count; Write-Output \"Total lines: $count\"; foreach \\($line in \\($lines | Select-Object -Last 15\\)\\) { try { $obj = $line | ConvertFrom-Json; $role = $obj.message.role; $content = $obj.message.content; if \\($content\\) { foreach \\($c in $content\\) { if \\($c.type -eq 'text'\\) { Write-Output \"=== $role ===\"; Write-Output \\($c.text.Substring\\(0, [Math]::Min\\(500, $c.text.Length\\)\\)\\); Write-Output \"---\" } } } } catch {} })",
+      "PowerShell($lines = Get-Content 'C:\\\\Users\\\\Jerlsy\\\\.claude\\\\projects\\\\Z--Developer-ShopManager\\\\30d40516-7772-461d-be02-dd15f4d8066d.jsonl'; $selected = $lines | Select-Object -Last 30; foreach \\($line in $selected\\) { try { $obj = $line | ConvertFrom-Json; $role = $obj.message.role; if \\($role\\) { $content = $obj.message.content; if \\($content -is [array]\\) { foreach \\($c in $content\\) { if \\($c -and $c.type -eq 'text' -and $c.text\\) { Write-Output \"=== $role ===\"; Write-Output \\($c.text.Substring\\(0,[Math]::Min\\(400,$c.text.Length\\)\\)\\); Write-Output \"---\" } } } } } catch { Write-Output \"err: $_\" } })",
+      "Bash(Get-ChildItem -Path \"Z:\\\\Developer\\\\ShopManager\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(dotnet --version)",
+      "Bash(dotnet run *)",
+      "Bash(powershell -Command \"[System.Reflection.Assembly]::LoadWithPartialName\\('PresentationFramework'\\).GetName\\(\\).Version\")",
+      "Bash(dotnet ef *)",
+      "Bash(dotnet tool *)",
+      "Bash(Remove-Item *)",
+      "Bash(xargs wc *)"
     ]
   }
 }

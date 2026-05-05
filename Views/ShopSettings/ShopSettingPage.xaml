@@ -206,6 +206,142 @@
                 </StackPanel>
             </Border>
 
+            <!-- LINE 推播設定 -->
+            <Border Style="{StaticResource SectionCardStyle}" Margin="0,0,0,20">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                        <md:PackIcon Kind="MessageTextOutline" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0"
+                                     Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                        <TextBlock Text="LINE 推播設定" Style="{StaticResource SectionTitleStyle}" Margin="0"/>
+                    </StackPanel>
+
+                    <!-- Token 輸入 -->
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Channel Access Token" Style="{StaticResource FieldLabelStyle}"/>
+                        <Button Grid.Column="1" Style="{StaticResource MaterialDesignFlatButton}"
+                                Height="24" Padding="6,0" FontSize="11"
+                                Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                Click="TokenHelp_Click">
+                            <StackPanel Orientation="Horizontal">
+                                <md:PackIcon Kind="HelpCircleOutline" Width="13" Height="13" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="如何取得？"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <PasswordBox Grid.Column="0"
+                                     md:HintAssist.Hint="貼上 Long-lived channel access token"
+                                     md:PasswordBoxAssist.Password="{Binding LineChannelAccessToken, Mode=TwoWay}"
+                                     FontFamily="Consolas" FontSize="12"
+                                     Margin="0,0,8,0"/>
+                        <Button Grid.Column="1"
+                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                Command="{Binding TestLineConnectionCommand}"
+                                IsEnabled="{Binding IsLineTesting, Converter={StaticResource BoolInverseConverter}}">
+                            <StackPanel Orientation="Horizontal">
+                                <md:PackIcon Kind="LinkVariant" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="測試連線"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <!-- 測試結果 -->
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0"
+                                Visibility="{Binding IsLineTestResultVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <!-- 成功圖示 -->
+                        <md:PackIcon Kind="CheckCircleOutline" Width="16" Height="16" Foreground="#4CAF50"
+                                     VerticalAlignment="Center" Margin="0,0,6,0"
+                                     Visibility="{Binding IsLineTestSuccess, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                        <!-- 失敗圖示 -->
+                        <md:PackIcon Kind="AlertCircleOutline" Width="16" Height="16"
+                                     Foreground="{DynamicResource MaterialDesign.Brush.ValidationError}"
+                                     VerticalAlignment="Center" Margin="0,0,6,0"
+                                     Visibility="{Binding IsLineTestFailed, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                        <!-- 測試中圖示 -->
+                        <md:PackIcon Kind="Loading" Width="16" Height="16"
+                                     Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                     VerticalAlignment="Center" Margin="0,0,6,0"
+                                     Visibility="{Binding IsLineTesting, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                        <TextBlock Text="{Binding LineTestMessage}" VerticalAlignment="Center" FontSize="12">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource AppSubtleForegroundBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsLineTestSuccess}" Value="True">
+                                            <Setter Property="Foreground" Value="#4CAF50"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsLineTestFailed}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource MaterialDesign.Brush.ValidationError}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+
+                    <TextBlock Margin="0,10,0,0" FontSize="11" Opacity="0.6" TextWrapping="Wrap"
+                               Text="Token 在 LINE Developers Console → 你的 Channel → Messaging API → Channel access token 產生。"/>
+
+                    <!-- Worker 設定與訊息範本（測試成功後才顯示） -->
+                    <StackPanel Visibility="{Binding IsLineConfigUnlocked, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <Grid Margin="0,16,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Cloudflare Worker URL" Style="{StaticResource FieldLabelStyle}"/>
+                            <Button Grid.Column="1" Style="{StaticResource MaterialDesignFlatButton}"
+                                    Height="24" Padding="6,0" FontSize="11"
+                                    Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                    Click="WorkerHelp_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <md:PackIcon Kind="HelpCircleOutline" Width="13" Height="13" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="如何設定？"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                        <TextBox md:HintAssist.Hint="https://xxx.workers.dev"
+                                 Text="{Binding LineWorkerUrl, UpdateSourceTrigger=PropertyChanged}"
+                                 FontFamily="Consolas" FontSize="12"/>
+
+                        <TextBlock Text="Worker API Key" Style="{StaticResource FieldLabelStyle}" Margin="0,10,0,6"/>
+                        <TextBox md:HintAssist.Hint="自訂的 API Key"
+                                 Text="{Binding LineWorkerApiKey, UpdateSourceTrigger=PropertyChanged}"
+                                 FontFamily="Consolas" FontSize="12"/>
+
+                        <TextBlock Text="綁定歡迎訊息" Style="{StaticResource FieldLabelStyle}" Margin="0,16,0,6"/>
+                        <TextBox Text="{Binding LineWelcomeMessage, UpdateSourceTrigger=PropertyChanged}"
+                                 md:HintAssist.Hint="例：歡迎加入！您的 LINE 已與排班系統連結。"
+                                 AcceptsReturn="True" TextWrapping="Wrap" MinLines="2" MaxLines="5"
+                                 VerticalScrollBarVisibility="Auto"/>
+
+                        <TextBlock Text="離職告別訊息" Style="{StaticResource FieldLabelStyle}" Margin="0,10,0,6"/>
+                        <TextBox Text="{Binding LineResignMessage, UpdateSourceTrigger=PropertyChanged}"
+                                 md:HintAssist.Hint="例：感謝您的付出，祝您前程順利！"
+                                 AcceptsReturn="True" TextWrapping="Wrap" MinLines="2" MaxLines="5"
+                                 VerticalScrollBarVisibility="Auto"/>
+                        <TextBlock Text="可使用 {name} 代入員工姓名" FontSize="11" Opacity="0.6" Margin="0,4,0,0"/>
+
+                        <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                                HorizontalAlignment="Left" Margin="0,16,0,0"
+                                Click="ViewFollowers_Click">
+                            <StackPanel Orientation="Horizontal">
+                                <md:PackIcon Kind="AccountGroupOutline" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="查看推播好友清單"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
             <!-- 危險區 -->
             <Border Style="{StaticResource SectionCardStyle}" BorderBrush="{DynamicResource MaterialDesign.Brush.ValidationError}" Margin="0,0,0,20">
                 <StackPanel>

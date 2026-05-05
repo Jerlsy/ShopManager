@@ -5,6 +5,7 @@ using MaterialDesignThemes.Wpf;
 using ShopManager.Models;
 using ShopManager.Services;
 using ShopManager.Views.EmployeeManagement;
+using ShopManager.Views.Salary;
 using ShopManager.Views.SalarySettings;
 using ShopManager.Views.Schedule;
 using ShopManager.Views.ShiftSettings;
@@ -57,6 +58,7 @@ public partial class MainViewModel : ObservableObject
         new("薪資設定", PackIconKind.CurrencyUsd, typeof(SalarySettingPage)),
         new("員工資料管理", PackIconKind.AccountGroup, typeof(EmployeeListPage)),
         new("排班管理", PackIconKind.CalendarMonth, typeof(SchedulePage)),
+        new("薪資計算", PackIconKind.CashMultiple, typeof(SalaryPage)),
     };
 
     public IEnumerable<NavItem> VisibleNavItems =>

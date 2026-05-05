@@ -1,0 +1,255 @@
+<Window x:Class="ShopManager.Views.Line.LineTokenHelpWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="如何取得 LINE Channel Access Token"
+        Width="560" Height="680"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        TextElement.Foreground="{DynamicResource MaterialDesign.Brush.Foreground}"
+        TextElement.FontFamily="{DynamicResource AppFontFamily}"
+        FontSize="{DynamicResource AppFontSize}"
+        Background="{DynamicResource AppBackgroundBrush}">
+
+    <Border BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- 標頭 -->
+            <Border Grid.Row="0" Padding="20,14" Background="{DynamicResource AppSurfaceBrush}"
+                    BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1">
+                <StackPanel Orientation="Horizontal">
+                    <md:PackIcon Kind="HelpCircleOutline" Width="20" Height="20"
+                                 Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                 VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <StackPanel>
+                        <TextBlock Text="取得 Channel Access Token" FontWeight="SemiBold" FontSize="15"/>
+                        <TextBlock Text="LINE Developers Console 設定步驟" FontSize="11"
+                                   Foreground="{DynamicResource AppSubtleForegroundBrush}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- 步驟內容 -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="20,16">
+                <StackPanel>
+
+                    <!-- Step 1 -->
+                    <Border Margin="0,0,0,10" CornerRadius="8" Background="{DynamicResource AppSurfaceBrush}"
+                            BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="14,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="36"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Width="28" Height="28" CornerRadius="14"
+                                    Background="{DynamicResource PrimaryHueMidBrush}" VerticalAlignment="Top">
+                                <TextBlock Text="1" Foreground="White" FontWeight="Bold" FontSize="13"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                <TextBlock Text="前往 LINE Developers Console" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <TextBox Style="{StaticResource SelectableTextStyle}" FontSize="12"
+                                         Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                         Text="開啟瀏覽器，前往 developers.line.biz/console/，使用 LINE 帳號登入。"/>
+                                <Border Margin="0,8,0,0" CornerRadius="4" Padding="8,5"
+                                        Background="{DynamicResource AppInfoBrush}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <md:PackIcon Kind="Link" Width="13" Height="13"
+                                                     Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                                     VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                        <TextBox Style="{StaticResource SelectableTextStyle}" FontSize="11"
+                                                 FontFamily="Consolas"
+                                                 Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                                 Text="https://developers.line.biz/console/"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Step 2 -->
+                    <Border Margin="0,0,0,10" CornerRadius="8" Background="{DynamicResource AppSurfaceBrush}"
+                            BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="14,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="36"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Width="28" Height="28" CornerRadius="14"
+                                    Background="{DynamicResource PrimaryHueMidBrush}" VerticalAlignment="Top">
+                                <TextBlock Text="2" Foreground="White" FontWeight="Bold" FontSize="13"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                <TextBlock Text="選擇 Provider 與 Channel" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <TextBox Style="{StaticResource SelectableTextStyle}" FontSize="12"
+                                         Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                         Text="在左側選單選擇你的 Provider，再點選已建立的 Messaging API Channel。若尚未建立，點「Create a new channel」→ 選「Messaging API」。"/>
+                                <Border Margin="0,8,0,0" CornerRadius="4" Padding="8,6"
+                                        Background="{DynamicResource AppBackgroundBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+                                    <StackPanel>
+                                        <TextBlock Text="頁面位置" FontSize="10" Opacity="0.5" Margin="0,0,0,3"/>
+                                        <TextBlock FontSize="12" FontFamily="Consolas">
+                                            <Run Text="Console 首頁" Foreground="{DynamicResource AppSubtleForegroundBrush}"/>
+                                            <Run Text=" › "/>
+                                            <Run Text="[你的 Provider]" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                                            <Run Text=" › "/>
+                                            <Run Text="[Channel 名稱]" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Step 3 -->
+                    <Border Margin="0,0,0,10" CornerRadius="8" Background="{DynamicResource AppSurfaceBrush}"
+                            BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="14,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="36"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Width="28" Height="28" CornerRadius="14"
+                                    Background="{DynamicResource PrimaryHueMidBrush}" VerticalAlignment="Top">
+                                <TextBlock Text="3" Foreground="White" FontWeight="Bold" FontSize="13"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                <TextBlock Text="切換到「Messaging API」頁籤" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <TextBox Style="{StaticResource SelectableTextStyle}" FontSize="12"
+                                         Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                         Text="進入 Channel 後，點選上方的「Messaging API」頁籤（非預設的 Basic settings）。"/>
+                                <Border Margin="0,8,0,0" CornerRadius="4" Padding="8,6"
+                                        Background="{DynamicResource AppBackgroundBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border CornerRadius="3" Padding="6,3" Margin="0,0,6,0"
+                                                Background="{DynamicResource AppBorderBrush}">
+                                            <TextBlock Text="Basic settings" FontSize="11" Opacity="0.5"/>
+                                        </Border>
+                                        <Border CornerRadius="3" Padding="6,3"
+                                                Background="{DynamicResource PrimaryHueMidBrush}">
+                                            <TextBlock Text="Messaging API" FontSize="11" Foreground="White"/>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Step 4 -->
+                    <Border Margin="0,0,0,10" CornerRadius="8" Background="{DynamicResource AppSurfaceBrush}"
+                            BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="14,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="36"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Width="28" Height="28" CornerRadius="14"
+                                    Background="{DynamicResource PrimaryHueMidBrush}" VerticalAlignment="Top">
+                                <TextBlock Text="4" Foreground="White" FontWeight="Bold" FontSize="13"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                <TextBlock Text="產生 Channel access token" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <TextBox Style="{StaticResource SelectableTextStyle}" FontSize="12"
+                                         Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                         Text="往下滾動到「Channel access token」區段，點「Issue」按鈕產生 Token。若已有 Token 直接複製使用，不需重新產生。"/>
+                                <Border Margin="0,8,0,0" CornerRadius="4" Padding="10,8"
+                                        Background="{DynamicResource AppBackgroundBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+                                    <StackPanel>
+                                        <TextBlock Text="Channel access token (long-lived)" FontSize="11"
+                                                   Opacity="0.5" Margin="0,0,0,5"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" CornerRadius="4" Padding="8,5"
+                                                    Background="{DynamicResource AppSurfaceBrush}"
+                                                    BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+                                                <TextBlock Text="eyJhbGciOi..." FontSize="11" FontFamily="Consolas"
+                                                           Opacity="0.4"/>
+                                            </Border>
+                                            <Border Grid.Column="1" CornerRadius="4" Padding="10,5" Margin="6,0,0,0"
+                                                    Background="{DynamicResource PrimaryHueMidBrush}">
+                                                <TextBlock Text="Issue" FontSize="11" Foreground="White"
+                                                           FontWeight="Medium"/>
+                                            </Border>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Step 5 -->
+                    <Border Margin="0,0,0,10" CornerRadius="8" Background="{DynamicResource AppSurfaceBrush}"
+                            BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="14,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="36"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Width="28" Height="28" CornerRadius="14"
+                                    Background="#4CAF50" VerticalAlignment="Top">
+                                <md:PackIcon Kind="Check" Width="16" Height="16" Foreground="White"
+                                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                <TextBlock Text="複製 Token 貼入 ShopManager" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <TextBox Style="{StaticResource SelectableTextStyle}" FontSize="12"
+                                         Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                         Text="點 Token 右側的「Copy」複製，回到 ShopManager 店鋪設定貼入「Channel Access Token」欄位，再點「測試連線」確認設定正確。"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- 注意事項 -->
+                    <Border CornerRadius="8" Padding="14,10" Margin="0,4,0,0"
+                            Background="{DynamicResource AppInfoBrush}"
+                            BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+                        <StackPanel Orientation="Horizontal">
+                            <md:PackIcon Kind="AlertOutline" Width="16" Height="16"
+                                         Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                         VerticalAlignment="Top" Margin="0,1,8,0"/>
+                            <TextBox Style="{StaticResource SelectableTextStyle}" FontSize="12"
+                                     Foreground="{DynamicResource AppInfoForegroundBrush}" MaxWidth="440"
+                                     Text="Token 請妥善保管，不要公開分享。若外洩請立即到 LINE Developers Console 重新產生新的 Token。"/>
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- 底部按鈕 -->
+            <Border Grid.Row="2" Padding="20,12"
+                    Background="{DynamicResource AppSurfaceBrush}"
+                    BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,1,0,0">
+                <Grid>
+                    <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                            HorizontalAlignment="Left"
+                            Click="OpenBrowser_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <md:PackIcon Kind="OpenInNew" Width="15" Height="15" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="前往 LINE Developers Console"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource MaterialDesignFlatButton}"
+                            HorizontalAlignment="Right"
+                            IsCancel="True" Click="Close_Click">
+                        <TextBlock Text="關閉"/>
+                    </Button>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</Window>
