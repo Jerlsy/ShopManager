@@ -39,7 +39,8 @@
       "Bash(dotnet ef *)",
       "Bash(dotnet tool *)",
       "Bash(Remove-Item *)",
-      "Bash(xargs wc *)"
+      "Bash(xargs wc *)",
+      "Bash(Write-Host \"Deleted old ScheduleViewModel.cs\")"
     ]
   }
 }
