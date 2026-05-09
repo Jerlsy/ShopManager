@@ -1,0 +1,42 @@
+<Window x:Class="ShopManager.Views.ShopSettings.NotesEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        Title="編輯備註"
+        Width="800" Height="600" MinWidth="560" MinHeight="420"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        Background="{DynamicResource AppBackgroundBrush}"
+        Loaded="Window_Loaded">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Quill 編輯器（工具列由 Quill 自帶） -->
+        <wv2:WebView2 x:Name="EditorWebView" Grid.Row="0"/>
+
+        <!-- 底部按鈕列 -->
+        <Border Grid.Row="1"
+                Background="{DynamicResource AppPanelBrush}"
+                BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,1,0,0"
+                Padding="16,10">
+            <Grid>
+                <Button HorizontalAlignment="Left" Content="取消" Click="Cancel_Click"
+                        Style="{StaticResource MaterialDesignFlatButton}"
+                        Height="36" Padding="16,0"/>
+                <Button HorizontalAlignment="Right" Click="Save_Click"
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        Height="36" Padding="16,0">
+                    <StackPanel Orientation="Horizontal">
+                        <md:PackIcon Kind="ContentSave" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="儲存備註"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

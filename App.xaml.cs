@@ -218,6 +218,12 @@ public partial class App : Application
                 ("ShopSettings",       "LineWelcomeMessage",          "TEXT"),
                 ("ShopSettings",       "LineResignMessage",           "TEXT"),
                 ("Employees",          "LineUserId",                  "TEXT"),
+                ("Employees",          "HolidaySalaryId",             "INTEGER"),
+                ("SalaryEmployeeRecords", "HolidayHourlyRate",        "TEXT NOT NULL DEFAULT '0'"),
+                ("SalaryEmployeeRecords", "WeekdayHours",             "REAL NOT NULL DEFAULT 0"),
+                ("SalaryEmployeeRecords", "WeekdayPay",               "TEXT NOT NULL DEFAULT '0'"),
+                ("SalaryEmployeeRecords", "OverridePay",              "TEXT NOT NULL DEFAULT '0'"),
+                ("ShopSettings",         "Notes",                    "TEXT"),
             };
             foreach (var (table, col, type) in cols)
             {
@@ -277,7 +283,7 @@ private static void ConfigureServices(ServiceCollection services)
 
         // ViewModel。
         services.AddTransient<MainViewModel>();
-        services.AddTransient<SystemSettingViewModel>();
+        services.AddSingleton<SystemSettingViewModel>();
         services.AddTransient<ShiftSettingViewModel>();
         services.AddTransient<SalarySettingViewModel>();
         services.AddTransient<EmployeeViewModel>();

@@ -1,0 +1,150 @@
+<UserControl x:Class="ShopManager.Views.Dialogs.SalaryCalculationConfigDialog"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:vm="clr-namespace:ShopManager.ViewModels"
+             MinWidth="520" MaxWidth="640">
+    <Border Background="{DynamicResource AppSurfaceBrush}"
+            BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
+            CornerRadius="20" Padding="28,24,28,20">
+        <StackPanel>
+            <TextBlock Text="薪資計算設定"
+                       FontSize="{DynamicResource FontSizeDialogTitle}" FontWeight="SemiBold"
+                       Margin="0,0,0,4"/>
+            <TextBlock Text="設定後按「確定並計算」自動計算當月薪資"
+                       Style="{StaticResource SubtleTextStyle}" Margin="0,0,0,20"/>
+
+            <!-- ── 假日設定 ────────────────────────────────── -->
+            <TextBlock Text="假日設定" Style="{StaticResource FormSectionStyle}"/>
+            <TextBlock Text="勾選以下星期幾，該日將以假日薪資計算（灰色＝店休日，無法勾選）"
+                       Style="{StaticResource CaptionTextStyle}" Margin="0,2,0,8"/>
+
+            <WrapPanel>
+                <ItemsControl ItemsSource="{Binding WeekdayItems}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:WeekdayCheckItem}">
+                            <CheckBox Content="{Binding Label}"
+                                      IsChecked="{Binding IsChecked}"
+                                      IsEnabled="{Binding IsShopClosed, Converter={StaticResource BoolInverseConverter}}"
+                                      Margin="0,0,16,6"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </WrapPanel>
+
+            <!-- 國定假日 -->
+            <CheckBox Content="國定假日是否併入假日"
+                      IsChecked="{Binding IncludeNationalHolidays}"
+                      Margin="0,6,0,0"/>
+
+            <!-- ── 額外設定 ────────────────────────────────── -->
+            <Grid Margin="0,20,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="額外設定（替代當日薪資）" Style="{StaticResource FormSectionStyle}" Margin="0"/>
+                    <TextBlock Text="針對特定員工特定日期強制指定金額，取代當日計算結果"
+                               Style="{StaticResource CaptionTextStyle}" Margin="0,2,0,0"/>
+                </StackPanel>
+                <Button Grid.Column="1"
+                        Command="{Binding AddOverrideCommand}"
+                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                        Height="32" Padding="12,0">
+                    <StackPanel Orientation="Horizontal">
+                        <md:PackIcon Kind="Plus" Width="14" Height="14" Margin="0,0,4,0"/>
+                        <TextBlock Text="新增"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+
+            <!-- 欄標題 -->
+            <Grid Visibility="{Binding Overrides.Count, Converter={StaticResource NonZeroToVisibilityConverter}}"
+                  Margin="0,0,0,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="110"/>
+                    <ColumnDefinition Width="36"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="員工" Style="{StaticResource CaptionTextStyle}"/>
+                <TextBlock Grid.Column="2" Text="日期" Style="{StaticResource CaptionTextStyle}"/>
+                <TextBlock Grid.Column="4" Text="金額（元）" Style="{StaticResource CaptionTextStyle}"/>
+            </Grid>
+
+            <ItemsControl ItemsSource="{Binding Overrides}" MaxHeight="240">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:DailyOverrideItem}">
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="110"/>
+                                <ColumnDefinition Width="36"/>
+                            </Grid.ColumnDefinitions>
+
+                            <ComboBox Grid.Column="0"
+                                      ItemsSource="{Binding AllEmployees}"
+                                      SelectedItem="{Binding SelectedEmployee}"
+                                      DisplayMemberPath="Name"
+                                      md:HintAssist.Hint="選擇員工"/>
+
+                            <ComboBox Grid.Column="2"
+                                      ItemsSource="{Binding AvailableDates}"
+                                      SelectedItem="{Binding SelectedDate}"
+                                      md:HintAssist.Hint="選擇日期">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding StringFormat={}{0:MM/dd (ddd)}}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+
+                            <TextBox Grid.Column="4"
+                                     Text="{Binding Amount, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:G}}"
+                                     md:HintAssist.Hint="金額"/>
+
+                            <Button Grid.Column="5"
+                                    Command="{Binding DataContext.RemoveOverrideCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                    CommandParameter="{Binding}"
+                                    Style="{StaticResource MaterialDesignIconForegroundButton}"
+                                    Width="32" Height="32" Padding="0" VerticalAlignment="Center">
+                                <md:PackIcon Kind="Close" Width="16" Height="16"
+                                             Foreground="{DynamicResource MaterialDesign.Brush.ValidationError}"/>
+                            </Button>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- 空狀態提示 -->
+            <TextBlock Text="目前無額外設定"
+                       Style="{StaticResource CaptionTextStyle}"
+                       Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                       Margin="0,4,0,0"
+                       Visibility="{Binding Overrides.Count, Converter={StaticResource ZeroToVisibilityConverter}}"/>
+
+            <!-- 按鈕列 -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
+                <Button Content="取消"
+                        Style="{StaticResource MaterialDesignFlatButton}"
+                        Command="{x:Static md:DialogHost.CloseDialogCommand}"
+                        CommandParameter="{x:Null}"
+                        Margin="0,0,8,0"/>
+                <Button Content="確定並計算"
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        Click="OkButton_Click"/>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

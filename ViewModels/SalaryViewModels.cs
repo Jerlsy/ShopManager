@@ -12,16 +12,7 @@ public class SalaryScheduleItem
     public string Label => $"{Schedule.Year} 年 {Schedule.Month} 月";
 }
 
-/// <summary>國定假日勾選項目（月薪制用）</summary>
-public partial class SalaryHolidayItem : ObservableObject
-{
-    public DateOnly Date { get; init; }
-    public string Description { get; init; } = string.Empty;
-    public string Label => $"{Date.Month:D2}/{Date.Day:D2} {Description}";
-    [ObservableProperty] private bool _isChecked = true;
-}
-
-/// <summary>額外薪資項目（單行 VM）</summary>
+/// <summary>額外薪資項目（單行 VM，獎金／扣款）</summary>
 public partial class BonusLineItem : ObservableObject
 {
     public static IReadOnlyList<BonusPresetOption> Presets { get; } =
@@ -49,7 +40,7 @@ public partial class BonusLineItem : ObservableObject
     [NotifyPropertyChangedFor(nameof(TotalChanged))]
     private decimal _amount;
 
-    public bool TotalChanged => true; // 任何欄位改變都通知父層重算
+    public bool TotalChanged => true;
 
     public string Label => SelectedPreset.Type == BonusPresetType.Custom
         ? CustomLabel
@@ -81,7 +72,7 @@ public class SalaryDailyEntry
 {
     public DateOnly Date    { get; init; }
     public double   Hours   { get; init; }
-    public string   TypeTag { get; init; } = string.Empty;   // 正常 / 店休 / 假日
+    public string   TypeTag { get; init; } = string.Empty;   // 平日 / 假日 / 替代
     public string DayLabel => Date.DayOfWeek switch
     {
         DayOfWeek.Monday    => "一",
@@ -94,6 +85,7 @@ public class SalaryDailyEntry
         _ => ""
     };
     public string Label => $"{Date.Month:D2}/{Date.Day:D2}（{DayLabel}）";
+    public decimal? OverrideAmount { get; init; }
 }
 
 /// <summary>員工薪資卡片 VM</summary>
@@ -103,48 +95,40 @@ public partial class EmployeeSalaryItem : ObservableObject
     public SalaryType SalaryType { get; init; }
 
     // 工時
-    public double NormalHours  { get; init; }
+    public double WeekdayHours { get; init; }
+    public double HolidayHours { get; init; }
     public double OT1Hours     { get; init; }
     public double OT2Hours     { get; init; }
-    public double RestDayHours { get; init; }
-    public double HolidayHours { get; init; }
-    public double TotalHours   => NormalHours + OT1Hours + OT2Hours + RestDayHours + HolidayHours;
+    public double TotalHours   => WeekdayHours + HolidayHours;
 
     // 薪資明細
-    public decimal NormalPay   { get; init; }
+    public decimal WeekdayPay  { get; init; }
+    public decimal HolidayPay  { get; init; }
     public decimal OT1Pay      { get; init; }
     public decimal OT2Pay      { get; init; }
-    public decimal RestDayPay  { get; init; }
-    public decimal HolidayPay  { get; init; }
+    public decimal OverridePay { get; init; }
     public decimal BaseAmount  { get; init; }
 
-    // 費率描述（顯示用）
-    public decimal HourlyRate   { get; init; }
-    public decimal MonthlyBase  { get; init; }
-    public decimal HourlyEquiv  => MonthlyBase > 0 ? Math.Round(MonthlyBase / 240m, 1) : 0;
+    // 費率描述
+    public decimal HourlyRate        { get; init; }
+    public decimal HolidayHourlyRate { get; init; }
+    public decimal MonthlyBase       { get; init; }
 
     public List<SalaryDailyEntry> DailyEntries { get; } = new();
 
     [ObservableProperty] private bool _isScheduleDetailOpen;
-
-    [RelayCommand]
-    private void ToggleScheduleDetail() => IsScheduleDetailOpen = !IsScheduleDetailOpen;
+    [RelayCommand] private void ToggleScheduleDetail() => IsScheduleDetailOpen = !IsScheduleDetailOpen;
 
     public ObservableCollection<BonusLineItem> BonusItems { get; } = new();
+    public decimal BonusTotal => BonusItems.Sum(b => b.Amount);
+    public decimal GrandTotal => BaseAmount + BonusTotal;
 
-    public decimal BonusTotal   => BonusItems.Sum(b => b.Amount);
-    public decimal GrandTotal   => BaseAmount + BonusTotal;
-
-    // 最低薪資警示
     public bool IsUnderMinWage { get; set; }
-
-    // 月薪不顯示工時明細（底薪固定）
-    public bool IsHourly   => SalaryType == SalaryType.Hourly;
-    public bool IsMonthly  => SalaryType == SalaryType.Monthly;
-    public bool IsContract => SalaryType == SalaryType.Contract;
+    public bool IsHourly  => SalaryType == SalaryType.Hourly;
+    public bool IsMonthly => SalaryType == SalaryType.Monthly;
     public bool HasOT      => OT1Hours > 0 || OT2Hours > 0;
-    public bool HasRestDay => RestDayHours > 0;
     public bool HasHoliday => HolidayHours > 0;
+    public bool HasOverride => OverridePay != 0;
 
     [ObservableProperty] private bool _isExpanded = true;
 
@@ -170,4 +154,3 @@ public partial class EmployeeSalaryItem : ObservableObject
         RefreshTotals();
     }
 }
-

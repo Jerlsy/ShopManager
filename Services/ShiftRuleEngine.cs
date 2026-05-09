@@ -5,9 +5,66 @@ namespace ShopManager.Services;
 // ── Evaluation context ────────────────────────────────────────────────────
 
 /// <summary>
+/// O(1) 查詢索引，由 AutoScheduleService 在排班開始時建立並逐筆維護。
+/// 拖放操作（無索引）仍回退到 LINQ 掃描，行為不變。
+/// </summary>
+public sealed class EntryIndex
+{
+    // (date, shiftId) → employeeIds
+    private readonly Dictionary<(DateOnly, int), List<int>> _byDateShift = new();
+    // date → employeeIds（已去重）
+    private readonly Dictionary<DateOnly, HashSet<int>> _byDate = new();
+    // employeeId → worked dates
+    private readonly Dictionary<int, HashSet<DateOnly>> _byEmployee = new();
+    // (employeeId, date) → entries（時間重疊 / 工時加總用）
+    private readonly Dictionary<(int, DateOnly), List<ScheduleEntry>> _byEmpDate = new();
+    // (employeeId, shiftId, date) → bool（快速重複偵測）
+    private readonly HashSet<(int, int, DateOnly)> _exists = new();
+
+    public void Add(ScheduleEntry e)
+    {
+        var ds  = (e.Date, e.ShiftSettingId);
+        var ed  = (e.EmployeeId, e.Date);
+
+        if (!_byDateShift.TryGetValue(ds, out var list)) _byDateShift[ds]  = list = new();
+        list.Add(e.EmployeeId);
+
+        if (!_byDate.TryGetValue(e.Date, out var set)) _byDate[e.Date]     = set  = new();
+        set.Add(e.EmployeeId);
+
+        if (!_byEmployee.TryGetValue(e.EmployeeId, out var dates)) _byEmployee[e.EmployeeId] = dates = new();
+        dates.Add(e.Date);
+
+        if (!_byEmpDate.TryGetValue(ed, out var el)) _byEmpDate[ed]        = el   = new();
+        el.Add(e);
+
+        _exists.Add((e.EmployeeId, e.ShiftSettingId, e.Date));
+    }
+
+    public bool AlreadyAssigned(int empId, int shiftId, DateOnly date) =>
+        _exists.Contains((empId, shiftId, date));
+
+    public IReadOnlyList<int> EmpsOnShift(DateOnly date, int shiftId) =>
+        _byDateShift.TryGetValue((date, shiftId), out var l) ? l : Array.Empty<int>();
+
+    public IReadOnlyCollection<int> EmpsOnDay(DateOnly date) =>
+        _byDate.TryGetValue(date, out var s) ? s : Array.Empty<int>();
+
+    public int CountOnShift(DateOnly date, int shiftId) =>
+        _byDateShift.TryGetValue((date, shiftId), out var l) ? l.Count : 0;
+
+    public IReadOnlyList<ScheduleEntry> EntriesForEmpOnDay(int empId, DateOnly date) =>
+        _byEmpDate.TryGetValue((empId, date), out var l) ? l : Array.Empty<ScheduleEntry>();
+
+    public IReadOnlyCollection<DateOnly> WorkedDates(int empId) =>
+        _byEmployee.TryGetValue(empId, out var s) ? s : Array.Empty<DateOnly>();
+}
+
+/// <summary>
 /// 排班規則評估所需的靜態快照，每次拖放操作建立一次，各規則共享。
 /// ExcludeEntryId：班表間移動時，排除來源班次本身的重疊/重複計算。
 /// LaborLaw：勞基法設定，用於每日工時上限等系統規則。
+/// Index：自動排班時由 AutoScheduleService 提供，加速規則查詢（可為 null）。
 /// </summary>
 public record ShiftValidationContext(
     Employee Employee,
@@ -17,7 +74,8 @@ public record ShiftValidationContext(
     IEnumerable<Employee> ActiveEmployees,
     int ExcludeEntryId = -1,
     LaborLawSetting? LaborLaw = null,
-    IReadOnlyDictionary<int, ShiftSetting>? ShiftLookup = null);
+    IReadOnlyDictionary<int, ShiftSetting>? ShiftLookup = null,
+    EntryIndex? Index = null);
 
 // ── Result ────────────────────────────────────────────────────────────────
 
@@ -158,16 +216,23 @@ public sealed class NotWithRule : IShiftRule
 {
     public ShiftValidationResult Evaluate(ShiftValidationContext ctx)
     {
-        var blockEntries = ctx.Schedule.Entries
-            .Where(e => e.Date == ctx.Date && e.ShiftSettingId == ctx.TargetShift.Id)
-            .ToList();
+        var notWithRules = ctx.Employee.ScheduleRules.Where(r => r.Type == ScheduleRuleType.NotWith).ToList();
+        if (notWithRules.Count == 0) return ShiftValidationResult.Allow;
 
-        foreach (var rule in ctx.Employee.ScheduleRules.Where(r => r.Type == ScheduleRuleType.NotWith))
+        IEnumerable<int> empIds = ctx.Index is not null
+            ? ctx.Index.EmpsOnShift(ctx.Date, ctx.TargetShift.Id)
+            : ctx.Schedule.Entries
+                .Where(e => e.Date == ctx.Date && e.ShiftSettingId == ctx.TargetShift.Id)
+                .Select(e => e.EmployeeId);
+
+        var empIdSet = empIds as IReadOnlyCollection<int> ?? empIds.ToList();
+
+        foreach (var rule in notWithRules)
         {
-            var conflict = blockEntries.FirstOrDefault(e => rule.ExcludedColleagueIds.Contains(e.EmployeeId));
-            if (conflict is null) continue;
+            var conflictId = empIdSet.FirstOrDefault(id => rule.ExcludedColleagueIds.Contains(id));
+            if (conflictId == 0) continue;
 
-            var colleague = ctx.ActiveEmployees.FirstOrDefault(e => e.Id == conflict.EmployeeId);
+            var colleague = ctx.ActiveEmployees.FirstOrDefault(e => e.Id == conflictId);
             return ShiftValidationResult.Block($"不與「{colleague?.Name ?? "某員工"}」同班");
         }
         return ShiftValidationResult.Allow;
@@ -182,12 +247,15 @@ public sealed class ColleagueNotWithRule : IShiftRule
 {
     public ShiftValidationResult Evaluate(ShiftValidationContext ctx)
     {
-        var blockEntries = ctx.Schedule.Entries
-            .Where(e => e.Date == ctx.Date && e.ShiftSettingId == ctx.TargetShift.Id);
+        IEnumerable<int> empIds = ctx.Index is not null
+            ? ctx.Index.EmpsOnShift(ctx.Date, ctx.TargetShift.Id)
+            : ctx.Schedule.Entries
+                .Where(e => e.Date == ctx.Date && e.ShiftSettingId == ctx.TargetShift.Id)
+                .Select(e => e.EmployeeId);
 
-        foreach (var existing in blockEntries)
+        foreach (var empId in empIds)
         {
-            var colleague = ctx.ActiveEmployees.FirstOrDefault(e => e.Id == existing.EmployeeId);
+            var colleague = ctx.ActiveEmployees.FirstOrDefault(e => e.Id == empId);
             if (colleague is null) continue;
 
             foreach (var rule in colleague.ScheduleRules.Where(r => r.Type == ScheduleRuleType.NotWith))
@@ -208,14 +276,15 @@ public sealed class TimeOverlapRule : IShiftRule
 {
     public ShiftValidationResult Evaluate(ShiftValidationContext ctx)
     {
-        foreach (var e in ctx.Schedule.Entries.Where(e =>
-            e.Date == ctx.Date &&
-            e.EmployeeId == ctx.Employee.Id &&
-            e.ShiftSettingId != ctx.TargetShift.Id &&
-            e.Id != ctx.ExcludeEntryId))
+        IEnumerable<ScheduleEntry> entries = ctx.Index is not null
+            ? ctx.Index.EntriesForEmpOnDay(ctx.Employee.Id, ctx.Date)
+            : ctx.Schedule.Entries.Where(e => e.Date == ctx.Date && e.EmployeeId == ctx.Employee.Id);
+
+        foreach (var e in entries)
         {
-            var eShift = e.ShiftSetting
-                ?? ctx.ShiftLookup?.GetValueOrDefault(e.ShiftSettingId);
+            if (e.ShiftSettingId == ctx.TargetShift.Id || e.Id == ctx.ExcludeEntryId) continue;
+
+            var eShift = e.ShiftSetting ?? ctx.ShiftLookup?.GetValueOrDefault(e.ShiftSettingId);
             if (eShift is null) continue;
 
             if (ctx.TargetShift.StartTime < eShift.EndTime &&
@@ -241,15 +310,15 @@ public sealed class DailyMaxHoursRule : IShiftRule
     {
         if (ctx.LaborLaw is null) return ShiftValidationResult.Allow;
 
-        // 薪資設定自訂值優先，否則套用共用法規上限
         var dailyMax = ctx.Employee.DefaultSalary?.DailyMaxHours ?? ctx.LaborLaw.DailyMaxHours;
         if (dailyMax <= 0) return ShiftValidationResult.Allow;
 
-        // 計算當日已排工時（移動時排除來源班次）
-        var existingHours = ctx.Schedule.Entries
-            .Where(e => e.Date == ctx.Date &&
-                        e.EmployeeId == ctx.Employee.Id &&
-                        e.Id != ctx.ExcludeEntryId)
+        IEnumerable<ScheduleEntry> entries = ctx.Index is not null
+            ? ctx.Index.EntriesForEmpOnDay(ctx.Employee.Id, ctx.Date)
+            : ctx.Schedule.Entries.Where(e => e.Date == ctx.Date && e.EmployeeId == ctx.Employee.Id);
+
+        var existingHours = entries
+            .Where(e => e.Id != ctx.ExcludeEntryId)
             .Sum(e =>
             {
                 if (e.ShiftSetting is not null) return e.ShiftSetting.WorkHours;
@@ -272,16 +341,23 @@ public sealed class NotWithDayRule : IShiftRule
 {
     public ShiftValidationResult Evaluate(ShiftValidationContext ctx)
     {
-        var dayEntries = ctx.Schedule.Entries
-            .Where(e => e.Date == ctx.Date && e.EmployeeId != ctx.Employee.Id)
-            .ToList();
+        var notWithDayRules = ctx.Employee.ScheduleRules.Where(r => r.Type == ScheduleRuleType.NotWithDay).ToList();
+        if (notWithDayRules.Count == 0) return ShiftValidationResult.Allow;
 
-        foreach (var rule in ctx.Employee.ScheduleRules.Where(r => r.Type == ScheduleRuleType.NotWithDay))
+        IEnumerable<int> dayEmpIds = ctx.Index is not null
+            ? ctx.Index.EmpsOnDay(ctx.Date).Where(id => id != ctx.Employee.Id)
+            : ctx.Schedule.Entries
+                .Where(e => e.Date == ctx.Date && e.EmployeeId != ctx.Employee.Id)
+                .Select(e => e.EmployeeId).Distinct();
+
+        var empIdSet = dayEmpIds as IReadOnlyCollection<int> ?? dayEmpIds.ToList();
+
+        foreach (var rule in notWithDayRules)
         {
-            var conflict = dayEntries.FirstOrDefault(e => rule.ExcludedColleagueIds.Contains(e.EmployeeId));
-            if (conflict is null) continue;
+            var conflictId = empIdSet.FirstOrDefault(id => rule.ExcludedColleagueIds.Contains(id));
+            if (conflictId == 0) continue;
 
-            var colleague = ctx.ActiveEmployees.FirstOrDefault(e => e.Id == conflict.EmployeeId);
+            var colleague = ctx.ActiveEmployees.FirstOrDefault(e => e.Id == conflictId);
             return ShiftValidationResult.Block($"不與「{colleague?.Name ?? "某員工"}」同天");
         }
         return ShiftValidationResult.Allow;
@@ -296,14 +372,15 @@ public sealed class ColleagueNotWithDayRule : IShiftRule
 {
     public ShiftValidationResult Evaluate(ShiftValidationContext ctx)
     {
-        var dayEmployeeIds = ctx.Schedule.Entries
-            .Where(e => e.Date == ctx.Date && e.EmployeeId != ctx.Employee.Id)
-            .Select(e => e.EmployeeId)
-            .Distinct();
+        IEnumerable<int> dayEmpIds = ctx.Index is not null
+            ? ctx.Index.EmpsOnDay(ctx.Date).Where(id => id != ctx.Employee.Id)
+            : ctx.Schedule.Entries
+                .Where(e => e.Date == ctx.Date && e.EmployeeId != ctx.Employee.Id)
+                .Select(e => e.EmployeeId).Distinct();
 
-        foreach (var employeeId in dayEmployeeIds)
+        foreach (var empId in dayEmpIds)
         {
-            var colleague = ctx.ActiveEmployees.FirstOrDefault(e => e.Id == employeeId);
+            var colleague = ctx.ActiveEmployees.FirstOrDefault(e => e.Id == empId);
             if (colleague is null) continue;
 
             foreach (var rule in colleague.ScheduleRules.Where(r => r.Type == ScheduleRuleType.NotWithDay))
@@ -319,7 +396,7 @@ public sealed class ColleagueNotWithDayRule : IShiftRule
 /// <summary>
 /// 勞基法第36條：不得超過最長連續上班日數（預設6天）。
 /// 以目標日為中心，計算加入後的連續上班天數（含目標日）。
-/// 連續上班日數 = 目標日往前的連續已排天數 + 1（目標日）+ 目標日往後的連續已排天數。
+/// 已知限制：僅看當月班表，不跨月偵測月初/月末連續。
 /// </summary>
 public sealed class ConsecutiveDaysRule : IShiftRule
 {
@@ -330,18 +407,18 @@ public sealed class ConsecutiveDaysRule : IShiftRule
         int maxDays = ctx.LaborLaw.MaxConsecutiveWorkDays;
         if (maxDays <= 0) return ShiftValidationResult.Allow;
 
-        // 該員工已排班的所有日期集合（排除當天，因為目標日是否算已排班取決於是否真的新增）
-        var workedDates = ctx.Schedule.Entries
-            .Where(e => e.EmployeeId == ctx.Employee.Id && e.Date != ctx.Date)
-            .Select(e => e.Date)
-            .ToHashSet();
+        // 使用索引的 HashSet（O(1)），或從 Entries 建立一次（O(n)，拖放情境）
+        IReadOnlyCollection<DateOnly> workedDates = ctx.Index is not null
+            ? ctx.Index.WorkedDates(ctx.Employee.Id)
+            : ctx.Schedule.Entries
+                .Where(e => e.EmployeeId == ctx.Employee.Id && e.Date != ctx.Date)
+                .Select(e => e.Date)
+                .ToHashSet();
 
-        // 往前數連續已排天數
         int before = 0;
         var check = ctx.Date.AddDays(-1);
         while (workedDates.Contains(check)) { before++; check = check.AddDays(-1); }
 
-        // 往後數連續已排天數
         int after = 0;
         check = ctx.Date.AddDays(1);
         while (workedDates.Contains(check)) { after++; check = check.AddDays(1); }
@@ -358,6 +435,7 @@ public sealed class ConsecutiveDaysRule : IShiftRule
 /// 每週工時上限（系統規則，不分薪資別）
 /// 目標週所有班次工時加總（含目標班次）不可超過上限。
 /// 週起始日依班表設定（WeekStartDay）。
+/// 已知限制：僅看當月班表，不跨月偵測跨週工時。
 /// </summary>
 public sealed class WeeklyMaxHoursRule : IShiftRule
 {
@@ -368,17 +446,29 @@ public sealed class WeeklyMaxHoursRule : IShiftRule
         var weeklyMax = ctx.Employee.DefaultSalary?.WeeklyMaxHours ?? ctx.LaborLaw.WeeklyMaxHours;
         if (weeklyMax <= 0) return ShiftValidationResult.Allow;
 
-        // 找到包含目標日的週起始日
         var weekStart = ctx.Date;
         while ((int)weekStart.DayOfWeek != ctx.Schedule.WeekStartDay)
             weekStart = weekStart.AddDays(-1);
         var weekEnd = weekStart.AddDays(7);
 
-        // 計算該員工本週已排工時
-        var existingHours = ctx.Schedule.Entries
-            .Where(e => e.EmployeeId == ctx.Employee.Id &&
-                        e.Date >= weekStart && e.Date < weekEnd &&
-                        e.Id != ctx.ExcludeEntryId)
+        // 若有索引，逐日查 EntriesForEmpOnDay（均為 O(1)）；否則線性掃描（拖放情境）
+        IEnumerable<ScheduleEntry> weekEntries;
+        if (ctx.Index is not null)
+        {
+            var list = new List<ScheduleEntry>();
+            for (var d = weekStart; d < weekEnd; d = d.AddDays(1))
+                list.AddRange(ctx.Index.EntriesForEmpOnDay(ctx.Employee.Id, d));
+            weekEntries = list;
+        }
+        else
+        {
+            weekEntries = ctx.Schedule.Entries
+                .Where(e => e.EmployeeId == ctx.Employee.Id &&
+                            e.Date >= weekStart && e.Date < weekEnd);
+        }
+
+        var existingHours = weekEntries
+            .Where(e => e.Id != ctx.ExcludeEntryId)
             .Sum(e =>
             {
                 if (e.ShiftSetting is not null) return e.ShiftSetting.WorkHours;

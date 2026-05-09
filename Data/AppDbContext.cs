@@ -25,9 +25,13 @@ public class AppDbContext : DbContext
     public DbSet<SalaryEmployeeRecord> SalaryEmployeeRecords { get; set; }
     public DbSet<SalaryBonusItem> SalaryBonusItems { get; set; }
 
+    /// <summary>測試用：覆寫 DB 路徑（null 表示使用預設 BaseDirectory）</summary>
+    public static string? OverrideDbPath { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        var dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "shopmanager.db");
+        var dbPath = OverrideDbPath
+            ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "shopmanager.db");
         optionsBuilder.UseSqlite($"Data Source={dbPath}");
     }
 
@@ -59,6 +63,12 @@ public class AppDbContext : DbContext
             .HasOne(e => e.DefaultSalary)
             .WithMany()
             .HasForeignKey(e => e.DefaultSalaryId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<Employee>()
+            .HasOne(e => e.HolidaySalary)
+            .WithMany()
+            .HasForeignKey(e => e.HolidaySalaryId)
             .OnDelete(DeleteBehavior.SetNull);
 
         // MonthlySchedule
@@ -102,8 +112,7 @@ public class AppDbContext : DbContext
             .HasForeignKey(e => e.ShiftSettingId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // SalaryRecord
-        modelBuilder.Entity<SalaryRecord>().Property(e => e.HolidayDates).HasConversion(JsonConv<DateOnly>());
+        // SalaryRecord（無額外 JSON 欄位）
 
         // SalaryRecord 關聯（Cascade：班表刪除時一併移除薪資紀錄）
         modelBuilder.Entity<SalaryRecord>()

@@ -31,6 +31,9 @@ public class ShopSetting
     public string? LineWorkerApiKey { get; set; }
     public string? LineWelcomeMessage { get; set; }
     public string? LineResignMessage { get; set; }
+
+    // ── 備註（RTF Base64）────────────────────────
+    public string? Notes { get; set; }
 }
 
 /// <summary>聯絡方式（Email、FB、IG、Line 等）</summary>

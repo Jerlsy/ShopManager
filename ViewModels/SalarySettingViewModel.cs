@@ -11,13 +11,9 @@ public partial class SalarySettingViewModel(
     IAppSnackbarService snackbarService,
     IAppDialogService dialogService) : ObservableObject
 {
-    // 子頁面切換
     [ObservableProperty] private bool _showLaborLaw;
-
-    // 勞基法設定
     [ObservableProperty] private LaborLawSetting _laborLaw = new();
 
-    // 薪資清單
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowEmptyHint))]
     private List<SalarySetting> _salaries = new();
@@ -30,14 +26,11 @@ public partial class SalarySettingViewModel(
 
     public bool ShowEmptyHint => !IsEditing && Salaries.Count == 0;
 
-    // 編輯暫存
     [ObservableProperty] private string _editAlias = string.Empty;
     [ObservableProperty] private string _editDescription = string.Empty;
     [ObservableProperty] private SalaryType _editType = SalaryType.Hourly;
     [ObservableProperty] private decimal? _editHourlyRate;
     [ObservableProperty] private decimal? _editMonthlyBase;
-    [ObservableProperty] private decimal? _editContractAmount;
-    [ObservableProperty] private string _editContractCycle = string.Empty;
     [ObservableProperty] private decimal? _editOT1Rate;
     [ObservableProperty] private decimal? _editOT2Rate;
     [ObservableProperty] private decimal? _editHolidayRate;
@@ -53,11 +46,8 @@ public partial class SalarySettingViewModel(
         Salaries = await service.GetAllAsync();
     }
 
-    [RelayCommand]
-    public void OpenLaborLaw() => ShowLaborLaw = true;
-
-    [RelayCommand]
-    public void CloseLaborLaw() => ShowLaborLaw = false;
+    [RelayCommand] public void OpenLaborLaw() => ShowLaborLaw = true;
+    [RelayCommand] public void CloseLaborLaw() => ShowLaborLaw = false;
 
     [RelayCommand]
     public async Task SaveLaborLawAsync()
@@ -66,13 +56,11 @@ public partial class SalarySettingViewModel(
         ShowLaborLaw = false;
         snackbarService.ShowSuccess("勞基法設定已儲存");
 
-        // 每日工時上限變更 → 重新檢查所有班表
         var conflictCount = await conflictService.RecheckAllForShopAsync();
         if (conflictCount > 0)
             snackbarService.ShowWarning($"儲存後發現 {conflictCount} 條排班衝突，請至排班頁面調整");
     }
 
-    /// <summary>新增時按類型帶入勞基法預設值</summary>
     partial void OnEditTypeChanged(SalaryType value)
     {
         EditOT1Rate = value == SalaryType.Hourly ? LaborLaw.HourlyOT1Rate : LaborLaw.MonthlyOT1Rate;
@@ -89,6 +77,13 @@ public partial class SalarySettingViewModel(
         EditAlias = string.Empty;
         EditDescription = string.Empty;
         EditType = SalaryType.Hourly;
+        EditHourlyRate = null;
+        EditMonthlyBase = null;
+        EditOT1Rate = null;
+        EditOT2Rate = null;
+        EditHolidayRate = null;
+        EditDailyMaxHours = null;
+        EditWeeklyMaxHours = null;
         IsEditing = true;
     }
 
@@ -101,8 +96,6 @@ public partial class SalarySettingViewModel(
         EditType = s.Type;
         EditHourlyRate = s.HourlyRate;
         EditMonthlyBase = s.MonthlyBase;
-        EditContractAmount = s.ContractAmount;
-        EditContractCycle = s.ContractCycle;
         EditOT1Rate = s.OT1Rate;
         EditOT2Rate = s.OT2Rate;
         EditHolidayRate = s.HolidayRate;
@@ -120,8 +113,6 @@ public partial class SalarySettingViewModel(
         salary.Type = EditType;
         salary.HourlyRate = EditHourlyRate;
         salary.MonthlyBase = EditMonthlyBase;
-        salary.ContractAmount = EditContractAmount;
-        salary.ContractCycle = EditContractCycle;
         salary.OT1Rate = EditOT1Rate;
         salary.OT2Rate = EditOT2Rate;
         salary.HolidayRate = EditHolidayRate;
@@ -150,6 +141,5 @@ public partial class SalarySettingViewModel(
         await LoadAsync();
     }
 
-    [RelayCommand]
-    public void Cancel() => IsEditing = false;
+    [RelayCommand] public void Cancel() => IsEditing = false;
 }

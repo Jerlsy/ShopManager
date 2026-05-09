@@ -177,28 +177,15 @@
                                 <Grid>
                                     <!-- 時薪 -->
                                     <StackPanel Visibility="{Binding EditType, Converter={StaticResource SalaryTypeVisibilityConverter}, ConverterParameter=Hourly}">
-                                        <TextBlock Text="基本時薪 (元) *" Style="{StaticResource FieldLabelStyle}"/>
+                                        <TextBlock Text="時薪 (元) *" Style="{StaticResource FieldLabelStyle}"/>
                                         <TextBox Text="{Binding EditHourlyRate, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
-                                                />
+                                                 md:HintAssist.Hint="可建立多個方案分別對應平日/假日"/>
                                     </StackPanel>
                                     <!-- 月薪 -->
                                     <StackPanel Visibility="{Binding EditType, Converter={StaticResource SalaryTypeVisibilityConverter}, ConverterParameter=Monthly}">
                                         <TextBlock Text="月薪底薪 (元) *" Style="{StaticResource FieldLabelStyle}"/>
-                                        <TextBox Text="{Binding EditMonthlyBase, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
-                                                />
+                                        <TextBox Text="{Binding EditMonthlyBase, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"/>
                                     </StackPanel>
-                                    <!-- 合約 -->
-                                    <Grid Visibility="{Binding EditType, Converter={StaticResource SalaryTypeVisibilityConverter}, ConverterParameter=Contract}">
-                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Column="0">
-                                            <TextBlock Text="合約總額 (元) *" Style="{StaticResource FieldLabelStyle}"/>
-                                            <TextBox Text="{Binding EditContractAmount, UpdateSourceTrigger=PropertyChanged}"/>
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="2">
-                                            <TextBlock Text="結算週期" Style="{StaticResource FieldLabelStyle}"/>
-                                            <TextBox Text="{Binding EditContractCycle, UpdateSourceTrigger=PropertyChanged}"/>
-                                        </StackPanel>
-                                    </Grid>
                                 </Grid>
                             </Border>
 

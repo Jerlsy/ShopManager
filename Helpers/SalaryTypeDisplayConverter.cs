@@ -4,16 +4,14 @@ using System.Windows.Data;
 
 namespace ShopManager.Helpers;
 
-/// <summary>SalaryType enum → 中文顯示名稱</summary>
 [ValueConversion(typeof(SalaryType), typeof(string))]
 public class SalaryTypeDisplayConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
         value is SalaryType t ? t switch
         {
-            SalaryType.Hourly => "時薪制",
+            SalaryType.Hourly  => "時薪制",
             SalaryType.Monthly => "月薪制",
-            SalaryType.Contract => "合同制",
             _ => value.ToString() ?? string.Empty
         } : string.Empty;
 

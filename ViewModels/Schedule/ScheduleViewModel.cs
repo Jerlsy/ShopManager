@@ -215,6 +215,8 @@ public partial class ScheduleViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsViewingCalendar))]
     private bool _isAutoAssigning;
 
+    [ObservableProperty] private bool _overwriteFromMonthStart;
+
     public bool ShowAutoAssignButton => HasSchedule && !IsCreating && !IsAutoAssigning;
     public bool IsViewingCalendar    => !IsCreating && !IsAutoAssigning;
 
@@ -334,11 +336,13 @@ public partial class ScheduleViewModel : ObservableObject
         await LoadForMonthChangeAsync();
     }
 
-    // 月份切換或初次載入：先抓假日（一次性 HTTP），再重建排班視圖
+    // 月份切換或初次載入：先抓假日（一次性 HTTP），再重建排班視圖，並重新評估衝突
     private async Task LoadForMonthChangeAsync()
     {
         await LoadMonthHolidaysAsync();
         await LoadScheduleAsync();
+        if (CurrentSchedule is not null)
+            ConflictCount = await _conflictService.RecheckAsync(CurrentSchedule.Id);
     }
 
     // 排班操作後的快速重整：只查 DB，不重抓假日（已快取在 _monthHolidays）

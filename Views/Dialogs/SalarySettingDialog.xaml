@@ -2,8 +2,8 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
-             xmlns:sys="clr-namespace:System;assembly=mscorlib"
-             Width="400">
+             xmlns:models="clr-namespace:ShopManager.Models"
+             Width="420">
     <Border Background="{DynamicResource AppSurfaceBrush}"
             BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
             CornerRadius="20" Padding="28,24,28,16">
@@ -12,6 +12,7 @@
                        FontSize="{DynamicResource FontSizeDialogTitle}" FontWeight="SemiBold"
                        Margin="0,0,0,20"/>
 
+            <!-- 薪資類型 -->
             <TextBlock Text="薪資類型" Style="{StaticResource FieldLabelStyle}"/>
             <ComboBox ItemsSource="{Binding SalaryTypes}"
                       SelectedItem="{Binding SelectedType}"
@@ -23,17 +24,39 @@
                 </ComboBox.ItemTemplate>
             </ComboBox>
 
-            <TextBlock Text="薪資方案" Style="{StaticResource FieldLabelStyle}"/>
-            <ComboBox ItemsSource="{Binding FilteredSalaries}"
-                      SelectedItem="{Binding SelectedPlan}"
-                      DisplayMemberPath="Alias"
-                      md:HintAssist.Hint="請選擇方案"
-                      Margin="0,0,0,4"/>
-            <TextBlock Text="尚無符合的薪資方案，請先至薪資設定新增"
-                       Style="{StaticResource CaptionTextStyle}"
-                       Foreground="{DynamicResource AppSubtleForegroundBrush}"
-                       Visibility="{Binding HasNoSalaries, Converter={StaticResource BoolToVisibilityConverter}}"
-                       Margin="0,2,0,0"/>
+            <!-- 時薪制：平日薪資 + 假日薪資 -->
+            <StackPanel Visibility="{Binding IsHourly, Converter={StaticResource BoolToVisibilityConverter}}">
+                <TextBlock Text="平日薪資" Style="{StaticResource FieldLabelStyle}"/>
+                <ComboBox ItemsSource="{Binding FilteredSalaries}"
+                          SelectedItem="{Binding SelectedWeekdayPlan}"
+                          DisplayMemberPath="Alias"
+                          Margin="0,0,0,4"/>
+                <TextBlock Text="尚無符合的薪資方案，請先至薪資設定新增"
+                           Style="{StaticResource CaptionTextStyle}"
+                           Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                           Visibility="{Binding HasNoSalaries, Converter={StaticResource BoolToVisibilityConverter}}"
+                           Margin="0,2,0,12"/>
+
+                <TextBlock Text="假日薪資" Style="{StaticResource FieldLabelStyle}" Margin="0,8,0,0"/>
+                <ComboBox ItemsSource="{Binding FilteredSalaries}"
+                          SelectedItem="{Binding SelectedHolidayPlan}"
+                          DisplayMemberPath="Alias"
+                          Margin="0,0,0,4"/>
+            </StackPanel>
+
+            <!-- 月薪制：單一方案 -->
+            <StackPanel Visibility="{Binding IsHourly, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
+                <TextBlock Text="薪資方案" Style="{StaticResource FieldLabelStyle}"/>
+                <ComboBox ItemsSource="{Binding FilteredSalaries}"
+                          SelectedItem="{Binding SelectedWeekdayPlan}"
+                          DisplayMemberPath="Alias"
+                          Margin="0,0,0,4"/>
+                <TextBlock Text="尚無符合的薪資方案，請先至薪資設定新增"
+                           Style="{StaticResource CaptionTextStyle}"
+                           Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                           Visibility="{Binding HasNoSalaries, Converter={StaticResource BoolToVisibilityConverter}}"
+                           Margin="0,2,0,0"/>
+            </StackPanel>
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
                 <Button Content="取消"

@@ -183,6 +183,7 @@ public partial class EmployeeViewModel : ObservableObject
     }
 
     [ObservableProperty] private SalarySetting? _editDefaultSalary;
+    [ObservableProperty] private SalarySetting? _editHolidaySalary;
     [ObservableProperty] private DateOnly? _editInterviewDate;
     [ObservableProperty] private DateOnly _editHireDate = DateOnly.FromDateTime(DateTime.Today);
     [ObservableProperty] private DateOnly? _editResignDate;
@@ -220,8 +221,16 @@ public partial class EmployeeViewModel : ObservableObject
     public bool IsIdValid => IdNumberError == null;
 
     // ── 摘要顯示（對話框按鈕用） ──────────────────────────
-    public string SalarySummary =>
-        EditDefaultSalary is null ? "未設定" : EditDefaultSalary.Alias;
+    public string SalarySummary
+    {
+        get
+        {
+            if (EditDefaultSalary is null) return "未設定";
+            if (EditDefaultSalary.Type == SalaryType.Hourly && EditHolidaySalary is not null)
+                return $"平日 {EditDefaultSalary.Alias} ／ 假日 {EditHolidaySalary.Alias}";
+            return EditDefaultSalary.Alias;
+        }
+    }
 
     public string ScheduleRulesSummary
     {
@@ -334,6 +343,7 @@ public partial class EmployeeViewModel : ObservableObject
             EditLinePictureUrl = null;
         }
         EditDefaultSalary  = AvailableSalaries.FirstOrDefault(s => s.Id == emp.DefaultSalaryId);
+        EditHolidaySalary  = AvailableSalaries.FirstOrDefault(s => s.Id == emp.HolidaySalaryId);
         EditInterviewDate  = emp.InterviewDate;
         EditHireDate       = emp.HireDate == default ? DateOnly.FromDateTime(DateTime.Today) : emp.HireDate;
         EditResignDate     = emp.ResignDate;
@@ -360,11 +370,12 @@ public partial class EmployeeViewModel : ObservableObject
     [RelayCommand]
     private async Task OpenSalaryDialogAsync()
     {
-        var dialog = new SalarySettingDialog(AvailableSalaries, EditDefaultSalary);
+        var dialog = new SalarySettingDialog(AvailableSalaries, EditDefaultSalary, EditHolidaySalary);
         var result = await DialogHost.Show(dialog, "RootDialog");
         if (result is SalaryDialogResult r)
         {
-            EditDefaultSalary = r.Plan;
+            EditDefaultSalary = r.WeekdayPlan;
+            EditHolidaySalary = r.HolidayPlan;
             OnPropertyChanged(nameof(SalarySummary));
         }
     }
@@ -460,6 +471,7 @@ public partial class EmployeeViewModel : ObservableObject
         emp.ContactInfos    = EditContactInfos;
         emp.LineUserId      = string.IsNullOrEmpty(EditLineUserId) ? null : EditLineUserId;
         emp.DefaultSalaryId = EditDefaultSalary?.Id;
+        emp.HolidaySalaryId = (EditDefaultSalary?.Type == SalaryType.Hourly) ? EditHolidaySalary?.Id : null;
         emp.InterviewDate   = EditInterviewDate;
         emp.HireDate        = EditHireDate;
         emp.ResignDate      = EditResignDate;
@@ -570,6 +582,7 @@ public partial class EmployeeViewModel : ObservableObject
         EditLineDisplayName = null;
         EditLinePictureUrl  = null;
         EditDefaultSalary  = null;
+        EditHolidaySalary  = null;
         EditInterviewDate  = null;
         EditHireDate       = DateOnly.FromDateTime(DateTime.Today);
         EditResignDate     = null;

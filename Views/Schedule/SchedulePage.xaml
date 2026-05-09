@@ -176,7 +176,7 @@
                                                 </TextBlock.Style>
                                                 <Run Text="已排 "/>
                                                 <Run Text="{Binding ShiftCount, Mode=OneWay}"/>
-                                                <Run Text=" / 目標 "/>
+                                                <Run Text=" / 可排 "/>
                                                 <Run Text="{Binding TargetCount, Mode=OneWay}"/>
                                             </TextBlock>
                                         </StackPanel>
@@ -331,6 +331,7 @@
                                                                                         AllowDrop="True"
                                                                                         DragOver="ShiftBlock_DragOver"
                                                                                         Drop="ShiftBlock_Drop"
+                                                                                        ToolTipOpening="ShiftBlock_ToolTipOpening"
                                                                                         Background="{Binding ShiftSetting.Color, Converter={StaticResource HexToBrushConverter}}">
                                                                                     <Border.Style>
                                                                                         <Style TargetType="Border">
@@ -589,8 +590,8 @@
                                                                             AllowDrop="True"
                                                                             DragOver="ShiftBlock_DragOver"
                                                                             Drop="ShiftBlock_Drop"
-                                                                            ClipToBounds="True"
-                                                                            ToolTipOpening="ShiftBlock_ToolTipOpening">
+                                                                            ToolTipOpening="ShiftBlock_ToolTipOpening"
+                                                                            ClipToBounds="True">
                                                                         <Border.Style>
                                                                             <Style TargetType="Border">
                                                                                 <Setter Property="Background" Value="{Binding ShiftSetting.Color, Converter={StaticResource HexToBrushConverter}}"/>
@@ -871,8 +872,8 @@
                                                         AllowDrop="True"
                                                         DragOver="ShiftBlock_DragOver"
                                                         Drop="ShiftBlock_Drop"
-                                                        ClipToBounds="True"
-                                                        ToolTipOpening="ShiftBlock_ToolTipOpening">
+                                                        ToolTipOpening="ShiftBlock_ToolTipOpening"
+                                                        ClipToBounds="True">
                                                     <Border.Style>
                                                         <Style TargetType="Border">
                                                             <Setter Property="Background" Value="{Binding ShiftSetting.Color, Converter={StaticResource HexToBrushConverter}}"/>
@@ -1587,8 +1588,20 @@
                                 </StackPanel>
                             </Button>
 
+                            <!-- 進階選項 -->
+                            <CheckBox IsChecked="{Binding OverwriteFromMonthStart}"
+                                      Margin="0,0,0,16">
+                                <StackPanel>
+                                    <TextBlock Text="從月初開始（覆蓋已過日期）"/>
+                                    <TextBlock Text="勾選後將清除本月所有排班並重新排定，包含今天以前的日期。"
+                                               Style="{StaticResource CaptionTextStyle}"
+                                               Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </CheckBox>
+
                             <!-- 操作按鈕 -->
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,4,0,0">
                                 <Button Content="取消"
                                         Style="{StaticResource MaterialDesignFlatButton}"
                                         Command="{Binding CancelAutoAssignCommand}"
@@ -1849,7 +1862,7 @@
                     MouseLeftButtonDown="EmployeeDetailOverlay_Click">
                 <Border Background="{DynamicResource AppSurfaceBrush}"
                         CornerRadius="20" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
-                        Width="560" MaxHeight="560"
+                        Width="600" MaxHeight="560"
                         HorizontalAlignment="Center" VerticalAlignment="Center">
                     <Border.Effect>
                         <DropShadowEffect ShadowDepth="4" BlurRadius="20" Opacity="0.25"/>
@@ -2031,9 +2044,9 @@
                                                     <Grid>
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="60"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="120"/>
                                                             <ColumnDefinition Width="*"/>
-                                                            <ColumnDefinition Width="130"/>
-                                                            <ColumnDefinition Width="110"/>
                                                         </Grid.ColumnDefinitions>
                                                         <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                                             <TextBlock Text="{Binding DateText}" FontWeight="Medium" FontSize="13"/>
@@ -2059,7 +2072,8 @@
                                                                     <Border Width="32" Height="32" CornerRadius="16"
                                                                             ClipToBounds="True" Margin="4,0,0,0"
                                                                             BorderThickness="2" BorderBrush="{DynamicResource AppSurfaceBrush}"
-                                                                            Background="{Binding ColorHex, Converter={StaticResource HexToBrushConverter}}">
+                                                                            Background="{Binding ColorHex, Converter={StaticResource HexToBrushConverter}}"
+                                                                            ToolTipOpening="AvatarChip_ToolTipOpening">
                                                                         <Border.ToolTip>
                                                                             <ToolTip Style="{StaticResource SpeechBubbleToolTip}">
                                                                                 <StackPanel Orientation="Horizontal" Margin="0,2">

@@ -5,6 +5,7 @@ using ShopManager.Data;
 using ShopManager.Models;
 using ShopManager.Services;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 
 namespace ShopManager.ViewModels;
 
@@ -43,7 +44,31 @@ public partial class SystemSettingViewModel(
     [ObservableProperty] private string _lineWelcomeMessage = string.Empty;
     [ObservableProperty] private string _lineResignMessage = string.Empty;
     [ObservableProperty] private bool _isLineConfigUnlocked;
+
+    // ── 備註 ────────────────────────────────────────────────────────────────
+    [ObservableProperty] private string? _notes;
     [ObservableProperty] private LineTestState _lineTestState = LineTestState.None;
+
+    // ── 未儲存變更追蹤 ───────────────────────────────────────────────────────
+    [ObservableProperty] private bool _hasUnsavedChanges;
+    private bool _suppressDirty;
+    private bool _closedDayOptionsWired;
+
+    private static readonly HashSet<string?> _volatileProps =
+    [
+        nameof(HasUnsavedChanges),
+        nameof(LineTestState), nameof(LineTestMessage),
+        nameof(IsLineTesting), nameof(IsLineTestResultVisible),
+        nameof(IsLineTestSuccess), nameof(IsLineTestFailed),
+        nameof(CurrentThemeName), nameof(CurrentThemeAccent),
+    ];
+
+    protected override void OnPropertyChanged(PropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+        if (!_suppressDirty && !_volatileProps.Contains(e.PropertyName))
+            HasUnsavedChanges = true;
+    }
     [ObservableProperty] private string _lineTestMessage = string.Empty;
 
     /// <summary>測試成功後觸發，View 負責開啟 LineFollowerWindow</summary>
@@ -85,36 +110,53 @@ public partial class SystemSettingViewModel(
 
     public async Task LoadAsync()
     {
-        var setting = await service.GetAsync();
-        if (setting is not null)
+        _suppressDirty = true;
+        try
         {
-            Name = setting.Name;
-            Address = setting.Address;
-            Phone = setting.Phone;
-            LogoPhotoData = setting.LogoPhotoData;
-            ContactInfos = new List<ContactInfo>(setting.ContactInfos);
-            WeekStartDay = setting.WeekStartDay;
-            NationalHolidaysOff = setting.NationalHolidaysOff;
+            var setting = await service.GetAsync();
+            if (setting is not null)
+            {
+                Name = setting.Name;
+                Address = setting.Address;
+                Phone = setting.Phone;
+                LogoPhotoData = setting.LogoPhotoData;
+                ContactInfos = new List<ContactInfo>(setting.ContactInfos);
+                WeekStartDay = setting.WeekStartDay;
+                NationalHolidaysOff = setting.NationalHolidaysOff;
 
-            foreach (var option in ClosedDayOptions)
-                option.IsChecked = setting.ClosedDaysOfWeek.Contains((int)option.Day);
+                foreach (var option in ClosedDayOptions)
+                    option.IsChecked = setting.ClosedDaysOfWeek.Contains((int)option.Day);
 
-            LineChannelAccessToken = setting.LineChannelAccessToken ?? string.Empty;
-            LineWorkerUrl = setting.LineWorkerUrl ?? string.Empty;
-            LineWorkerApiKey = setting.LineWorkerApiKey ?? string.Empty;
-            LineWelcomeMessage = setting.LineWelcomeMessage ?? string.Empty;
-            LineResignMessage = setting.LineResignMessage ?? string.Empty;
-            IsLineConfigUnlocked = !string.IsNullOrWhiteSpace(setting.LineChannelAccessToken);
+                LineChannelAccessToken = setting.LineChannelAccessToken ?? string.Empty;
+                LineWorkerUrl = setting.LineWorkerUrl ?? string.Empty;
+                LineWorkerApiKey = setting.LineWorkerApiKey ?? string.Empty;
+                LineWelcomeMessage = setting.LineWelcomeMessage ?? string.Empty;
+                LineResignMessage = setting.LineResignMessage ?? string.Empty;
+                IsLineConfigUnlocked = !string.IsNullOrWhiteSpace(setting.LineChannelAccessToken);
+                Notes = setting.Notes;
+            }
+
+            CustomPrimaryHex = themeService.CustomPrimaryHex;
+            CustomSecondaryHex = themeService.CustomSecondaryHex;
+            NotifyThemeChanged();
+
+            BaseFontSize = appearanceService.BaseFontSize;
+            SelectedFontFamily = AppearanceService.AvailableFonts
+                .FirstOrDefault(f => f.Name == appearanceService.FontFamilyName)
+                ?? AppearanceService.AvailableFonts[0];
+
+            if (!_closedDayOptionsWired)
+            {
+                foreach (var opt in ClosedDayOptions)
+                    opt.PropertyChanged += (_, _) => { if (!_suppressDirty) HasUnsavedChanges = true; };
+                _closedDayOptionsWired = true;
+            }
         }
-
-        CustomPrimaryHex = themeService.CustomPrimaryHex;
-        CustomSecondaryHex = themeService.CustomSecondaryHex;
-        NotifyThemeChanged();
-
-        BaseFontSize = appearanceService.BaseFontSize;
-        SelectedFontFamily = AppearanceService.AvailableFonts
-            .FirstOrDefault(f => f.Name == appearanceService.FontFamilyName)
-            ?? AppearanceService.AvailableFonts[0];
+        finally
+        {
+            _suppressDirty = false;
+            HasUnsavedChanges = false;
+        }
     }
 
     [RelayCommand]
@@ -140,6 +182,7 @@ public partial class SystemSettingViewModel(
             LineWorkerApiKey = string.IsNullOrWhiteSpace(LineWorkerApiKey) ? null : LineWorkerApiKey,
             LineWelcomeMessage = string.IsNullOrWhiteSpace(LineWelcomeMessage) ? null : LineWelcomeMessage,
             LineResignMessage = string.IsNullOrWhiteSpace(LineResignMessage) ? null : LineResignMessage,
+            Notes = string.IsNullOrWhiteSpace(Notes) ? null : Notes,
         };
 
         await service.SaveAsync(setting);
@@ -151,6 +194,7 @@ public partial class SystemSettingViewModel(
 
         WeakReferenceMessenger.Default.Send(new SystemConfiguredMessage { ShopName = Name, LogoPhotoData = LogoPhotoData });
         snackbarService.ShowSuccess("店舖設定已儲存");
+        HasUnsavedChanges = false;
     }
 
     public void SetLogoPhoto(byte[] data) => LogoPhotoData = data;

@@ -85,9 +85,10 @@ public partial class ScheduleViewModel
             if (item.PriorityShifts.Count > 0) EmployeeConstraints.Add(item);
         }
 
-        IsQuickAdding   = false;
-        IsBatchMode     = false;
-        IsAutoAssigning = true;
+        IsQuickAdding          = false;
+        IsBatchMode            = false;
+        OverwriteFromMonthStart = false;
+        IsAutoAssigning        = true;
     }
 
     [RelayCommand]
@@ -134,8 +135,6 @@ public partial class ScheduleViewModel
             .Distinct()
             .ToList();
 
-        await _scheduleService.UpdateAutoAssignConfigAsync(CurrentSchedule.Id, conditionConfigs, dayOffList, workDayList, excludeIds);
-
         // 儲存優先班別至員工資料（含清除：未出現在約束清單的員工視為已移除偏好）
         var preferredMap = EmployeeConstraints
             .Where(c => c.ConstraintType == EmployeeConstraintType.ShiftPriority && c.SelectedEmployee is not null)
@@ -149,18 +148,24 @@ public partial class ScheduleViewModel
             emp.PreferredShiftIds = newIds;
         }
 
-        // 取得最新班表，只清除明天以後的排班（過去日期鎖定，保留供演算法計算）
+        await _scheduleService.UpdateAutoAssignConfigAsync(CurrentSchedule.Id, conditionConfigs, dayOffList, workDayList, excludeIds);
+
+        // 取得最新班表，清除目標日期以後的排班（過去日期預設鎖定，勾選月初時從 1 日起清）
         var freshSchedule = await _scheduleService.GetAsync(SelectedYear, SelectedMonth);
         if (freshSchedule is null) return;
 
-        var tomorrow = DateOnly.FromDateTime(DateTime.Today).AddDays(1);
-        await _entryService.ClearFutureEntriesAsync(freshSchedule.Id, tomorrow);
-        var lockedEntries = freshSchedule.Entries.Where(e => e.Date < tomorrow).ToList();
+        var tomorrow  = DateOnly.FromDateTime(DateTime.Today).AddDays(1);
+        var clearFrom = OverwriteFromMonthStart
+            ? new DateOnly(SelectedYear, SelectedMonth, 1)
+            : tomorrow;
+
+        await _entryService.ClearFutureEntriesAsync(freshSchedule.Id, clearFrom);
+        var lockedEntries = freshSchedule.Entries.Where(e => e.Date < clearFrom).ToList();
         freshSchedule.Entries.Clear();
         foreach (var e in lockedEntries) freshSchedule.Entries.Add(e);
 
         var (added, gaps, gapDays) = await _autoScheduleService.AutoAssignAsync(
-            freshSchedule, ActiveEmployees, EnabledShifts, _laborLaw);
+            freshSchedule, ActiveEmployees, EnabledShifts, _laborLaw, fromDate: clearFrom);
         await _scheduleService.UpdateStaffingGapDaysAsync(freshSchedule.Id, gapDays);
 
         IsAutoAssigning = false;
@@ -180,4 +185,5 @@ public partial class ScheduleViewModel
 
         await LoadScheduleAsync();
     }
+
 }

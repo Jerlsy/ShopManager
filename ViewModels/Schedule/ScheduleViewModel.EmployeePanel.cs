@@ -170,6 +170,9 @@ public partial class ScheduleViewModel
         var updated = CurrentSchedule?.EmployeeDayOffs.FirstOrDefault(d => d.EmployeeId == empId);
         if (updated is not null) foreach (var d in updated.Days) EmployeeDetailDayOffs.Add(d);
 
+        if (IsAutoAssigning)
+            SyncDayOffToConstraints(empId, day, isAdding: true);
+
         _snackbarService.ShowSuccess(entriesToRemove.Count > 0
             ? $"已設為休息日，同時移除 {entriesToRemove.Count} 筆排班"
             : "已設為休息日");
@@ -195,5 +198,41 @@ public partial class ScheduleViewModel
         EmployeeDetailDayOffs.Clear();
         var updated = CurrentSchedule?.EmployeeDayOffs.FirstOrDefault(d => d.EmployeeId == empId);
         if (updated is not null) foreach (var d in updated.Days) EmployeeDetailDayOffs.Add(d);
+
+        if (IsAutoAssigning)
+            SyncDayOffToConstraints(empId, day, isAdding: false);
+    }
+
+    private void SyncDayOffToConstraints(int empId, int day, bool isAdding)
+    {
+        var constraint = EmployeeConstraints.FirstOrDefault(c =>
+            c.ConstraintType == EmployeeConstraintType.DayOff &&
+            c.SelectedEmployee?.Id == empId);
+
+        if (isAdding)
+        {
+            if (constraint is null)
+            {
+                var emp = ActiveEmployees.FirstOrDefault(e => e.Id == empId);
+                if (emp is null) return;
+                constraint = new EmployeeConstraintItem
+                {
+                    SelectedEmployee = emp,
+                    ConstraintType   = EmployeeConstraintType.DayOff,
+                };
+                constraint.InitializeDayCells(SelectedYear, SelectedMonth, CurrentSchedule?.ClosedDays ?? []);
+                EmployeeConstraints.Add(constraint);
+            }
+            var addCell = constraint.DayOffCells.FirstOrDefault(c => c.Day == day);
+            if (addCell is not null) addCell.IsChecked = true;
+        }
+        else
+        {
+            if (constraint is null) return;
+            var removeCell = constraint.DayOffCells.FirstOrDefault(c => c.Day == day);
+            if (removeCell is not null) removeCell.IsChecked = false;
+            if (constraint.DayOffDays.Count == 0)
+                EmployeeConstraints.Remove(constraint);
+        }
     }
 }

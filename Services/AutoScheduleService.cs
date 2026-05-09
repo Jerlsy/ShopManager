@@ -9,12 +9,13 @@ public class AutoScheduleService(ScheduleService entryService)
     /// 只排明天以後的日期，今天及以前的現有排班保留供公平計算。
     /// </summary>
     public async Task<(int Added, List<string> Gaps, List<int> GapDays)> AutoAssignAsync(
-        MonthlySchedule         schedule,
+        MonthlySchedule             schedule,
         IReadOnlyList<Employee>     activeEmployees,
         IReadOnlyList<ShiftSetting> enabledShifts,
-        LaborLawSetting?            laborLaw)
+        LaborLawSetting?            laborLaw,
+        bool                        dryRun   = false,
+        DateOnly?                   fromDate = null)
     {
-        // 建立「星期幾 → 條件」對應（每天最多一條條件）
         var condByDow = new Dictionary<DayOfWeek, WorkDayConditionConfig>();
         foreach (var cfg in schedule.WorkDayConditionConfigs)
             foreach (var dow in cfg.DaysOfWeek)
@@ -22,8 +23,7 @@ public class AutoScheduleService(ScheduleService entryService)
 
         if (condByDow.Count == 0) return (0, [], []);
 
-        var today    = DateOnly.FromDateTime(DateTime.Today);
-        var tomorrow = today.AddDays(1);
+        var tomorrow    = fromDate ?? DateOnly.FromDateTime(DateTime.Today).AddDays(1);
         var daysInMonth = DateTime.DaysInMonth(schedule.Year, schedule.Month);
 
         var workDays = new List<(DateOnly Date, List<ShiftSetting> Shifts, WorkDayConditionConfig Cond)>();
@@ -44,44 +44,81 @@ public class AutoScheduleService(ScheduleService entryService)
 
         if (workDays.Count == 0 || employees.Count == 0) return (0, [], []);
 
-        // Phase 0：建立跳過表（休假日 + 強制上班日）
+        // Phase 0：跳過表
         var skipDays   = schedule.EmployeeDayOffs.ToDictionary(d => d.EmployeeId, d => d.Days.ToHashSet());
         var forcedDays = schedule.EmployeeWorkDays.ToDictionary(d => d.EmployeeId, d => d.Days.ToHashSet());
 
         bool ShouldSkip(Employee emp, DateOnly date) =>
-            (skipDays.TryGetValue(emp.Id, out var offs)  && offs.Contains(date.Day)) ||
+            (skipDays.TryGetValue(emp.Id, out var offs) && offs.Contains(date.Day)) ||
             (forcedDays.TryGetValue(emp.Id, out var fds) && !fds.Contains(date.Day));
 
-        // 計算起始值（鎖定過去日期的現有排班）
-        var assignedCount = employees.ToDictionary(e => e.Id, e =>
-            schedule.Entries.Count(en => en.EmployeeId == e.Id && en.Date < tomorrow));
-        var assignedPerShift = employees.ToDictionary(e => e.Id, e =>
-            schedule.Entries
-                .Where(en => en.EmployeeId == e.Id && en.Date < tomorrow)
-                .GroupBy(en => en.ShiftSettingId)
-                .ToDictionary(g => g.Key, g => g.Count()));
-
-        // 計算每班公平配額
+        // 計算公平配額：以「能排該班的員工數」為分母（排除 ExcludeShift）
         var totalSlotsPerShift = new Dictionary<int, int>();
         foreach (var (_, wdShifts, wdCond) in workDays)
             foreach (var s in wdShifts)
                 totalSlotsPerShift[s.Id] = totalSlotsPerShift.GetValueOrDefault(s.Id, 0) + wdCond.MaxPerShift;
+
         var preferredQuota = totalSlotsPerShift.ToDictionary(
             kvp => kvp.Key,
-            kvp => (double)kvp.Value / employees.Count);
+            kvp =>
+            {
+                int eligible = employees.Count(e => !e.ScheduleRules
+                    .Any(r => r.Type == ScheduleRuleType.ExcludeShift &&
+                              r.ExcludedShiftIds.Contains(kvp.Key)));
+                return eligible > 0 ? (double)kvp.Value / eligible : 0.0;
+            });
 
-        var shiftLookup    = (IReadOnlyDictionary<int, ShiftSetting>)enabledShifts.ToDictionary(s => s.Id);
-        var entriesToSave  = new List<ScheduleEntry>();
-        var gaps           = new List<string>();
-        var gapDaySet      = new HashSet<int>();
+        // 計算起始值（鎖定過去日期的現有排班），同時建立索引
+        var index = new EntryIndex();
+        var assignedCount    = employees.ToDictionary(e => e.Id, _ => 0);
+        var assignedPerShift = employees.ToDictionary(e => e.Id, _ => new Dictionary<int, int>());
+
+        foreach (var entry in schedule.Entries)
+        {
+            index.Add(entry);
+            if (assignedCount.ContainsKey(entry.EmployeeId) && entry.Date < tomorrow)
+            {
+                assignedCount[entry.EmployeeId]++;
+                var perShift = assignedPerShift[entry.EmployeeId];
+                perShift[entry.ShiftSettingId] = perShift.GetValueOrDefault(entry.ShiftSettingId, 0) + 1;
+            }
+        }
+
+        var shiftLookup   = (IReadOnlyDictionary<int, ShiftSetting>)enabledShifts.ToDictionary(s => s.Id);
+        var entriesToSave = new List<ScheduleEntry>();
+        var gaps          = new List<string>();
+        var gapDaySet     = new HashSet<int>();
+
+        // 集中管理新增班次（維護索引與計數器，避免重複）
+        void AddEntry(Employee emp, DateOnly date, ShiftSetting shift)
+        {
+            var entry = new ScheduleEntry
+            {
+                MonthlyScheduleId = schedule.Id,
+                EmployeeId        = emp.Id,
+                Date              = date,
+                ShiftSettingId    = shift.Id,
+            };
+            schedule.Entries.Add(entry);
+            index.Add(entry);
+            entriesToSave.Add(entry);
+            assignedCount[emp.Id]++;
+            assignedPerShift[emp.Id][shift.Id] =
+                assignedPerShift[emp.Id].GetValueOrDefault(shift.Id, 0) + 1;
+        }
+
+        ShiftValidationContext MakeCtx(Employee emp, DateOnly date, ShiftSetting shift) =>
+            new(Employee: emp, Date: date, TargetShift: shift,
+                Schedule: schedule, ActiveEmployees: employees, LaborLaw: laborLaw,
+                ShiftLookup: shiftLookup, Index: index);
 
         foreach (var (date, shifts, cond) in workDays)
         {
             // Phase 1：每班填至 MaxPerShift
             foreach (var shift in shifts)
             {
-                int assignedToShift = schedule.Entries.Count(e => e.Date == date && e.ShiftSettingId == shift.Id);
-                if (assignedToShift >= cond.MaxPerShift) continue;
+                int onShift = index.CountOnShift(date, shift.Id);
+                if (onShift >= cond.MaxPerShift) continue;
 
                 var eligible = employees
                     .Where(e => !ShouldSkip(e, date))
@@ -94,46 +131,21 @@ public class AutoScheduleService(ScheduleService entryService)
                         int total = assignedCount[e.Id];
                         return total == 0 ? 0.0 : (double)sc / total;
                     })
-                    .ThenBy(e =>
-                    {
-                        if (!e.PreferredShiftIds.Contains(shift.Id)) return int.MaxValue;
-                        int sc = assignedPerShift[e.Id].GetValueOrDefault(shift.Id, 0);
-                        if (sc >= preferredQuota.GetValueOrDefault(shift.Id, 0)) return int.MaxValue;
-                        return e.PreferredShiftIds.IndexOf(shift.Id);
-                    });
+                    .ThenBy(e => e.PreferredShiftIds.Contains(shift.Id)
+                        ? e.PreferredShiftIds.IndexOf(shift.Id) : int.MaxValue);
 
                 foreach (var emp in eligible)
                 {
-                    if (assignedToShift >= cond.MaxPerShift) break;
-                    if (schedule.Entries.Any(e => e.Date == date && e.ShiftSettingId == shift.Id && e.EmployeeId == emp.Id))
-                        continue;
+                    if (index.CountOnShift(date, shift.Id) >= cond.MaxPerShift) break;
+                    if (index.AlreadyAssigned(emp.Id, shift.Id, date)) continue;
+                    if (ShiftRuleEngine.Evaluate(MakeCtx(emp, date, shift)).IsBlocked) continue;
 
-                    var ctx = new ShiftValidationContext(
-                        Employee: emp, Date: date, TargetShift: shift,
-                        Schedule: schedule, ActiveEmployees: employees, LaborLaw: laborLaw,
-                        ShiftLookup: shiftLookup);
-
-                    if (ShiftRuleEngine.Evaluate(ctx).IsBlocked) continue;
-
-                    var entry = new ScheduleEntry
-                    {
-                        MonthlyScheduleId = schedule.Id,
-                        EmployeeId = emp.Id, Date = date, ShiftSettingId = shift.Id,
-                    };
-                    schedule.Entries.Add(entry);
-                    entriesToSave.Add(entry);
-                    assignedCount[emp.Id]++;
-                    assignedPerShift[emp.Id][shift.Id] = assignedPerShift[emp.Id].GetValueOrDefault(shift.Id, 0) + 1;
-                    assignedToShift++;
+                    AddEntry(emp, date, shift);
                 }
             }
 
             // Phase 2：人數仍不足 MinPerDay → 跨班補排
-            var todayEmpIds = schedule.Entries
-                .Where(e => e.Date == date)
-                .Select(e => e.EmployeeId)
-                .Distinct()
-                .ToHashSet();
+            var todayEmpIds = index.EmpsOnDay(date);
 
             if (todayEmpIds.Count < cond.MinPerDay)
             {
@@ -141,7 +153,7 @@ public class AutoScheduleService(ScheduleService entryService)
                     .Where(e => !todayEmpIds.Contains(e.Id) && !ShouldSkip(e, date))
                     .OrderBy(e => assignedCount[e.Id]))
                 {
-                    if (todayEmpIds.Count >= cond.MinPerDay) break;
+                    if (index.EmpsOnDay(date).Count >= cond.MinPerDay) break;
 
                     var shiftsOrdered = shifts
                         .OrderBy(s =>
@@ -155,41 +167,24 @@ public class AutoScheduleService(ScheduleService entryService)
 
                     foreach (var shift in shiftsOrdered)
                     {
-                        int shiftCount = schedule.Entries.Count(e => e.Date == date && e.ShiftSettingId == shift.Id);
-                        if (shiftCount >= cond.MaxPerShift) continue;
-                        if (schedule.Entries.Any(e => e.Date == date && e.ShiftSettingId == shift.Id && e.EmployeeId == emp.Id))
-                            continue;
+                        if (index.CountOnShift(date, shift.Id) >= cond.MaxPerShift) continue;
+                        if (index.AlreadyAssigned(emp.Id, shift.Id, date)) continue;
+                        if (ShiftRuleEngine.Evaluate(MakeCtx(emp, date, shift)).IsBlocked) continue;
 
-                        var ctx = new ShiftValidationContext(
-                            Employee: emp, Date: date, TargetShift: shift,
-                            Schedule: schedule, ActiveEmployees: employees, LaborLaw: laborLaw,
-                            ShiftLookup: shiftLookup);
-
-                        if (ShiftRuleEngine.Evaluate(ctx).IsBlocked) continue;
-
-                        var entry = new ScheduleEntry
-                        {
-                            MonthlyScheduleId = schedule.Id,
-                            EmployeeId = emp.Id, Date = date, ShiftSettingId = shift.Id,
-                        };
-                        schedule.Entries.Add(entry);
-                        entriesToSave.Add(entry);
-                        assignedCount[emp.Id]++;
-                        assignedPerShift[emp.Id][shift.Id] = assignedPerShift[emp.Id].GetValueOrDefault(shift.Id, 0) + 1;
-                        todayEmpIds.Add(emp.Id);
+                        AddEntry(emp, date, shift);
                         break;
                     }
                 }
 
-                if (todayEmpIds.Count < cond.MinPerDay)
+                if (index.EmpsOnDay(date).Count < cond.MinPerDay)
                 {
-                    gaps.Add($"{date:MM/dd} 人力不足（{todayEmpIds.Count}/{cond.MinPerDay}）");
+                    gaps.Add($"{date:MM/dd} 人力不足（{index.EmpsOnDay(date).Count}/{cond.MinPerDay}）");
                     gapDaySet.Add(date.Day);
                 }
             }
         }
 
-        if (entriesToSave.Count > 0)
+        if (!dryRun && entriesToSave.Count > 0)
             await entryService.AddEntriesAsync(entriesToSave);
 
         return (entriesToSave.Count, gaps, gapDaySet.ToList());

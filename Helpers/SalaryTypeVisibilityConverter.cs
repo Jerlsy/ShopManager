@@ -6,8 +6,8 @@ using System.Windows.Data;
 namespace ShopManager.Helpers;
 
 /// <summary>
-/// SalaryType 對應 Visibility
-/// ConverterParameter = "Hourly" | "Monthly" | "Contract"
+/// SalaryType 對應 Visibility。
+/// ConverterParameter = "Hourly" | "Monthly"
 /// 當類型相符時 Visible，否則 Collapsed
 /// </summary>
 [ValueConversion(typeof(SalaryType), typeof(Visibility))]
@@ -19,9 +19,8 @@ public class SalaryTypeVisibilityConverter : IValueConverter
         {
             return param switch
             {
-                "Hourly" => type == SalaryType.Hourly ? Visibility.Visible : Visibility.Collapsed,
+                "Hourly"  => type == SalaryType.Hourly  ? Visibility.Visible : Visibility.Collapsed,
                 "Monthly" => type == SalaryType.Monthly ? Visibility.Visible : Visibility.Collapsed,
-                "Contract" => type == SalaryType.Contract ? Visibility.Visible : Visibility.Collapsed,
                 _ => Visibility.Collapsed
             };
         }

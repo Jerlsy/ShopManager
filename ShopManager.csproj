@@ -14,6 +14,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="ShopManager.Tests\**\*" />
+    <None Remove="ShopManager.Tests\**\*" />
+    <Content Remove="ShopManager.Tests\**\*" />
+    <EmbeddedResource Remove="ShopManager.Tests\**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Resource Include="Fonts\*.ttf" />
     <Content Include="Resources\app.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -34,6 +41,8 @@
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
 
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
+
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3912.50" />
   </ItemGroup>
 
 </Project>

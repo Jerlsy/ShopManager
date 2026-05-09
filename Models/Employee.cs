@@ -34,6 +34,10 @@ public class Employee
     public int? DefaultSalaryId { get; set; }
     public SalarySetting? DefaultSalary { get; set; }
 
+    // 時薪制假日薪資方案（FK，僅 Hourly 員工使用）
+    public int? HolidaySalaryId { get; set; }
+    public SalarySetting? HolidaySalary { get; set; }
+
     // 預設獎金
     public List<DefaultBonus> DefaultBonuses { get; set; } = new();
 

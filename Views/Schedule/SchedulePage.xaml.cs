@@ -140,12 +140,34 @@ public partial class SchedulePage : UserControl
     //   EmployeeDrag   → 新增模式，用 IsDisabled 判斷
     // Drop：isCopy=true 時走複製路徑；否則走移動/新增路徑
     // 注意：交換（Swap）改由 EntryChip_Drop 處理，不再在此判斷
+
+    private void AvatarChip_ToolTipOpening(object sender, ToolTipEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.ToolTip is ToolTip tt)
+        {
+            tt.Placement = PlacementMode.Custom;
+            tt.CustomPopupPlacementCallback = PlaceTooltipAtAvatarTop;
+        }
+    }
+
+    // 箭頭尖端對齊頭像頂端中心（x = 水平置中，y = 頭像上方）
+    private static CustomPopupPlacement[] PlaceTooltipAtAvatarTop(Size popupSize, Size targetSize, Point _)
+    {
+        double x = (targetSize.Width - popupSize.Width) / 2;
+        double y = -popupSize.Height;
+        return [new CustomPopupPlacement(new Point(x, y), PopupPrimaryAxis.Horizontal)];
+    }
+
     private void ShiftBlock_ToolTipOpening(object sender, ToolTipEventArgs e)
     {
         if (sender is FrameworkElement fe && fe.ToolTip is ToolTip tt)
+        {
+            tt.Placement = PlacementMode.Custom;
             tt.CustomPopupPlacementCallback = PlaceTooltipCenterAbove;
+        }
     }
 
+    // 箭頭尖端在目標正上方，帶 6px 間距（ShiftBlock 用）
     private static CustomPopupPlacement[] PlaceTooltipCenterAbove(Size popupSize, Size targetSize, Point _)
     {
         double x = (targetSize.Width - popupSize.Width) / 2;

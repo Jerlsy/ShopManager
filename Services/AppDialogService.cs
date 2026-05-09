@@ -10,7 +10,18 @@ public class AppDialogService : IAppDialogService
     {
         var view = new ConfirmDialogView(title, content, confirmText, cancelText);
         var result = await DialogHost.Show(view, "RootDialog");
-        // CommandParameter 為 bool.TrueString ("True")
         return result is string s && s == bool.TrueString;
+    }
+
+    public async Task<bool?> ShowUnsavedChangesAsync()
+    {
+        var view = new UnsavedChangesDialogView();
+        var result = await DialogHost.Show(view, "RootDialog");
+        return (result as string) switch
+        {
+            "save"    => true,
+            "discard" => false,
+            _         => null,
+        };
     }
 }

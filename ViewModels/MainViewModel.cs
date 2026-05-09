@@ -11,6 +11,7 @@ using ShopManager.Views.Schedule;
 using ShopManager.Views.ShiftSettings;
 using ShopManager.Views.ShopSettings;
 using System.Windows;
+using System.Windows.Threading;
 
 namespace ShopManager.ViewModels;
 
@@ -32,6 +33,8 @@ public partial class MainViewModel : ObservableObject
     private readonly ShopSettingService _shopService;
     private readonly ShopContext _shopContext;
     private readonly NavigationService _navigation;
+    private readonly IAppDialogService _dialogService;
+    private readonly SystemSettingViewModel _systemSettingVm;
 
     [ObservableProperty] private string _shopName = "店鋪管理系統";
     [ObservableProperty] private byte[]? _shopLogoData;
@@ -39,12 +42,22 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private NavItem? _selectedNavItem;
     [ObservableProperty] private bool _isNavExpanded = true;
 
+    private NavItem? _currentNavItem;
+    private NavItem? _pendingNavItem;
+    private bool _blockNavCheck;
+
     public GridLength NavColumnWidth =>
         IsNavExpanded
             ? new GridLength((double)Application.Current.Resources["LayoutNavExpandedWidth"])
             : new GridLength(44);
 
     partial void OnIsNavExpandedChanged(bool value) => OnPropertyChanged(nameof(NavColumnWidth));
+
+    // IsSystemConfigured 是 VisibleNavItems 的唯一變數，連動處理。
+    // 之所以集中在此：手動在多處 OnPropertyChanged(nameof(VisibleNavItems)) 會在儲存後
+    // 觸發 ListBox 重評 ItemsSource，導致 SelectedItem 暫時被清空再回填，
+    // 讓 OnSelectedNavItemChanged 在 HasUnsavedChanges 尚未歸零前再度觸發未儲存對話框。
+    partial void OnIsSystemConfiguredChanged(bool value) => OnPropertyChanged(nameof(VisibleNavItems));
 
     [RelayCommand]
     private void ToggleNav() => IsNavExpanded = !IsNavExpanded;
@@ -67,11 +80,15 @@ public partial class MainViewModel : ObservableObject
     public MainViewModel(
         ShopSettingService shopService,
         ShopContext shopContext,
-        NavigationService navigation)
+        NavigationService navigation,
+        IAppDialogService dialogService,
+        SystemSettingViewModel systemSettingVm)
     {
         _shopService = shopService;
         _shopContext = shopContext;
         _navigation = navigation;
+        _dialogService = dialogService;
+        _systemSettingVm = systemSettingVm;
         ShopName = _shopContext.ShopName;
 
         _navigation.PropertyChanged += (_, e) =>
@@ -86,7 +103,6 @@ public partial class MainViewModel : ObservableObject
             vm.IsSystemConfigured = true;
             vm.ShopName = m.ShopName;
             vm.ShopLogoData = m.LogoPhotoData;
-            vm.OnPropertyChanged(nameof(VisibleNavItems));
         });
     }
 
@@ -104,8 +120,42 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnSelectedNavItemChanged(NavItem? value)
     {
-        if (value is not null)
-            _navigation.Navigate(value.PageType);
+        if (value is null || _blockNavCheck) return;
+
+        if (_systemSettingVm.HasUnsavedChanges &&
+            _currentNavItem?.PageType == typeof(ShopSettingPage))
+        {
+            var previous  = _currentNavItem;
+            _pendingNavItem = value;
+
+            _blockNavCheck = true;
+            SelectedNavItem = previous;
+            _blockNavCheck = false;
+
+            Dispatcher.CurrentDispatcher.InvokeAsync(HandleUnsavedChangesNavigationAsync);
+            return;
+        }
+
+        _currentNavItem = value;
+        _navigation.Navigate(value.PageType);
+    }
+
+    private async Task HandleUnsavedChangesNavigationAsync()
+    {
+        var result = await _dialogService.ShowUnsavedChangesAsync();
+        var target  = _pendingNavItem;
+        _pendingNavItem = null;
+
+        if (result is null || target is null) return; // 取消
+
+        if (result == true)
+            await _systemSettingVm.SaveAsync();
+
+        _blockNavCheck = true;
+        SelectedNavItem = target;
+        _blockNavCheck = false;
+        _currentNavItem = target;
+        _navigation.Navigate(target.PageType);
     }
 
     public async Task InitializeAsync()
@@ -116,7 +166,6 @@ public partial class MainViewModel : ObservableObject
             ShopName = shop.Name;
             ShopLogoData = shop.LogoPhotoData;
             IsSystemConfigured = true;
-            OnPropertyChanged(nameof(VisibleNavItems));
         }
 
         SelectedNavItem = AllNavItems[0];
@@ -126,6 +175,5 @@ public partial class MainViewModel : ObservableObject
     {
         _navigation.ClearCache();
         IsSystemConfigured = false;
-        OnPropertyChanged(nameof(VisibleNavItems));
     }
 }

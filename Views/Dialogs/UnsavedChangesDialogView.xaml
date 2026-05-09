@@ -1,0 +1,47 @@
+<UserControl x:Class="ShopManager.Views.Dialogs.UnsavedChangesDialogView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+             MinWidth="320" MaxWidth="480">
+
+    <Border Background="{DynamicResource AppSurfaceBrush}"
+            BorderBrush="{DynamicResource AppBorderBrush}"
+            BorderThickness="1" CornerRadius="20" Padding="24,20,24,12">
+        <StackPanel>
+
+            <TextBlock Text="有未儲存的變更"
+                       FontSize="{DynamicResource FontSizeDialogTitle}"
+                       FontWeight="SemiBold"
+                       Margin="0,0,0,12"/>
+
+            <TextBlock Text="「店鋪設定」有未儲存的變更，離開前是否要儲存？"
+                       FontSize="{DynamicResource FontSizeBody}"
+                       Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                       TextWrapping="Wrap"
+                       Opacity="0.87"
+                       Margin="0,0,0,20"/>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="取消"
+                        Style="{StaticResource MaterialDesignFlatButton}"
+                        Margin="0,0,4,0"
+                        Command="{x:Static md:DialogHost.CloseDialogCommand}"
+                        CommandParameter="cancel"/>
+
+                <Button Content="不儲存"
+                        Style="{StaticResource MaterialDesignFlatButton}"
+                        Foreground="{DynamicResource MaterialDesign.Brush.ValidationError}"
+                        Margin="0,0,4,0"
+                        Command="{x:Static md:DialogHost.CloseDialogCommand}"
+                        CommandParameter="discard"/>
+
+                <Button Content="儲存並離開"
+                        Style="{StaticResource MaterialDesignFlatButton}"
+                        Foreground="{DynamicResource PrimaryHueMidBrush}"
+                        Command="{x:Static md:DialogHost.CloseDialogCommand}"
+                        CommandParameter="save"/>
+            </StackPanel>
+
+        </StackPanel>
+    </Border>
+</UserControl>

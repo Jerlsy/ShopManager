@@ -26,81 +26,139 @@ public class SalaryCalculationService(AppDbContext db)
         MonthlySchedule schedule,
         List<Employee> employees,
         LaborLawSetting laborLaw,
-        List<DateOnly> holidayDates,
+        SalaryCalculationConfig config,
+        List<DateOnly> nationalHolidays,
         Guid shopId)
     {
         var record = new SalaryRecord
         {
-            ShopId             = shopId,
-            MonthlyScheduleId  = schedule.Id,
-            Year               = schedule.Year,
-            Month              = schedule.Month,
-            HolidayDates       = holidayDates,
-            UpdatedAt          = DateTime.Now,
+            ShopId            = shopId,
+            MonthlyScheduleId = schedule.Id,
+            Year              = schedule.Year,
+            Month             = schedule.Month,
+            UpdatedAt         = DateTime.Now,
         };
-
-        var closedSet  = schedule.ClosedDays.ToHashSet();
-        var holidaySet = holidayDates.Select(d => d.Day).ToHashSet();
 
         foreach (var emp in employees)
         {
             var salary = emp.DefaultSalary;
             if (salary is null) continue;
 
-            // 固定休假的星期幾（0=Sunday … 6=Saturday）
-            var fixedOffDows = emp.ScheduleRules
-                .Where(r => r.Type == ScheduleRuleType.FixedOff)
-                .SelectMany(r => r.FixedOffDays)
-                .ToHashSet();
-
-            // 取得該員工當月所有排班，依日期分組
-            var entriesByDay = schedule.Entries
+            // 依日期分組取得工時
+            var entriesByDate = schedule.Entries
                 .Where(e => e.EmployeeId == emp.Id && e.ShiftSetting is not null)
-                .GroupBy(e => e.Date.Day)
+                .GroupBy(e => e.Date)
                 .ToDictionary(g => g.Key, g => g.Sum(e => e.ShiftSetting!.WorkHours));
 
-            double normalHours  = 0, ot1Hours = 0, ot2Hours = 0;
-            double restDayHours = 0, holidayHours = 0;
+            double weekdayHours = 0, holidayHours = 0, ot1Hours = 0, ot2Hours = 0;
+            decimal weekdayPay = 0, holidayPay = 0, ot1Pay = 0, ot2Pay = 0, overridePay = 0;
 
-            foreach (var (day, hours) in entriesByDay)
+            foreach (var (date, hours) in entriesByDate)
             {
                 if (hours <= 0) continue;
 
-                bool isHoliday  = salary.Type == SalaryType.Monthly && holidaySet.Contains(day);
-                bool isRestDay  = closedSet.Contains(day);
-                var  date       = new DateOnly(schedule.Year, schedule.Month, day);
-                bool isFixedOff = fixedOffDows.Contains((int)date.DayOfWeek);
+                // 額外設定優先：強制以指定金額取代當日薪資
+                var over = config.DailyOverrides
+                    .FirstOrDefault(o => o.EmployeeId == emp.Id && o.Date == date);
+                if (over is not null)
+                {
+                    overridePay += over.Amount;
+                    continue;
+                }
 
-                if (isHoliday)
+                bool isHoliday = config.IsHoliday(date, nationalHolidays);
+
+                if (salary.Type == SalaryType.Hourly)
                 {
-                    // 國定假日（月薪制已勾選）：全部計假日
-                    holidayHours += hours;
+                    if (isHoliday)
+                    {
+                        // 假日：使用員工的假日薪資方案費率（無設定則回退到平日費率）
+                        decimal hRate = emp.HolidaySalary?.HourlyRate ?? salary.HourlyRate ?? 0;
+                        holidayPay   += hRate * (decimal)hours;
+                        holidayHours += hours;
+                    }
+                    else
+                    {
+                        // 平日：OT 分層計算
+                        decimal wRate      = salary.HourlyRate ?? 0;
+                        decimal ot1Rate    = salary.OT1Rate ?? laborLaw.HourlyOT1Rate;
+                        decimal ot2Rate    = salary.OT2Rate ?? laborLaw.HourlyOT2Rate;
+                        double dailyNormal = laborLaw.DailyNormalHours;
+                        double normal      = Math.Min(hours, dailyNormal);
+                        double ot          = Math.Max(hours - dailyNormal, 0);
+                        double ot1         = Math.Min(ot, 2);
+                        double ot2         = Math.Max(ot - 2, 0);
+
+                        weekdayPay   += wRate * (decimal)normal
+                                      + wRate * ot1Rate * (decimal)ot1
+                                      + wRate * ot2Rate * (decimal)ot2;
+                        weekdayHours += hours;
+                        ot1Hours     += ot1;
+                        ot2Hours     += ot2;
+                    }
                 }
-                else if (isRestDay)
+                else // Monthly
                 {
-                    // 店休日出勤：前2hr×OT1，超過×OT2
-                    restDayHours += hours;
-                }
-                else
-                {
-                    // 一般工作日（含固定休假日有排班 → 不加成，正常分層）
-                    double dailyNormal = laborLaw.DailyNormalHours;
-                    normalHours += Math.Min(hours, dailyNormal);
-                    double ot = Math.Max(hours - dailyNormal, 0);
-                    ot1Hours  += Math.Min(ot, 2);
-                    ot2Hours  += Math.Max(ot - 2, 0);
+                    decimal monthlyBase  = salary.MonthlyBase ?? 0;
+                    decimal hourlyEquiv  = monthlyBase > 0 ? monthlyBase / 240m : 0;
+                    decimal ot1Rate      = salary.OT1Rate ?? laborLaw.MonthlyOT1Rate;
+                    decimal ot2Rate      = salary.OT2Rate ?? laborLaw.MonthlyOT2Rate;
+                    decimal holRate      = salary.HolidayRate ?? laborLaw.HolidayOTRate;
+                    double  dailyNormal  = laborLaw.DailyNormalHours;
+
+                    if (isHoliday)
+                    {
+                        // 假日：補貼
+                        holidayPay   += hourlyEquiv * holRate * (decimal)hours;
+                        holidayHours += hours;
+                    }
+                    else
+                    {
+                        // 平日：OT 補貼（底薪固定，不在此累加）
+                        double ot  = Math.Max(hours - dailyNormal, 0);
+                        double ot1 = Math.Min(ot, 2);
+                        double ot2 = Math.Max(ot - 2, 0);
+                        ot1Pay     += hourlyEquiv * ot1Rate * (decimal)ot1;
+                        ot2Pay     += hourlyEquiv * ot2Rate * (decimal)ot2;
+                        weekdayHours += hours;
+                        ot1Hours   += ot1;
+                        ot2Hours   += ot2;
+                    }
                 }
             }
 
-            var empRecord = BuildRecord(emp, salary, laborLaw,
-                normalHours, ot1Hours, ot2Hours, restDayHours, holidayHours);
+            // 月薪底薪固定
+            if (salary.Type == SalaryType.Monthly)
+                weekdayPay = salary.MonthlyBase ?? 0;
 
-            // 從員工預設獎金帶入
+            decimal baseAmount = weekdayPay + holidayPay + ot1Pay + ot2Pay + overridePay;
+
+            var empRecord = new SalaryEmployeeRecord
+            {
+                EmployeeId       = emp.Id,
+                Employee         = emp,
+                SalaryType       = salary.Type,
+                HourlyRate       = salary.HourlyRate        ?? 0,
+                HolidayHourlyRate = emp.HolidaySalary?.HourlyRate ?? salary.HourlyRate ?? 0,
+                MonthlyBase      = salary.MonthlyBase       ?? 0,
+                WeekdayHours     = Math.Round(weekdayHours,  2),
+                HolidayHours     = Math.Round(holidayHours,  2),
+                OT1Hours         = Math.Round(ot1Hours,      2),
+                OT2Hours         = Math.Round(ot2Hours,      2),
+                WeekdayPay       = Math.Round(weekdayPay,    0),
+                HolidayPay       = Math.Round(holidayPay,    0),
+                OT1Pay           = Math.Round(ot1Pay,        0),
+                OT2Pay           = Math.Round(ot2Pay,        0),
+                OverridePay      = Math.Round(overridePay,   0),
+                BaseAmount       = Math.Round(baseAmount,    0),
+            };
+
+            // 帶入員工預設獎金
             foreach (var bonus in emp.DefaultBonuses)
                 empRecord.BonusItems.Add(new SalaryBonusItem
                 {
-                    Label     = bonus.Label,
-                    Amount    = bonus.Amount,
+                    Label      = bonus.Label,
+                    Amount     = bonus.Amount,
                     PresetType = BonusPresetType.Custom,
                 });
 
@@ -108,75 +166,6 @@ public class SalaryCalculationService(AppDbContext db)
         }
 
         return record;
-    }
-
-    private static SalaryEmployeeRecord BuildRecord(
-        Employee emp, SalarySetting salary, LaborLawSetting law,
-        double normalHours, double ot1Hours, double ot2Hours,
-        double restDayHours, double holidayHours)
-    {
-        decimal ot1Rate     = salary.OT1Rate     ?? law.HourlyOT1Rate;
-        decimal ot2Rate     = salary.OT2Rate     ?? law.HourlyOT2Rate;
-        decimal holidayRate = salary.HolidayRate ?? law.HolidayOTRate;
-
-        decimal normalPay = 0, ot1Pay = 0, ot2Pay = 0, restPay = 0, holidayPay = 0;
-
-        switch (salary.Type)
-        {
-            case SalaryType.Hourly:
-            {
-                decimal rate = salary.HourlyRate ?? 0;
-                normalPay  = rate * (decimal)normalHours;
-                ot1Pay     = rate * ot1Rate     * (decimal)ot1Hours;
-                ot2Pay     = rate * ot2Rate     * (decimal)ot2Hours;
-                // 店休日：前2hr×OT1，超過×OT2
-                double rd1 = Math.Min(restDayHours, 2);
-                double rd2 = Math.Max(restDayHours - 2, 0);
-                restPay    = rate * ot1Rate * (decimal)rd1
-                           + rate * ot2Rate * (decimal)rd2;
-                break;
-            }
-            case SalaryType.Monthly:
-            {
-                decimal monthlyBase = salary.MonthlyBase ?? 0;
-                decimal hourlyEquiv = monthlyBase / 240m;
-                normalPay   = monthlyBase;   // 底薪固定
-                ot1Pay      = hourlyEquiv * ot1Rate     * (decimal)ot1Hours;
-                ot2Pay      = hourlyEquiv * ot2Rate     * (decimal)ot2Hours;
-                double rd1  = Math.Min(restDayHours, 2);
-                double rd2  = Math.Max(restDayHours - 2, 0);
-                restPay     = hourlyEquiv * ot1Rate * (decimal)rd1
-                            + hourlyEquiv * ot2Rate * (decimal)rd2;
-                holidayPay  = hourlyEquiv * holidayRate * (decimal)holidayHours;
-                break;
-            }
-            case SalaryType.Contract:
-                normalPay = salary.ContractAmount ?? 0;
-                break;
-        }
-
-        decimal baseAmount = normalPay + ot1Pay + ot2Pay + restPay + holidayPay;
-
-        return new SalaryEmployeeRecord
-        {
-            EmployeeId     = emp.Id,
-            Employee       = emp,
-            SalaryType     = salary.Type,
-            HourlyRate     = salary.HourlyRate     ?? 0,
-            MonthlyBase    = salary.MonthlyBase    ?? 0,
-            ContractAmount = salary.ContractAmount ?? 0,
-            NormalHours    = Math.Round(normalHours,  2),
-            OT1Hours       = Math.Round(ot1Hours,     2),
-            OT2Hours       = Math.Round(ot2Hours,     2),
-            RestDayHours   = Math.Round(restDayHours, 2),
-            HolidayHours   = Math.Round(holidayHours, 2),
-            NormalPay      = Math.Round(normalPay,   0),
-            OT1Pay         = Math.Round(ot1Pay,      0),
-            OT2Pay         = Math.Round(ot2Pay,      0),
-            RestDayPay     = Math.Round(restPay,     0),
-            HolidayPay     = Math.Round(holidayPay,  0),
-            BaseAmount     = Math.Round(baseAmount,  0),
-        };
     }
 
     // ── 儲存 ────────────────────────────────────────────────────────────
@@ -187,7 +176,6 @@ public class SalaryCalculationService(AppDbContext db)
 
         if (existing is not null)
         {
-            // 刪除舊紀錄，重新寫入（確保 snapshot 資料最新）
             db.SalaryRecords.Remove(existing);
             await db.SaveChangesAsync();
         }
@@ -198,24 +186,6 @@ public class SalaryCalculationService(AppDbContext db)
         return record;
     }
 
-    // ── 更新單筆員工的額外項目 ───────────────────────────────────────────
-    public async Task UpdateBonusItemsAsync(int employeeRecordId, List<SalaryBonusItem> items)
-    {
-        var old = db.SalaryBonusItems.Where(b => b.SalaryEmployeeRecordId == employeeRecordId);
-        db.SalaryBonusItems.RemoveRange(old);
-
-        foreach (var item in items)
-        {
-            item.Id = 0;
-            item.SalaryEmployeeRecordId = employeeRecordId;
-            db.SalaryBonusItems.Add(item);
-        }
-
-        await db.SaveChangesAsync();
-    }
-
-    public async Task DeleteAsync(int recordId)
-    {
+    public async Task DeleteAsync(int recordId) =>
         await db.SalaryRecords.Where(r => r.Id == recordId).ExecuteDeleteAsync();
-    }
 }

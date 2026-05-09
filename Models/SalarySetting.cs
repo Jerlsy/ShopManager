@@ -7,31 +7,30 @@ public class SalarySetting
 {
     [Key] public int Id { get; set; }
     public Guid ShopId { get; set; }
-    [Required] public string Alias { get; set; } = string.Empty;    // 薪資別名
-    public string Description { get; set; } = string.Empty;         // 描述
-    public SalaryType Type { get; set; } = SalaryType.Hourly;       // 類型
+    [Required] public string Alias { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public SalaryType Type { get; set; } = SalaryType.Hourly;
 
     // ── 時薪制 ──────────────────────────────
-    public decimal? HourlyRate { get; set; }                         // 時薪
+    public decimal? HourlyRate { get; set; }        // 平日時薪
 
     // ── 月薪制 ──────────────────────────────
-    public decimal? MonthlyBase { get; set; }                        // 底薪
+    public decimal? MonthlyBase { get; set; }        // 底薪
 
-    // ── 合同制 ──────────────────────────────
-    public decimal? ContractAmount { get; set; }                     // 合同金額
-    public string ContractCycle { get; set; } = string.Empty;       // 計薪週期（月/案件）
+    // ── 舊欄位相容（DB 有 NOT NULL 約束，保留避免寫入失敗）──────
+    public decimal? ContractAmount { get; set; }
+    public string ContractCycle { get; set; } = string.Empty;
 
     // ── 共用設定 ────────────────────────────
-    public decimal? OT1Rate { get; set; }       // 延長工時費率1（null = 採用法規預設）
-    public decimal? OT2Rate { get; set; }       // 延長工時費率2
-    public decimal? HolidayRate { get; set; }   // 假日加班費率
-    public double? DailyMaxHours { get; set; }  // 每日正常工時上限
-    public double? WeeklyMaxHours { get; set; } // 每周正常工時上限
+    public decimal? OT1Rate { get; set; }
+    public decimal? OT2Rate { get; set; }
+    public decimal? HolidayRate { get; set; }
+    public double? DailyMaxHours { get; set; }
+    public double? WeeklyMaxHours { get; set; }
 }
 
 public enum SalaryType
 {
-    Hourly = 0,     // 時薪
-    Monthly = 1,    // 月薪
-    Contract = 2    // 合同
+    Hourly = 0,
+    Monthly = 1,
 }

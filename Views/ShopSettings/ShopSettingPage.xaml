@@ -2,7 +2,8 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
-             xmlns:vm="clr-namespace:ShopManager.ViewModels">
+             xmlns:vm="clr-namespace:ShopManager.ViewModels"
+             xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf">
 
     <StackPanel Margin="{DynamicResource PageMargin}">
             <!-- 頁面標題 -->
@@ -323,9 +324,9 @@
                                  AcceptsReturn="True" TextWrapping="Wrap" MinLines="2" MaxLines="5"
                                  VerticalScrollBarVisibility="Auto"/>
 
-                        <TextBlock Text="離職告別訊息" Style="{StaticResource FieldLabelStyle}" Margin="0,10,0,6"/>
+                        <TextBlock Text="解除綁定訊息" Style="{StaticResource FieldLabelStyle}" Margin="0,10,0,6"/>
                         <TextBox Text="{Binding LineResignMessage, UpdateSourceTrigger=PropertyChanged}"
-                                 md:HintAssist.Hint="例：感謝您的付出，祝您前程順利！"
+                                 md:HintAssist.Hint="例：感謝您的付出，您的 LINE 已與排班系統解除連結！"
                                  AcceptsReturn="True" TextWrapping="Wrap" MinLines="2" MaxLines="5"
                                  VerticalScrollBarVisibility="Auto"/>
                         <TextBlock Text="可使用 {name} 代入員工姓名" FontSize="11" Opacity="0.6" Margin="0,4,0,0"/>
@@ -339,6 +340,41 @@
                             </StackPanel>
                         </Button>
                     </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- 備註 -->
+            <Border Style="{StaticResource SectionCardStyle}" Margin="0,0,0,20"
+                    PreviewMouseWheel="Section_PreviewMouseWheel">
+                <StackPanel>
+                    <Grid Margin="0,0,0,4">
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="備註" Style="{StaticResource SectionTitleStyle}" Margin="0"/>
+                            <TextBlock Text="自由記錄店鋪相關事項，支援粗體、顏色、超連結等格式" Style="{StaticResource CaptionTextStyle}" Margin="0,2,0,0"/>
+                        </StackPanel>
+                        <Button HorizontalAlignment="Right" Style="{StaticResource MaterialDesignFlatButton}"
+                                Click="EditNotes_Click" Height="36" Padding="12,0" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal">
+                                <md:PackIcon Kind="PencilOutline" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="編輯備註"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+
+                    <Border Margin="0,12,0,0"
+                            BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="8"
+                            ClipToBounds="True" MinHeight="80">
+                        <Grid>
+                            <TextBlock x:Name="NotesPlaceholder"
+                                       Text="（尚無備註，點擊「編輯備註」開始輸入）"
+                                       Style="{StaticResource CaptionTextStyle}"
+                                       VerticalAlignment="Center" HorizontalAlignment="Center"
+                                       Margin="0,24"/>
+                            <wv2:WebView2 x:Name="NotesPreviewWebView"
+                                          Height="60"
+                                          Visibility="Collapsed"/>
+                        </Grid>
+                    </Border>
                 </StackPanel>
             </Border>
 
