@@ -55,6 +55,7 @@ public partial class ExportScheduleWindow : Window
     private static RenderTargetBitmap RenderSchedule(ExportScheduleData data)
     {
         const double dpi    = 96;
+        const double scale  = 1.5;
         const double nameW  = 90;   // 員工姓名欄寬
         const double cellW  = 44;   // 日期格寬
         const double titleH = 44;   // 標題列高
@@ -242,7 +243,10 @@ public partial class ExportScheduleWindow : Window
             }
         }
 
-        var rtb = new RenderTargetBitmap((int)totalW, (int)totalH, dpi, dpi, PixelFormats.Pbgra32);
+        visual.Transform = new ScaleTransform(scale, scale);
+        var rtb = new RenderTargetBitmap(
+            (int)(totalW * scale), (int)(totalH * scale),
+            dpi, dpi, PixelFormats.Pbgra32);
         rtb.Render(visual);
         return rtb;
     }
