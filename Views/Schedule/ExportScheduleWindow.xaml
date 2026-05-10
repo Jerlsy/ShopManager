@@ -3,17 +3,18 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
         Title="班表匯出"
-        Width="960" Height="640"
-        MinWidth="600" MinHeight="400"
+        Width="960" Height="680"
+        MinWidth="600" MinHeight="440"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource AppShellBackgroundBrush}">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- 預覽區：Stretch=Uniform 自動縮放至最適合大小 -->
+        <!-- 預覽區 -->
         <Grid Grid.Row="0">
             <Image x:Name="PreviewImage"
                    Margin="20"
@@ -23,8 +24,73 @@
                    RenderOptions.BitmapScalingMode="HighQuality"/>
         </Grid>
 
+        <!-- LINE 推播區（有收件人時顯示）-->
+        <Border x:Name="LinePushPanel" Grid.Row="1"
+                BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,1,0,0"
+                Background="{DynamicResource AppPanelAltBrush}" Padding="16,12"
+                Visibility="Collapsed">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- 標題 -->
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+                    <md:PackIcon Kind="Send" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"
+                                 Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                    <TextBlock Text="LINE 推播班表圖片" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- 收件人清單 -->
+                <ItemsControl x:Name="RecipientList" Grid.Row="1" Margin="0,0,0,10">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                      Margin="0,0,20,6" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal">
+                                    <Border Width="26" Height="26" CornerRadius="13"
+                                            Background="{Binding CircleBrush}" Margin="0,0,6,0">
+                                        <TextBlock Text="{Binding Initial}" Foreground="White"
+                                                   FontSize="12" FontWeight="SemiBold"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding DisplayName}" FontSize="13"/>
+                                        <TextBlock Text="{Binding SourceLabel}" FontSize="11"
+                                                   Foreground="{DynamicResource AppSubtleTextBrush}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </CheckBox>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- 操作按鈕 -->
+                <StackPanel Grid.Row="2" Orientation="Horizontal">
+                    <Button Style="{StaticResource MaterialDesignFlatButton}"
+                            Margin="0,0,8,0" Click="ToggleAll_Click">
+                        <TextBlock Text="全選 / 取消"/>
+                    </Button>
+                    <Button Style="{StaticResource MaterialDesignRaisedButton}"
+                            Click="PushLine_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <md:PackIcon Kind="Send" Width="16" Height="16" Margin="0,0,6,0"/>
+                            <TextBlock Text="確定推播"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
         <!-- 工具列 -->
-        <Border Grid.Row="1"
+        <Border Grid.Row="2"
                 BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,1,0,0"
                 Background="{DynamicResource AppSurfaceBrush}" Padding="16,12">
             <Grid>

@@ -53,6 +53,17 @@ public partial class ScheduleViewModel
                 $"{s.StartTime:HH\\:mm}–{s.EndTime:HH\\:mm}"))
             .ToList();
 
+        // 推播收件人：從 DB 重新取得最新員工資料（避免快照缺少新綁定的 LineUserId）
+        var freshEmployees = await _employeeService.GetAllAsync();
+        var freshById      = freshEmployees.ToDictionary(e => e.Id);
+        var pushRecipients = ActiveEmployees
+            .Select(e => freshById.TryGetValue(e.Id, out var fresh) ? fresh : e)
+            .Where(e => !string.IsNullOrEmpty(e.LineUserId))
+            .Select(e => new ExportScheduleData.PushRecipient(e.LineUserId!, e.Name, null, false))
+            .Concat((setting?.OwnerLineBindings ?? new())
+                .Select(o => new ExportScheduleData.PushRecipient(o.UserId, o.DisplayName, o.PictureUrl, true)))
+            .ToList();
+
         return new ExportScheduleData
         {
             ShopName = shopName,
@@ -62,6 +73,10 @@ public partial class ScheduleViewModel
             Columns = columns,
             Rows = rows,
             ShiftLegend = legend,
+            PushRecipients = pushRecipients,
+            LineChannelAccessToken = setting?.LineChannelAccessToken,
+            LineWorkerUrl = setting?.LineWorkerUrl,
+            LineWorkerApiKey = setting?.LineWorkerApiKey,
         };
     }
 }

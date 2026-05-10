@@ -1,5 +1,7 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
 using ShopManager.Models;
+using ShopManager.Services;
 using System.Globalization;
 using System.IO;
 using System.Windows;
@@ -12,6 +14,7 @@ public partial class ExportScheduleWindow : Window
 {
     private readonly ExportScheduleData _data;
     private RenderTargetBitmap? _bitmap;
+    private readonly List<PushRecipientItem> _recipients = new();
 
     public ExportScheduleWindow(ExportScheduleData data)
     {
@@ -22,7 +25,85 @@ public partial class ExportScheduleWindow : Window
         {
             _bitmap = RenderSchedule(data);
             PreviewImage.Source = _bitmap;
+            SetupLinePushPanel(data);
         };
+    }
+
+    private void SetupLinePushPanel(ExportScheduleData data)
+    {
+        if (data.PushRecipients.Count == 0
+            || string.IsNullOrEmpty(data.LineChannelAccessToken)
+            || string.IsNullOrEmpty(data.LineWorkerUrl)
+            || string.IsNullOrEmpty(data.LineWorkerApiKey))
+            return;
+
+        foreach (var r in data.PushRecipients)
+            _recipients.Add(new PushRecipientItem(r));
+
+        RecipientList.ItemsSource = _recipients;
+        LinePushPanel.Visibility = Visibility.Visible;
+    }
+
+    private void ToggleAll_Click(object sender, RoutedEventArgs e)
+    {
+        bool allSelected = _recipients.All(r => r.IsSelected);
+        foreach (var r in _recipients)
+            r.IsSelected = !allSelected;
+        RecipientList.ItemsSource = null;
+        RecipientList.ItemsSource = _recipients;
+    }
+
+    private async void PushLine_Click(object sender, RoutedEventArgs e)
+    {
+        var selected = _recipients.Where(r => r.IsSelected).ToList();
+        var snackbar = App.Services.GetRequiredService<IAppSnackbarService>();
+
+        if (selected.Count == 0) { snackbar.ShowWarning("請先勾選至少一位收件人"); return; }
+
+        var confirmed = await App.Services.GetRequiredService<IAppDialogService>()
+            .ShowConfirmAsync("確定推播",
+                $"確定要將本月班表圖片推播給 {selected.Count} 位收件人？",
+                "確定推播", "取消");
+        if (!confirmed) return;
+
+        var pushBtn = (System.Windows.Controls.Button)sender;
+        pushBtn.IsEnabled = false;
+
+        if (_bitmap is null) { pushBtn.IsEnabled = true; return; }
+
+        // 編碼為 PNG bytes
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(_bitmap));
+        using var ms = new MemoryStream();
+        encoder.Save(ms);
+        var pngBytes = ms.ToArray();
+
+        var lineService = App.Services.GetRequiredService<LineService>();
+        var uploaded = await lineService.UploadScheduleImageAsync(
+            _data.LineWorkerUrl!, _data.LineWorkerApiKey!, pngBytes);
+        if (uploaded is null)
+        {
+            snackbar.ShowError("圖片上傳失敗，請確認 Worker URL 與 API Key");
+            pushBtn.IsEnabled = true;
+            return;
+        }
+        var (imageUrl, imageKey) = uploaded.Value;
+
+        var results = await Task.WhenAll(
+            selected.Select(r => lineService.PushImageAsync(
+                _data.LineChannelAccessToken!, r.Recipient.UserId, imageUrl)));
+        int ok = results.Count(r => r);
+
+        _ = Task.Delay(TimeSpan.FromMinutes(5)).ContinueWith(_ =>
+            lineService.DeleteScheduleImageAsync(_data.LineWorkerUrl!, _data.LineWorkerApiKey!, imageKey));
+
+        if (ok == selected.Count)
+            snackbar.ShowSuccess($"已成功推播給 {ok} 位收件人");
+        else
+        {
+            snackbar.ShowWarning($"推播完成：{ok}/{selected.Count} 位成功，可再次推播");
+            pushBtn.IsEnabled = true;
+        }
     }
 
     private void SaveImage_Click(object sender, RoutedEventArgs e)
@@ -48,6 +129,30 @@ public partial class ExportScheduleWindow : Window
     }
 
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
+
+    // ── 收件人項目（供 ItemsControl DataTemplate 繫結）────────────────────────
+    public sealed class PushRecipientItem
+    {
+        private static readonly SolidColorBrush EmployeeBrush;
+        private static readonly SolidColorBrush OwnerBrush;
+
+        static PushRecipientItem()
+        {
+            EmployeeBrush = new SolidColorBrush(Color.FromRgb(0x4A, 0x90, 0xD9)); EmployeeBrush.Freeze();
+            OwnerBrush    = new SolidColorBrush(Color.FromRgb(0x3D, 0xAA, 0x70)); OwnerBrush.Freeze();
+        }
+
+        public PushRecipientItem(ExportScheduleData.PushRecipient r) => Recipient = r;
+
+        public ExportScheduleData.PushRecipient Recipient { get; }
+        public bool IsSelected { get; set; } = true;
+
+        public string DisplayName => Recipient.DisplayName;
+        public string SourceLabel => Recipient.IsOwner ? "業主" : "員工";
+        public string Initial     => string.IsNullOrEmpty(Recipient.DisplayName)
+                                     ? "?" : Recipient.DisplayName[0].ToString();
+        public SolidColorBrush CircleBrush => Recipient.IsOwner ? OwnerBrush : EmployeeBrush;
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // 班表圖片渲染

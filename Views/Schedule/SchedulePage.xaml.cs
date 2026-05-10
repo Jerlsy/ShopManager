@@ -1,10 +1,6 @@
-using Microsoft.Extensions.DependencyInjection;
 using ShopManager.Models;
-using ShopManager.Services;
 using ShopManager.ViewModels;
 using System.ComponentModel;
-using System.IO;
-using System.Windows.Media.Imaging;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -401,70 +397,6 @@ public partial class SchedulePage : UserControl
         win.Show();
     }
 
-    // ── 推播班表 ────────────────────────────────────────────────────────────
-    private async void PushScheduleToLine_Click(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is not ScheduleViewModel vm) return;
-        var snackbar = App.Services.GetRequiredService<IAppSnackbarService>();
-
-        var setting = await App.Services.GetRequiredService<ShopSettingService>().GetAsync();
-        if (string.IsNullOrEmpty(setting?.LineChannelAccessToken))
-        {
-            snackbar.ShowWarning("請先在系統設定中設定 LINE Channel Access Token");
-            return;
-        }
-        if (string.IsNullOrEmpty(setting.LineWorkerUrl) || string.IsNullOrEmpty(setting.LineWorkerApiKey))
-        {
-            snackbar.ShowWarning("請先在系統設定中設定 LINE Worker URL 與 API Key");
-            return;
-        }
-
-        var boundEmployees = vm.ActiveEmployees
-            .Where(emp => !string.IsNullOrEmpty(emp.LineUserId))
-            .ToList();
-        if (boundEmployees.Count == 0)
-        {
-            snackbar.ShowWarning("目前沒有員工綁定 LINE 帳號，請至員工資料設定");
-            return;
-        }
-
-        // 渲染班表圖片並編碼為 PNG
-        var data = await vm.BuildExportDataAsync();
-        if (data is null) return;
-        var bitmap  = ExportScheduleWindow.RenderSchedule(data);
-        var encoder = new PngBitmapEncoder();
-        encoder.Frames.Add(BitmapFrame.Create(bitmap));
-        using var ms = new MemoryStream();
-        encoder.Save(ms);
-        var pngBytes = ms.ToArray();
-
-        // 上傳到 R2
-        var lineService = App.Services.GetRequiredService<LineService>();
-        var uploaded = await lineService.UploadScheduleImageAsync(
-            setting.LineWorkerUrl, setting.LineWorkerApiKey, pngBytes);
-        if (uploaded is null)
-        {
-            snackbar.ShowError("圖片上傳失敗，請確認 Worker URL 與 API Key 是否正確");
-            return;
-        }
-        var (imageUrl, imageKey) = uploaded.Value;
-
-        // 推播給所有已綁定員工
-        var results = await Task.WhenAll(
-            boundEmployees.Select(emp =>
-                lineService.PushImageAsync(setting.LineChannelAccessToken, emp.LineUserId!, imageUrl)));
-        int successCount = results.Count(r => r);
-
-        // 5 分鐘後刪除 R2 暫存圖片
-        _ = Task.Delay(TimeSpan.FromMinutes(5)).ContinueWith(_ =>
-            lineService.DeleteScheduleImageAsync(
-                setting.LineWorkerUrl, setting.LineWorkerApiKey, imageKey));
-
-        if (successCount == boundEmployees.Count)
-            snackbar.ShowSuccess($"已成功推播班表給 {successCount} 位員工");
-        else
-            snackbar.ShowWarning($"推播完成：{successCount}/{boundEmployees.Count} 位成功");
-    }
 
     // ── 滾輪事件修正 ────────────────────────────────────────────────────────
     // 問題根源：section card 內的元素（AllowDrop 班表色塊、員工卡片等）攔截了

@@ -40,7 +40,14 @@
       "Bash(dotnet tool *)",
       "Bash(Remove-Item *)",
       "Bash(xargs wc *)",
-      "Bash(Write-Host \"Deleted old ScheduleViewModel.cs\")"
+      "Bash(Write-Host \"Deleted old ScheduleViewModel.cs\")",
+      "Bash(sqlite3 \"bin\\\\Debug\\\\net10.0-windows\\\\shopmanager.db\" \".tables\")",
+      "Bash(dotnet test *)",
+      "Bash(Select-String \"鎖定|05/0[1-9]|⚠|OK\\\\\\(\")",
+      "Bash(Select-Object -First 50)",
+      "PowerShell(dotnet test *)",
+      "Bash(dotnet add *)",
+      "Bash(Select-String -Pattern \"error CS|建置成功|Build succeeded|error MSB30\")"
     ]
   }
 }
