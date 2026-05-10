@@ -49,50 +49,67 @@ public partial class ExportScheduleWindow : Window
 
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
 
-    // ── 班表圖片渲染（DrawingVisual → RenderTargetBitmap）──────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    // 班表圖片渲染
+    // ─────────────────────────────────────────────────────────────────────────
     private static RenderTargetBitmap RenderSchedule(ExportScheduleData data)
     {
         const double dpi    = 96;
-        const double nameW  = 90;
-        const double cellW  = 44;
-        const double titleH = 44;
-        const double colH   = 46;
-        const double rowH   = 34;
-
-        double totalW = nameW + data.DaysInMonth * cellW;
-        double totalH = titleH + colH + data.Rows.Count * rowH + 1;
+        const double nameW  = 90;   // 員工姓名欄寬
+        const double cellW  = 44;   // 日期格寬
+        const double titleH = 44;   // 標題列高
+        const double colH   = 46;   // 欄標題高
+        const double rowH   = 34;   // 資料列高
+        const double legendH = 28;  // 每條圖例高
+        const double legendPad = 14; // 圖例區上下留白
+        const double legendSwatchSize = 14; // 色塊大小
 
         var fontFamily  = new FontFamily("Microsoft JhengHei UI, Microsoft JhengHei, sans-serif");
-        var normalFace  = new Typeface(fontFamily, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
-        var boldFace    = new Typeface(fontFamily, FontStyles.Normal, FontWeights.Bold,   FontStretches.Normal);
-        var semiBoldFace= new Typeface(fontFamily, FontStyles.Normal, FontWeights.SemiBold,FontStretches.Normal);
+        var normalFace  = new Typeface(fontFamily, FontStyles.Normal, FontWeights.Normal,   FontStretches.Normal);
+        var boldFace    = new Typeface(fontFamily, FontStyles.Normal, FontWeights.Bold,     FontStretches.Normal);
+        var semiBoldFace= new Typeface(fontFamily, FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
 
-        // 預先凍結畫筆以提升效能
-        var pen05 = new Pen(new SolidColorBrush(Color.FromRgb(0xCC, 0xCC, 0xCC)), 0.5); pen05.Freeze();
-        var pen10 = new Pen(new SolidColorBrush(Color.FromRgb(0x99, 0xAA, 0xBB)), 1.0); pen10.Freeze();
+        // 班別顏色快取（附透明度以配合淡色格）
+        var colorMap = data.ShiftLegend.ToDictionary(
+            l => l.Id,
+            l => ParseHex(l.ColorHex));
+
+        double tableW = nameW + data.DaysInMonth * cellW;
+        double tableH = colH + data.Rows.Count * rowH;
+
+        // 圖例區高度（至少保留留白，有圖例才算）
+        double legendAreaH = data.ShiftLegend.Count > 0
+            ? legendPad * 2 + data.ShiftLegend.Count * legendH
+            : 0;
+
+        double totalW = tableW;
+        double totalH = titleH + tableH + legendAreaH + 1;
+
+        var pen05 = FreezePen(Color.FromRgb(0xCC, 0xCC, 0xCC), 0.5);
+        var pen10 = FreezePen(Color.FromRgb(0x99, 0xAA, 0xBB), 1.0);
 
         var visual = new DrawingVisual();
         using (var dc = visual.RenderOpen())
         {
-            // 白色底
+            // 白底
             dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, totalW, totalH));
 
             // ── 標題列 ──────────────────────────────────────────────────────
-            var titleBg = new SolidColorBrush(Color.FromRgb(0x2A, 0x5C, 0x8A)); titleBg.Freeze();
+            var titleBg = FreezeColor(Color.FromRgb(0x2A, 0x5C, 0x8A));
             dc.DrawRectangle(titleBg, null, new Rect(0, 0, totalW, titleH));
             var titleT = Fmt($"{data.ShopName}　{data.Year} 年 {data.Month} 月　班表", boldFace, 15, Brushes.White);
             dc.DrawText(titleT, new Point(14, (titleH - titleT.Height) / 2));
 
-            // ── 欄位標題列 ───────────────────────────────────────────────────
-            var colBg = new SolidColorBrush(Color.FromRgb(0xE3, 0xEE, 0xF7)); colBg.Freeze();
-            dc.DrawRectangle(colBg, null, new Rect(0, titleH, totalW, colH));
+            // ── 欄標題列 ─────────────────────────────────────────────────────
+            double colY = titleH;
+            var colHeaderBg = FreezeColor(Color.FromRgb(0xE3, 0xEE, 0xF7));
+            dc.DrawRectangle(colHeaderBg, null, new Rect(0, colY, totalW, colH));
 
             // 員工名稱欄標題
-            dc.DrawRectangle(null, pen10, new Rect(0, titleH, nameW, colH));
-            var nameHdrT = Fmt("員工", semiBoldFace, 12, new SolidColorBrush(Color.FromRgb(0x44, 0x66, 0x88)));
-            dc.DrawText(nameHdrT, new Point((nameW - nameHdrT.Width) / 2, titleH + (colH - nameHdrT.Height) / 2));
+            dc.DrawRectangle(null, pen10, new Rect(0, colY, nameW, colH));
+            var nameHdrT = Fmt("員工", semiBoldFace, 12, FreezeColor(Color.FromRgb(0x44, 0x66, 0x88)));
+            dc.DrawText(nameHdrT, new Point((nameW - nameHdrT.Width) / 2, colY + (colH - nameHdrT.Height) / 2));
 
-            // 各日欄標題
             for (int i = 0; i < data.Columns.Count; i++)
             {
                 var col = data.Columns[i];
@@ -102,33 +119,33 @@ public partial class ExportScheduleWindow : Window
                 Brush dowFg;
                 if (col.IsClosed)
                 {
-                    colCellBg = new SolidColorBrush(Color.FromRgb(0xD8, 0xD8, 0xD8));
+                    colCellBg = FreezeColor(Color.FromRgb(0xD5, 0xD5, 0xD5));
                     dowFg     = Brushes.Gray;
                 }
                 else if (col.DayOfWeekLabel == "日")
                 {
-                    colCellBg = new SolidColorBrush(Color.FromRgb(0xFF, 0xE3, 0xE3));
+                    colCellBg = FreezeColor(Color.FromRgb(0xFF, 0xE3, 0xE3));
                     dowFg     = Brushes.Crimson;
                 }
                 else if (col.DayOfWeekLabel == "六")
                 {
-                    colCellBg = new SolidColorBrush(Color.FromRgb(0xE3, 0xEE, 0xFF));
+                    colCellBg = FreezeColor(Color.FromRgb(0xE3, 0xEE, 0xFF));
                     dowFg     = Brushes.RoyalBlue;
                 }
                 else
                 {
-                    colCellBg = colBg;
-                    dowFg     = new SolidColorBrush(Color.FromRgb(0x44, 0x55, 0x66));
+                    colCellBg = colHeaderBg;
+                    dowFg     = FreezeColor(Color.FromRgb(0x44, 0x55, 0x66));
                 }
 
-                dc.DrawRectangle(colCellBg, null, new Rect(x, titleH, cellW, colH));
-                dc.DrawRectangle(null, pen05, new Rect(x, titleH, cellW, colH));
+                dc.DrawRectangle(colCellBg, null, new Rect(x, colY, cellW, colH));
+                dc.DrawRectangle(null, pen05, new Rect(x, colY, cellW, colH));
 
                 var dayT = Fmt(col.Day.ToString(), boldFace, 14, Brushes.Black);
-                dc.DrawText(dayT, new Point(x + (cellW - dayT.Width) / 2, titleH + 4));
+                dc.DrawText(dayT, new Point(x + (cellW - dayT.Width) / 2, colY + 4));
 
                 var dowT = Fmt(col.DayOfWeekLabel, normalFace, 11, dowFg);
-                dc.DrawText(dowT, new Point(x + (cellW - dowT.Width) / 2, titleH + colH - dowT.Height - 5));
+                dc.DrawText(dowT, new Point(x + (cellW - dowT.Width) / 2, colY + colH - dowT.Height - 5));
             }
 
             // ── 資料列 ───────────────────────────────────────────────────────
@@ -137,9 +154,10 @@ public partial class ExportScheduleWindow : Window
                 var row  = data.Rows[r];
                 double y = titleH + colH + r * rowH;
 
+                // 交替底色
                 var rowBg = r % 2 == 0
                     ? Brushes.White
-                    : (Brush)new SolidColorBrush(Color.FromRgb(0xF6, 0xFA, 0xFD));
+                    : (Brush)FreezeColor(Color.FromRgb(0xF6, 0xFA, 0xFD));
                 dc.DrawRectangle(rowBg, null, new Rect(0, y, totalW, rowH));
 
                 // 員工姓名格
@@ -147,48 +165,107 @@ public partial class ExportScheduleWindow : Window
                 var nameT = Fmt(row.Name, semiBoldFace, 13, Brushes.Black);
                 dc.DrawText(nameT, new Point(8, y + (rowH - nameT.Height) / 2));
 
-                // 班次格
-                for (int c = 0; c < row.Cells.Count && c < data.Columns.Count; c++)
+                // 班次格（以顏色填滿）
+                for (int c = 0; c < row.ShiftIds.Count && c < data.Columns.Count; c++)
                 {
-                    var col      = data.Columns[c];
-                    var cellText = row.Cells[c];
-                    var x        = nameW + c * cellW;
-
-                    Brush? cellBg = null;
-                    Brush  cellFg = Brushes.Black;
+                    var col     = data.Columns[c];
+                    var shiftId = row.ShiftIds[c];
+                    var x       = nameW + c * cellW;
 
                     if (col.IsClosed)
                     {
-                        cellBg = new SolidColorBrush(Color.FromRgb(0xEB, 0xEB, 0xEB));
-                        cellFg = Brushes.Gray;
+                        // 店休：深灰格
+                        dc.DrawRectangle(FreezeColor(Color.FromRgb(0xE0, 0xE0, 0xE0)), null, new Rect(x, y, cellW, rowH));
+                        var closedT = Fmt("休", normalFace, 11, Brushes.Gray);
+                        dc.DrawText(closedT, new Point(x + (cellW - closedT.Width) / 2, y + (rowH - closedT.Height) / 2));
                     }
-                    else if (!string.IsNullOrEmpty(cellText))
+                    else if (shiftId.HasValue && colorMap.TryGetValue(shiftId.Value, out var shiftColor))
                     {
-                        if (col.DayOfWeekLabel == "日")
-                            cellBg = new SolidColorBrush(Color.FromRgb(0xFF, 0xF0, 0xF0));
-                        else if (col.DayOfWeekLabel == "六")
-                            cellBg = new SolidColorBrush(Color.FromRgb(0xF0, 0xF4, 0xFF));
+                        // 有排班：以班別顏色塗滿（70% 不透明，保持視覺柔和）
+                        var fill = new SolidColorBrush(Color.FromArgb(0xCC, shiftColor.R, shiftColor.G, shiftColor.B));
+                        fill.Freeze();
+                        dc.DrawRectangle(fill, null, new Rect(x, y, cellW, rowH));
                     }
+                    // 未排班：保持列底色（空白）
 
-                    if (cellBg is not null) dc.DrawRectangle(cellBg, null, new Rect(x, y, cellW, rowH));
                     dc.DrawRectangle(null, pen05, new Rect(x, y, cellW, rowH));
-
-                    if (!string.IsNullOrEmpty(cellText))
-                    {
-                        var ct = Fmt(cellText, normalFace, 13, cellFg);
-                        dc.DrawText(ct, new Point(x + (cellW - ct.Width) / 2, y + (rowH - ct.Height) / 2));
-                    }
                 }
             }
 
-            // 最外框
-            var outerPen = new Pen(new SolidColorBrush(Color.FromRgb(0x99, 0xAA, 0xBB)), 1.5); outerPen.Freeze();
-            dc.DrawRectangle(null, outerPen, new Rect(0, titleH, totalW, totalH - titleH));
+            // 表格外框
+            var outerPen = FreezePen(Color.FromRgb(0x88, 0x99, 0xAA), 1.5);
+            dc.DrawRectangle(null, outerPen, new Rect(0, titleH, totalW, tableH));
+
+            // ── 圖例區 ───────────────────────────────────────────────────────
+            if (data.ShiftLegend.Count > 0)
+            {
+                double legendY = titleH + tableH;
+
+                // 圖例分隔線 + 背景
+                dc.DrawRectangle(FreezeColor(Color.FromRgb(0xF4, 0xF8, 0xFC)), null,
+                    new Rect(0, legendY, totalW, legendAreaH));
+                dc.DrawRectangle(null, FreezePen(Color.FromRgb(0xCC, 0xDD, 0xEE), 1.0),
+                    new Rect(0, legendY, totalW, legendAreaH));
+
+                // 標題「班別說明」
+                var legHdrT = Fmt("班別說明", semiBoldFace, 12, FreezeColor(Color.FromRgb(0x33, 0x55, 0x77)));
+                dc.DrawText(legHdrT, new Point(12, legendY + legendPad - legHdrT.Height - 2));
+
+                // 各班別圖例（橫排，自動換行）
+                double legX = 12;
+                double legItemY = legendY + legendPad;
+                double legItemW = 180; // 每個圖例項目的寬度
+
+                foreach (var leg in data.ShiftLegend)
+                {
+                    // 換行
+                    if (legX + legItemW > totalW - 12)
+                    {
+                        legX  = 12;
+                        legItemY += legendH;
+                    }
+
+                    // 色塊
+                    var sc = ParseHex(leg.ColorHex);
+                    var swatchBrush = new SolidColorBrush(sc); swatchBrush.Freeze();
+                    dc.DrawRectangle(swatchBrush, FreezePen(Color.FromRgb(0x88, 0x88, 0x88), 0.5),
+                        new Rect(legX, legItemY + (legendH - legendSwatchSize) / 2,
+                            legendSwatchSize, legendSwatchSize));
+
+                    // 班名 + 時間
+                    var legText = Fmt($"{leg.Alias}  {leg.TimeRange}", normalFace, 12, Brushes.Black);
+                    dc.DrawText(legText, new Point(legX + legendSwatchSize + 6,
+                        legItemY + (legendH - legText.Height) / 2));
+
+                    legX += legItemW;
+                }
+            }
         }
 
         var rtb = new RenderTargetBitmap((int)totalW, (int)totalH, dpi, dpi, PixelFormats.Pbgra32);
         rtb.Render(visual);
         return rtb;
+    }
+
+    // ── 小工具 ────────────────────────────────────────────────────────────────
+    private static Color ParseHex(string hex)
+    {
+        try { return (Color)ColorConverter.ConvertFromString(hex); }
+        catch { return Colors.SteelBlue; }
+    }
+
+    private static SolidColorBrush FreezeColor(Color c)
+    {
+        var b = new SolidColorBrush(c);
+        b.Freeze();
+        return b;
+    }
+
+    private static Pen FreezePen(Color c, double thickness)
+    {
+        var p = new Pen(new SolidColorBrush(c), thickness);
+        p.Freeze();
+        return p;
     }
 
     private static FormattedText Fmt(string text, Typeface typeface, double size, Brush fg) =>

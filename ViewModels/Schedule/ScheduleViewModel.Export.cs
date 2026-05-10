@@ -23,23 +23,35 @@ public partial class ScheduleViewModel
                 _monthHolidays.GetValueOrDefault(d));
         }).ToList();
 
-        var shiftAliases = EnabledShifts.ToDictionary(s => s.Id, s => s.Alias);
+        // 每位員工每天的班別 ID（null = 未排）
         var entryByEmp = CurrentSchedule.Entries
             .GroupBy(e => e.EmployeeId)
             .ToDictionary(
                 g => g.Key,
-                g => g.ToDictionary(e => e.Date.Day,
-                    e => shiftAliases.GetValueOrDefault(e.ShiftSettingId, "?")));
+                g => g.ToDictionary(e => e.Date.Day, e => e.ShiftSettingId));
 
         var rows = ActiveEmployees.Select(emp =>
         {
             var dayShifts = entryByEmp.GetValueOrDefault(emp.Id, new());
-            IReadOnlyList<string> cells = Enumerable.Range(1, daysInMonth)
-                .Select(d => columns[d - 1].IsClosed ? "休"
-                    : dayShifts.TryGetValue(d, out var alias) ? alias : "")
+            IReadOnlyList<int?> shiftIds = Enumerable.Range(1, daysInMonth)
+                .Select(d => dayShifts.TryGetValue(d, out var id) ? (int?)id : null)
                 .ToList();
-            return new ExportScheduleData.EmployeeRow(emp.Name, cells);
+            return new ExportScheduleData.EmployeeRow(emp.Name, shiftIds);
         }).ToList();
+
+        // 圖例：只列出本月實際出現的班別，按 EnabledShifts 原始順序
+        var usedShiftIds = CurrentSchedule.Entries
+            .Select(e => e.ShiftSettingId)
+            .ToHashSet();
+
+        var legend = EnabledShifts
+            .Where(s => usedShiftIds.Contains(s.Id))
+            .Select(s => new ExportScheduleData.ShiftLegendItem(
+                s.Id,
+                s.Alias,
+                s.Color,
+                $"{s.StartTime:HH\\:mm}–{s.EndTime:HH\\:mm}"))
+            .ToList();
 
         return new ExportScheduleData
         {
@@ -49,6 +61,7 @@ public partial class ScheduleViewModel
             DaysInMonth = daysInMonth,
             Columns = columns,
             Rows = rows,
+            ShiftLegend = legend,
         };
     }
 }
