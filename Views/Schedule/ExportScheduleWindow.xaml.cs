@@ -54,7 +54,7 @@ public partial class ExportScheduleWindow : Window
     // 所有座標與字體直接以 1.5× 繪製，DrawingVisual 不做事後縮放，
     // 保證文字由 WPF 字型引擎在目標解析度下原生渲染，無鋸齒。
     // ─────────────────────────────────────────────────────────────────────────
-    private static RenderTargetBitmap RenderSchedule(ExportScheduleData data)
+    internal static RenderTargetBitmap RenderSchedule(ExportScheduleData data)
     {
         const double dpi   = 96;
         const double scale = 1.5;

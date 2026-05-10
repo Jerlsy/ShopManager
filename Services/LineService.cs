@@ -102,6 +102,41 @@ public class LineService
         catch { return ("未知", null); }
     }
 
+    public async Task<(string Url, string Key)?> UploadScheduleImageAsync(
+        string workerUrl, string apiKey, byte[] pngBytes)
+    {
+        var url = workerUrl.TrimEnd('/') + "/upload-image";
+        using var req = new HttpRequestMessage(HttpMethod.Post, url);
+        req.Headers.Add("X-Api-Key", apiKey);
+        req.Content = new ByteArrayContent(pngBytes);
+        req.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/png");
+        var res = await _http.SendAsync(req);
+        if (!res.IsSuccessStatusCode) return null;
+        var json = await res.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        return (json.GetProperty("url").GetString()!, json.GetProperty("key").GetString()!);
+    }
+
+    public async Task<bool> PushImageAsync(string token, string userId, string imageUrl)
+    {
+        var body = JsonSerializer.Serialize(new
+        {
+            to       = userId,
+            messages = new[] { new { type = "image", originalContentUrl = imageUrl, previewImageUrl = imageUrl } }
+        });
+        using var req = CreateAuthorizedRequest(HttpMethod.Post, "https://api.line.me/v2/bot/message/push", token);
+        req.Content = new StringContent(body, Encoding.UTF8, "application/json");
+        var res = await _http.SendAsync(req);
+        return res.IsSuccessStatusCode;
+    }
+
+    public async Task DeleteScheduleImageAsync(string workerUrl, string apiKey, string key)
+    {
+        var url = workerUrl.TrimEnd('/') + $"/delete-image?key={Uri.EscapeDataString(key)}";
+        using var req = new HttpRequestMessage(HttpMethod.Delete, url);
+        req.Headers.Add("X-Api-Key", apiKey);
+        await _http.SendAsync(req);
+    }
+
     public async Task<bool> PushMessageAsync(string token, string userId, string text)
     {
         var body = JsonSerializer.Serialize(new

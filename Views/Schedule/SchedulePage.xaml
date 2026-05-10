@@ -116,6 +116,17 @@
                             <TextBlock Text="轉存班表"/>
                         </StackPanel>
                     </Button>
+
+                    <!-- 推播班表 -->
+                    <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Click="PushScheduleToLine_Click"
+                            Visibility="{Binding HasSchedule, Converter={StaticResource BoolToVisibilityConverter}}"
+                            Margin="8,0,0,0" ToolTip="將本月班表圖片推播給已綁定 LINE 的員工">
+                        <StackPanel Orientation="Horizontal">
+                            <md:PackIcon Kind="Send" Width="18" Height="18" Margin="0,0,6,0"/>
+                            <TextBlock Text="推播班表"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </Grid>
         </Border>
