@@ -59,7 +59,14 @@ public partial class ScheduleViewModel
         var pushRecipients = ActiveEmployees
             .Select(e => freshById.TryGetValue(e.Id, out var fresh) ? fresh : e)
             .Where(e => !string.IsNullOrEmpty(e.LineUserId))
-            .Select(e => new ExportScheduleData.PushRecipient(e.LineUserId!, e.Name, null, false))
+            .Select(e =>
+            {
+                var dayMap = entryByEmp.GetValueOrDefault(e.Id, new());
+                IReadOnlyList<int?> shiftIds = Enumerable.Range(1, daysInMonth)
+                    .Select(d => dayMap.TryGetValue(d, out var sid) ? (int?)sid : null)
+                    .ToList();
+                return new ExportScheduleData.PushRecipient(e.LineUserId!, e.Name, null, false, shiftIds);
+            })
             .Concat((setting?.OwnerLineBindings ?? new())
                 .Select(o => new ExportScheduleData.PushRecipient(o.UserId, o.DisplayName, o.PictureUrl, true)))
             .ToList();

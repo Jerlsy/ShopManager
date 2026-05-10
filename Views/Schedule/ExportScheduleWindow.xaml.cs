@@ -4,6 +4,7 @@ using ShopManager.Models;
 using ShopManager.Services;
 using System.Globalization;
 using System.IO;
+using System.Text;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -44,10 +45,21 @@ public partial class ExportScheduleWindow : Window
         LinePushPanel.Visibility = Visibility.Visible;
     }
 
+    private void RadioFullSchedule_Checked(object sender, RoutedEventArgs e) => SetOwnerEnabled(true);
+    private void RadioPersonalOnly_Checked(object sender, RoutedEventArgs e) => SetOwnerEnabled(false);
+
+    private void SetOwnerEnabled(bool enabled)
+    {
+        foreach (var r in _recipients.Where(r => r.Recipient.IsOwner))
+            r.IsEnabled = enabled;
+        RecipientList.ItemsSource = null;
+        RecipientList.ItemsSource = _recipients;
+    }
+
     private void ToggleAll_Click(object sender, RoutedEventArgs e)
     {
-        bool allSelected = _recipients.All(r => r.IsSelected);
-        foreach (var r in _recipients)
+        bool allSelected = _recipients.Where(r => r.IsEnabled).All(r => r.IsSelected);
+        foreach (var r in _recipients.Where(r => r.IsEnabled))
             r.IsSelected = !allSelected;
         RecipientList.ItemsSource = null;
         RecipientList.ItemsSource = _recipients;
@@ -55,55 +67,101 @@ public partial class ExportScheduleWindow : Window
 
     private async void PushLine_Click(object sender, RoutedEventArgs e)
     {
-        var selected = _recipients.Where(r => r.IsSelected).ToList();
+        bool isPersonal = RadioPersonalOnly.IsChecked == true;
+        var selected    = _recipients.Where(r => r.IsSelected).ToList();
+        var targets     = isPersonal ? selected.Where(r => !r.Recipient.IsOwner).ToList() : selected;
+
         var snackbar = App.Services.GetRequiredService<IAppSnackbarService>();
+        if (targets.Count == 0)
+        {
+            snackbar.ShowWarning(isPersonal ? "個人班表模式下須勾選至少一位員工（業主帳號不適用）" : "請先勾選至少一位收件人");
+            return;
+        }
 
-        if (selected.Count == 0) { snackbar.ShowWarning("請先勾選至少一位收件人"); return; }
-
-        var confirmed = await App.Services.GetRequiredService<IAppDialogService>()
-            .ShowConfirmAsync("確定推播",
-                $"確定要將本月班表圖片推播給 {selected.Count} 位收件人？",
-                "確定推播", "取消");
+        string confirmMsg = isPersonal
+            ? $"確定要發送個人班表文字訊息給 {targets.Count} 位員工？"
+            : $"確定要將本月完整班表圖片推播給 {selected.Count} 位收件人？";
+        bool confirmed = await App.Services.GetRequiredService<IAppDialogService>()
+            .ShowConfirmAsync("確定推播", confirmMsg, "確定推播", "取消");
         if (!confirmed) return;
 
         var pushBtn = (System.Windows.Controls.Button)sender;
         pushBtn.IsEnabled = false;
 
-        if (_bitmap is null) { pushBtn.IsEnabled = true; return; }
-
-        // 編碼為 PNG bytes
-        var encoder = new PngBitmapEncoder();
-        encoder.Frames.Add(BitmapFrame.Create(_bitmap));
-        using var ms = new MemoryStream();
-        encoder.Save(ms);
-        var pngBytes = ms.ToArray();
-
         var lineService = App.Services.GetRequiredService<LineService>();
-        var uploaded = await lineService.UploadScheduleImageAsync(
-            _data.LineWorkerUrl!, _data.LineWorkerApiKey!, pngBytes);
-        if (uploaded is null)
+        int ok;
+
+        if (isPersonal)
         {
-            snackbar.ShowError("圖片上傳失敗，請確認 Worker URL 與 API Key");
-            pushBtn.IsEnabled = true;
-            return;
+            // 個人班表：每位員工收到自己的文字班表
+            var tasks = targets.Select(r =>
+                lineService.PushMessageAsync(
+                    _data.LineChannelAccessToken!, r.Recipient.UserId,
+                    BuildPersonalText(r.Recipient)));
+            ok = (await Task.WhenAll(tasks)).Count(r => r);
         }
-        var (imageUrl, imageKey) = uploaded.Value;
+        else
+        {
+            // 完整班表：所有收件人收到相同班表圖片
+            if (_bitmap is null) { pushBtn.IsEnabled = true; return; }
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(_bitmap));
+            using var ms = new MemoryStream();
+            encoder.Save(ms);
 
-        var results = await Task.WhenAll(
-            selected.Select(r => lineService.PushImageAsync(
-                _data.LineChannelAccessToken!, r.Recipient.UserId, imageUrl)));
-        int ok = results.Count(r => r);
+            var uploaded = await lineService.UploadScheduleImageAsync(
+                _data.LineWorkerUrl!, _data.LineWorkerApiKey!, ms.ToArray());
+            if (uploaded is null)
+            {
+                snackbar.ShowError("圖片上傳失敗，請確認 Worker URL 與 API Key");
+                pushBtn.IsEnabled = true;
+                return;
+            }
+            var (imageUrl, imageKey) = uploaded.Value;
 
-        _ = Task.Delay(TimeSpan.FromMinutes(5)).ContinueWith(_ =>
-            lineService.DeleteScheduleImageAsync(_data.LineWorkerUrl!, _data.LineWorkerApiKey!, imageKey));
+            ok = (await Task.WhenAll(
+                selected.Select(r => lineService.PushImageAsync(
+                    _data.LineChannelAccessToken!, r.Recipient.UserId, imageUrl))))
+                .Count(r => r);
 
-        if (ok == selected.Count)
+            _ = Task.Delay(TimeSpan.FromMinutes(5)).ContinueWith(_ =>
+                lineService.DeleteScheduleImageAsync(_data.LineWorkerUrl!, _data.LineWorkerApiKey!, imageKey));
+        }
+
+        if (ok == targets.Count)
             snackbar.ShowSuccess($"已成功推播給 {ok} 位收件人");
         else
         {
-            snackbar.ShowWarning($"推播完成：{ok}/{selected.Count} 位成功，可再次推播");
+            snackbar.ShowWarning($"推播完成：{ok}/{targets.Count} 位成功，可再次推播");
             pushBtn.IsEnabled = true;
         }
+    }
+
+    private string BuildPersonalText(ExportScheduleData.PushRecipient recipient)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"【{_data.ShopName}】{_data.Year} 年 {_data.Month} 月 個人班表");
+        sb.AppendLine($"您好 {recipient.DisplayName}，以下是您本月的排班：");
+        sb.AppendLine();
+
+        if (recipient.ShiftIds is null) return sb.ToString();
+
+        var legendById = _data.ShiftLegend.ToDictionary(l => l.Id);
+        bool hasAny = false;
+        for (int i = 0; i < recipient.ShiftIds.Count && i < _data.Columns.Count; i++)
+        {
+            var col     = _data.Columns[i];
+            var shiftId = recipient.ShiftIds[i];
+            if (!shiftId.HasValue) continue;
+
+            hasAny = true;
+            if (legendById.TryGetValue(shiftId.Value, out var leg))
+                sb.AppendLine($"{_data.Month:D2}/{col.Day:D2}（{col.DayOfWeekLabel}）{leg.Alias}　{leg.TimeRange}");
+        }
+        if (!hasAny)
+            sb.AppendLine("本月尚無排班紀錄。");
+
+        return sb.ToString().TrimEnd();
     }
 
     private void SaveImage_Click(object sender, RoutedEventArgs e)
@@ -146,6 +204,7 @@ public partial class ExportScheduleWindow : Window
 
         public ExportScheduleData.PushRecipient Recipient { get; }
         public bool IsSelected { get; set; } = true;
+        public bool IsEnabled  { get; set; } = true;
 
         public string DisplayName => Recipient.DisplayName;
         public string SourceLabel => Recipient.IsOwner ? "業主" : "員工";

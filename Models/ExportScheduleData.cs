@@ -23,5 +23,7 @@ public class ExportScheduleData
 
     public record ShiftLegendItem(int Id, string Alias, string ColorHex, string TimeRange);
 
-    public record PushRecipient(string UserId, string DisplayName, string? PictureUrl, bool IsOwner);
+    /// <summary>ShiftIds[i] 對應 Columns[i]，供個人班表文字訊息使用；業主帳號為 null。</summary>
+    public record PushRecipient(string UserId, string DisplayName, string? PictureUrl, bool IsOwner,
+        IReadOnlyList<int?>? ShiftIds = null);
 }
