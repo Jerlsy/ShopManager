@@ -13,20 +13,15 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- 預覽區 -->
-        <ScrollViewer Grid.Row="0"
-                      HorizontalScrollBarVisibility="Auto"
-                      VerticalScrollBarVisibility="Auto"
-                      Padding="20">
-            <Border>
-                <Border.Effect>
-                    <DropShadowEffect ShadowDepth="2" BlurRadius="10" Opacity="0.18"/>
-                </Border.Effect>
-                <Image x:Name="PreviewImage"
-                       RenderOptions.BitmapScalingMode="NearestNeighbor"
-                       Stretch="None"/>
-            </Border>
-        </ScrollViewer>
+        <!-- 預覽區：Stretch=Uniform 自動縮放至最適合大小 -->
+        <Grid Grid.Row="0">
+            <Image x:Name="PreviewImage"
+                   Margin="20"
+                   Stretch="Uniform"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   RenderOptions.BitmapScalingMode="HighQuality"/>
+        </Grid>
 
         <!-- 工具列 -->
         <Border Grid.Row="1"
