@@ -1,0 +1,60 @@
+<Window x:Class="ShopManager.Views.Schedule.ExportScheduleWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="班表匯出"
+        Width="960" Height="640"
+        MinWidth="600" MinHeight="400"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppShellBackgroundBrush}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 預覽區 -->
+        <ScrollViewer Grid.Row="0"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto"
+                      Padding="20">
+            <Border>
+                <Border.Effect>
+                    <DropShadowEffect ShadowDepth="2" BlurRadius="10" Opacity="0.18"/>
+                </Border.Effect>
+                <Image x:Name="PreviewImage"
+                       RenderOptions.BitmapScalingMode="NearestNeighbor"
+                       Stretch="None"/>
+            </Border>
+        </ScrollViewer>
+
+        <!-- 工具列 -->
+        <Border Grid.Row="1"
+                BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,1,0,0"
+                Background="{DynamicResource AppSurfaceBrush}" Padding="16,12">
+            <Grid>
+                <TextBlock VerticalAlignment="Center" Style="{StaticResource CaptionTextStyle}"
+                           Text="圖片寬度依員工人數與天數自動計算，匯出後可直接傳送至 LINE 群組。"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Style="{StaticResource MaterialDesignRaisedButton}"
+                            Margin="0,0,10,0" Click="SaveImage_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <md:PackIcon Kind="FileDownloadOutline" Width="18" Height="18" Margin="0,0,6,0"/>
+                            <TextBlock Text="儲存圖片 (PNG)"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Margin="0,0,10,0" Click="CopyToClipboard_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <md:PackIcon Kind="ContentCopy" Width="16" Height="16" Margin="0,0,6,0"/>
+                            <TextBlock Text="複製到剪貼簿"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource MaterialDesignFlatButton}" Click="Close_Click">
+                        <TextBlock Text="關閉"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

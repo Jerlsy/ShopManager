@@ -40,8 +40,9 @@ public class AppDbContext : DbContext
         base.OnModelCreating(modelBuilder);
 
         // ShopSetting
-        modelBuilder.Entity<ShopSetting>().Property(e => e.ContactInfos)    .HasConversion(JsonConv<ContactInfo>());
-        modelBuilder.Entity<ShopSetting>().Property(e => e.ClosedDaysOfWeek).HasConversion(JsonConv<int>());
+        modelBuilder.Entity<ShopSetting>().Property(e => e.ContactInfos)      .HasConversion(JsonConv<ContactInfo>());
+        modelBuilder.Entity<ShopSetting>().Property(e => e.ClosedDaysOfWeek) .HasConversion(JsonConv<int>());
+        modelBuilder.Entity<ShopSetting>().Property(e => e.OwnerLineBindings).HasConversion(JsonConv<OwnerLineBinding>());
 
         // ScheduleRule
         modelBuilder.Entity<ScheduleRule>().Property(e => e.FixedOffDays)         .HasConversion(JsonConv<int>());

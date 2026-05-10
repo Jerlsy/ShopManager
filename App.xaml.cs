@@ -224,6 +224,7 @@ public partial class App : Application
                 ("SalaryEmployeeRecords", "WeekdayPay",               "TEXT NOT NULL DEFAULT '0'"),
                 ("SalaryEmployeeRecords", "OverridePay",              "TEXT NOT NULL DEFAULT '0'"),
                 ("ShopSettings",         "Notes",                    "TEXT"),
+                ("ShopSettings",         "OwnerLineBindings",        "TEXT NOT NULL DEFAULT '[]'"),
             };
             foreach (var (table, col, type) in cols)
             {

@@ -130,6 +130,7 @@
             <helpers:NonZeroToVisibilityConverter x:Key="NonZeroToVisibilityConverter"/>
             <helpers:BonusTypeToCustomLabelVisibilityConverter x:Key="BonusTypeToCustomLabelVisibilityConverter"/>
             <helpers:BonusTypeToPresetLabelVisibilityConverter x:Key="BonusTypeToPresetLabelVisibilityConverter"/>
+            <helpers:UrlToImageConverter x:Key="UrlToImageConverter"/>
 
             <!-- ── 響應式佈局尺寸（由 App.xaml.cs ApplyLayoutScale 依螢幕寬度覆寫） ── -->
             <sys:Double x:Key="LayoutNavExpandedWidth">200</sys:Double>

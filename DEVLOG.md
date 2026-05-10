@@ -110,6 +110,57 @@
 - [ ] 薪資計算頁面：月份選擇 → 員工卡片（工時明細 + 薪資明細 + 額外項目）→ 儲存。
 - [ ] 最低薪資警示。
 
+### Phase 8：LINE 推播強化 — 店主帳號綁定（規劃中）
+
+> 依賴：店鋪設定已完成 LINE Channel Token 設定。
+
+**資料層**
+- [ ] 新增 `Models/OwnerLineBinding.cs`（record：`UserId`、`DisplayName`、`PictureUrl`）。
+- [ ] `Models/ShopSetting.cs` 新增 `List<OwnerLineBinding> OwnerLineBindings`。
+- [ ] `Data/AppDbContext.cs` 對 `OwnerLineBindings` 加 JSON `HasConversion`（同 ContactInfos 模式）。
+
+**ViewModel**
+- [ ] `ViewModels/SystemSettingViewModel.cs` 新增 `ObservableCollection<OwnerLineBindingViewModel> OwnerLineBindings`。
+- [ ] 新增 `AddOwnerLineBindingCommand`：開啟好友清單（reuse `LineFollowerWindow` 或共用選擇邏輯），選中後呼叫 `ApplyOwnerBinding(userId, displayName, pictureUrl)`。
+- [ ] 新增 `RemoveOwnerLineBindingCommand(item)`：從清單移除指定項目。
+- [ ] `SaveAsync` / `LoadAsync` 同步讀寫 OwnerLineBindings。
+
+**View**
+- [ ] `Views/ShopSettings/ShopSettingPage.xaml`：LINE 設定區塊下方新增「業主 LINE 帳號」子區塊。
+  - 清單顯示：頭像縮圖 + DisplayName + UserId（灰字）。
+  - 每列右側「移除」按鈕。
+  - 左下「＋ 新增業主帳號」按鈕（開啟好友清單）。
+- [ ] `Views/ShopSettings/ShopSettingPage.xaml.cs` 新增 binding handler（選取後回呼 ViewModel）。
+
+---
+
+### Phase 9：轉存班表（規劃中）
+
+> 依賴：本月排班資料存在；選用 LINE 推播時需完成 Phase 8（店主帳號綁定）。
+
+**ScheduleViewModel 修改**
+- [ ] `ViewModels/Schedule/ScheduleViewModel.cs` 新增 `ShowExportScheduleButton`（bool：本月 `MonthlySchedule` 存在且 Entries 非空）。
+- [ ] 新增 `OpenExportScheduleCommand`：開啟 `ExportScheduleWindow`，傳入當月 `MonthlySchedule`。
+
+**SchedulePage.xaml**
+- [ ] 自動排班按鈕旁加「轉存班表」按鈕，`Visibility` 綁定 `ShowExportScheduleButton`。
+
+**ExportScheduleViewModel**
+- [ ] 新增 `ViewModels/ExportScheduleViewModel.cs`。
+  - `SelectedFileFormat`（enum `ExportFormat`：`Txt` / `Excel`）。
+  - `ExportRecipients`（`ObservableCollection<ExportRecipientItem>`）：
+    - 員工：`LineUserId` 非空 且 本月有 `ScheduleEntry`。
+    - 店主：`ShopSetting.OwnerLineBindings` 全部列入（標記來源為「業主」）。
+  - `PushType`（enum：`PersonalOnly` 僅個人班表 / `FullSchedule` 本月完整班表）。
+  - `ExportToFileCommand`：`SaveFileDialog` → 輸出 `.txt`（格式：表頭日期橫排、員工縱排，每格顯示班別 Alias）。
+  - `PushLineCommand`：逐筆呼叫 `LineService.PushMessageAsync`，訊息格式待後續規劃。
+  - `ToggleAllCommand`：全選 / 取消全選 ExportRecipients。
+
+**ExportScheduleWindow**
+- [ ] 新增 `Views/Schedule/ExportScheduleWindow.xaml(.cs)`，分兩個 section card：
+  - **匯出班表**：檔案格式下拉（txt / Excel）+ 「轉存為檔案」按鈕（先實作 txt）。
+  - **LINE 推播班表**：可勾選收件人清單（頭像 + 姓名 + 來源標籤）+ 推播類別下拉 + 「確定推播」按鈕。
+
 ---
 
 ## UI 樣式架構守則 (勿隨意修改)
@@ -172,5 +223,5 @@ ShopManager/
 
 ---
 
-*最後更新時間：2026-05-03*
+*最後更新時間：2026-05-09*
 *由 Claude Code 管理與維護*

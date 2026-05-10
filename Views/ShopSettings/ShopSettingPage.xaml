@@ -339,6 +339,69 @@
                                 <TextBlock Text="查看推播好友清單"/>
                             </StackPanel>
                         </Button>
+
+                        <!-- 業主 LINE 帳號綁定 -->
+                        <Border BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,1,0,0"
+                                Margin="0,20,0,0" Padding="0,16,0,0">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,8">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="業主 LINE 帳號" Style="{StaticResource FormSectionStyle}" Margin="0"/>
+                                        <TextBlock Text="綁定業主帳號後可接收系統通知推播" Style="{StaticResource CaptionTextStyle}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                    <Button HorizontalAlignment="Right" Style="{StaticResource MaterialDesignFlatButton}"
+                                            Click="AddOwnerBinding_Click" Height="32" Padding="12,0" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal">
+                                            <md:PackIcon Kind="AccountPlusOutline" Width="16" Height="16" Margin="0,0,4,0"/>
+                                            <TextBlock Text="新增綁定"/>
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                                <TextBlock Text="尚未綁定任何業主帳號"
+                                           Style="{StaticResource CaptionTextStyle}"
+                                           HorizontalAlignment="Center" Margin="0,8"
+                                           Visibility="{Binding OwnerLineBindings.Count, Converter={StaticResource ZeroToVisibilityConverter}}"/>
+                                <ItemsControl ItemsSource="{Binding OwnerLineBindings}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,8">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Border Grid.Column="0" Width="36" Height="36" CornerRadius="18"
+                                                            ClipToBounds="True" Margin="0,0,12,0"
+                                                            Background="{DynamicResource AppPanelBrush}">
+                                                        <Grid>
+                                                            <Image Source="{Binding PictureUrl, Converter={StaticResource UrlToImageConverter}}"
+                                                                   Stretch="UniformToFill"
+                                                                   Visibility="{Binding PictureUrl, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                            <md:PackIcon Kind="AccountCircleOutline" Width="22" Height="22" Opacity="0.45"
+                                                                         HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                         Visibility="{Binding PictureUrl, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                                                        </Grid>
+                                                    </Border>
+                                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding DisplayName}" FontWeight="Medium"/>
+                                                        <TextBlock Text="{Binding UserId}" Style="{StaticResource CaptionTextStyle}"
+                                                                   FontFamily="Consolas" FontSize="11" Opacity="0.65"/>
+                                                    </StackPanel>
+                                                    <Button Grid.Column="2" Style="{StaticResource MaterialDesignIconButton}"
+                                                            Width="36" Height="36"
+                                                            Foreground="{DynamicResource MaterialDesign.Brush.ValidationError}"
+                                                            Command="{Binding DataContext.RemoveOwnerBindingCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}">
+                                                        <md:PackIcon Kind="DeleteOutline" Width="18" Height="18"/>
+                                                    </Button>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </StackPanel>
             </Border>

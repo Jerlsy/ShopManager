@@ -286,6 +286,28 @@ public class BonusTypeToCustomLabelVisibilityConverter : IValueConverter
         throw new NotImplementedException();
 }
 
+/// <summary>URL 字串 → BitmapImage（供 LINE 頭像等網路圖片顯示）</summary>
+[ValueConversion(typeof(string), typeof(System.Windows.Media.ImageSource))]
+public class UrlToImageConverter : IValueConverter
+{
+    public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is not string url || string.IsNullOrEmpty(url)) return null;
+        try
+        {
+            var bi = new System.Windows.Media.Imaging.BitmapImage();
+            bi.BeginInit();
+            bi.UriSource = new Uri(url);
+            bi.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnDemand;
+            bi.EndInit();
+            return bi;
+        }
+        catch { return null; }
+    }
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotImplementedException();
+}
+
 /// <summary>BonusPresetType != Custom → Visible（用於預設名稱文字顯示）</summary>
 [ValueConversion(typeof(Models.BonusPresetType), typeof(Visibility))]
 public class BonusTypeToPresetLabelVisibilityConverter : IValueConverter

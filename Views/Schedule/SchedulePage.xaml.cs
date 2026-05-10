@@ -387,6 +387,16 @@ public partial class SchedulePage : UserControl
         }
     }
 
+    // ── 轉存班表 ────────────────────────────────────────────────────────────
+    private async void ExportSchedule_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not ScheduleViewModel vm) return;
+        var data = await vm.BuildExportDataAsync();
+        if (data is null) return;
+        var win = new ExportScheduleWindow(data) { Owner = Window.GetWindow(this) };
+        win.Show();
+    }
+
     // ── 滾輪事件修正 ────────────────────────────────────────────────────────
     // 問題根源：section card 內的元素（AllowDrop 班表色塊、員工卡片等）攔截了
     // MouseWheel 事件，導致事件無法冒泡到 PageScrollViewer（背景捲動正常的原因）。

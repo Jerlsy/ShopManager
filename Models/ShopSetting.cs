@@ -31,9 +31,18 @@ public class ShopSetting
     public string? LineWorkerApiKey { get; set; }
     public string? LineWelcomeMessage { get; set; }
     public string? LineResignMessage { get; set; }
+    public List<OwnerLineBinding> OwnerLineBindings { get; set; } = new();
 
     // ── 備註（RTF Base64）────────────────────────
     public string? Notes { get; set; }
+}
+
+/// <summary>業主 LINE 帳號綁定（可綁多位管理者）</summary>
+public class OwnerLineBinding
+{
+    public string UserId { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+    public string? PictureUrl { get; set; }
 }
 
 /// <summary>聯絡方式（Email、FB、IG、Line 等）</summary>

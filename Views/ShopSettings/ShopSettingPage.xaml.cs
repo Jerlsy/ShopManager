@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
+using ShopManager.Models;
 using ShopManager.ViewModels;
 using ShopManager.Views.Line;
 using System.Windows;
@@ -128,6 +129,25 @@ public partial class ShopSettingPage : UserControl
             _viewModel.Notes = win.SavedHtml;
             LoadNotesPreview(_viewModel.Notes);
         }
+    }
+
+    private async void AddOwnerBinding_Click(object sender, RoutedEventArgs e)
+    {
+        var win = App.Services.GetRequiredService<LineFollowerWindow>();
+        win.ViewModel.IsSelectMode = true;
+        win.Owner = Window.GetWindow(this);
+        win.ViewModel.FollowerSelected += (_, item) =>
+            _viewModel.AddOwnerBinding(new OwnerLineBinding
+            {
+                UserId = item.UserId,
+                DisplayName = item.DisplayName,
+                PictureUrl = item.PictureUrl
+            });
+        win.Show();
+        await win.ViewModel.InitAsync(
+            _viewModel.LineChannelAccessToken,
+            _viewModel.LineWorkerUrl,
+            _viewModel.LineWorkerApiKey);
     }
 
     private async void OnLineTestSucceeded(object? sender, string token)

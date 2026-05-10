@@ -32,6 +32,7 @@ public class ShopSettingService(AppDbContext db, ShopContext shopContext)
             existing.LineWorkerApiKey = setting.LineWorkerApiKey;
             existing.LineWelcomeMessage = setting.LineWelcomeMessage;
             existing.LineResignMessage = setting.LineResignMessage;
+            existing.OwnerLineBindings = setting.OwnerLineBindings;
             existing.Notes = setting.Notes;
         }
         await db.SaveChangesAsync();

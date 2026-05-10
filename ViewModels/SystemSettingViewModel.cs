@@ -43,6 +43,7 @@ public partial class SystemSettingViewModel(
     [ObservableProperty] private string _lineWorkerApiKey = string.Empty;
     [ObservableProperty] private string _lineWelcomeMessage = string.Empty;
     [ObservableProperty] private string _lineResignMessage = string.Empty;
+    [ObservableProperty] private List<OwnerLineBinding> _ownerLineBindings = new();
     [ObservableProperty] private bool _isLineConfigUnlocked;
 
     // ── 備註 ────────────────────────────────────────────────────────────────
@@ -133,6 +134,7 @@ public partial class SystemSettingViewModel(
                 LineWelcomeMessage = setting.LineWelcomeMessage ?? string.Empty;
                 LineResignMessage = setting.LineResignMessage ?? string.Empty;
                 IsLineConfigUnlocked = !string.IsNullOrWhiteSpace(setting.LineChannelAccessToken);
+                OwnerLineBindings = new List<OwnerLineBinding>(setting.OwnerLineBindings);
                 Notes = setting.Notes;
             }
 
@@ -182,6 +184,7 @@ public partial class SystemSettingViewModel(
             LineWorkerApiKey = string.IsNullOrWhiteSpace(LineWorkerApiKey) ? null : LineWorkerApiKey,
             LineWelcomeMessage = string.IsNullOrWhiteSpace(LineWelcomeMessage) ? null : LineWelcomeMessage,
             LineResignMessage = string.IsNullOrWhiteSpace(LineResignMessage) ? null : LineResignMessage,
+            OwnerLineBindings = OwnerLineBindings,
             Notes = string.IsNullOrWhiteSpace(Notes) ? null : Notes,
         };
 
@@ -240,6 +243,19 @@ public partial class SystemSettingViewModel(
         var list = new List<ContactInfo>(ContactInfos);
         list.Remove(contact);
         ContactInfos = list;
+    }
+
+    public void AddOwnerBinding(OwnerLineBinding item)
+    {
+        OwnerLineBindings = new List<OwnerLineBinding>(OwnerLineBindings) { item };
+    }
+
+    [RelayCommand]
+    public void RemoveOwnerBinding(OwnerLineBinding item)
+    {
+        var list = new List<OwnerLineBinding>(OwnerLineBindings);
+        list.Remove(item);
+        OwnerLineBindings = list;
     }
 
     [RelayCommand]

@@ -105,6 +105,17 @@
                             <TextBlock Text="自動排班"/>
                         </StackPanel>
                     </Button>
+
+                    <!-- 轉存班表 -->
+                    <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Click="ExportSchedule_Click"
+                            Visibility="{Binding HasSchedule, Converter={StaticResource BoolToVisibilityConverter}}"
+                            Margin="8,0,0,0" ToolTip="將本月班表匯出為 PNG 圖片">
+                        <StackPanel Orientation="Horizontal">
+                            <md:PackIcon Kind="FileExportOutline" Width="18" Height="18" Margin="0,0,6,0"/>
+                            <TextBlock Text="轉存班表"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </Grid>
         </Border>
