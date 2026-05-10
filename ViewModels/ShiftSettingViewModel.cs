@@ -29,15 +29,31 @@ public partial class ShiftSettingViewModel(
     // 編輯用暫存欄位
     [ObservableProperty] private string _editAlias = string.Empty;
     [ObservableProperty] private bool _editIsEnabled = true;
-    [ObservableProperty] private string _editColor = "#4A90D9";
+    [ObservableProperty] private string _editColor = "#E53935";
 
-    // 預定義色票
+    // 預定義色票（色相均勻分布，每色相僅一個代表色）
     public static List<string> ColorPalette { get; } = new()
     {
-        "#4A90D9", "#50C878", "#FF6B6B", "#FFB347", "#9B59B6",
-        "#1ABC9C", "#E74C3C", "#F39C12", "#3498DB", "#2ECC71",
-        "#E67E22", "#9B27AF", "#00BCD4", "#FF5722", "#607D8B",
-        "#795548", "#FF9800", "#8BC34A", "#03A9F4", "#673AB7",
+        "#E53935", // 紅
+        "#FF7043", // 珊瑚橙
+        "#FB8C00", // 橙
+        "#F9A825", // 金黃
+        "#AFB42B", // 黃綠
+        "#7CB342", // 草綠
+        "#43A047", // 深綠
+        "#00897B", // 翡翠
+        "#00ACC1", // 青
+        "#039BE5", // 天藍
+        "#1E88E5", // 藍
+        "#3949AB", // 靛藍
+        "#6A1B9A", // 深紫
+        "#8E24AA", // 紫
+        "#D81B60", // 桃紅
+        "#F06292", // 粉紅
+        "#558B2F", // 橄欖綠
+        "#00695C", // 深翡翠
+        "#4E342E", // 棕
+        "#546E7A", // 藍灰
     };
 
     // 時間欄位：用字串雙向綁定，儲存時轉 TimeOnly
@@ -85,7 +101,10 @@ public partial class ShiftSettingViewModel(
 
     public async Task LoadAsync()
     {
-        Shifts = await service.GetAllAsync();
+        Shifts = (await service.GetAllAsync())
+            .OrderBy(s => s.Alias)
+            .ThenBy(s => s.StartTime)
+            .ToList();
     }
 
     [RelayCommand]
