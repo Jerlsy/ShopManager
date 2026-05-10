@@ -51,102 +51,105 @@ public partial class ExportScheduleWindow : Window
 
     // ─────────────────────────────────────────────────────────────────────────
     // 班表圖片渲染
+    // 所有座標與字體直接以 1.5× 繪製，DrawingVisual 不做事後縮放，
+    // 保證文字由 WPF 字型引擎在目標解析度下原生渲染，無鋸齒。
     // ─────────────────────────────────────────────────────────────────────────
     private static RenderTargetBitmap RenderSchedule(ExportScheduleData data)
     {
-        const double dpi    = 96;
-        const double scale  = 1.5;
-        const double nameW  = 90;   // 員工姓名欄寬
-        const double cellW  = 44;   // 日期格寬
-        const double titleH = 44;   // 標題列高
-        const double colH   = 46;   // 欄標題高
-        const double rowH   = 34;   // 資料列高
-        const double legendH = 28;  // 每條圖例高
-        const double legendPad = 14; // 圖例區上下留白
-        const double legendSwatchSize = 14; // 色塊大小
+        const double dpi   = 96;
+        const double scale = 1.5;
 
+        // ── 版面常數（邏輯尺寸 × scale，直接繪製到目標像素）──────────────
+        double S(double v) => v * scale;
+
+        double nameW        = S(90);   // 員工姓名欄寬
+        double cellW        = S(44);   // 日期格寬
+        double titleH       = S(44);   // 標題列高
+        double colH         = S(46);   // 欄標題高
+        double rowH         = S(34);   // 資料列高
+        double legTopGap    = S(20);   // 表格底部到圖例框的白色間距
+        double legPadV      = S(12);   // 圖例框上下 padding
+        double legTitleRowH = S(22);   // 圖例框內「班別說明」標題列高
+        double legTitleGap  = S(6);    // 標題列下到第一條圖例的間距
+        double legItemH     = S(28);   // 每條圖例高
+        double legItemW     = S(180);  // 每條圖例欄寬（橫排用）
+        double legSwatchSz  = S(14);   // 色塊大小
+
+        // 字體 typeface
         var fontFamily  = new FontFamily("Microsoft JhengHei UI, Microsoft JhengHei, sans-serif");
         var normalFace  = new Typeface(fontFamily, FontStyles.Normal, FontWeights.Normal,   FontStretches.Normal);
         var boldFace    = new Typeface(fontFamily, FontStyles.Normal, FontWeights.Bold,     FontStretches.Normal);
         var semiBoldFace= new Typeface(fontFamily, FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
 
-        // 班別顏色快取（附透明度以配合淡色格）
-        var colorMap = data.ShiftLegend.ToDictionary(
-            l => l.Id,
-            l => ParseHex(l.ColorHex));
+        // 班別顏色快取
+        var colorMap = data.ShiftLegend.ToDictionary(l => l.Id, l => ParseHex(l.ColorHex));
 
         double tableW = nameW + data.DaysInMonth * cellW;
         double tableH = colH + data.Rows.Count * rowH;
 
-        // 圖例區高度（至少保留留白，有圖例才算）
-        double legendAreaH = data.ShiftLegend.Count > 0
-            ? legendPad * 2 + data.ShiftLegend.Count * legendH
+        // 圖例區：計算橫排後需幾列
+        int itemsPerRow  = data.ShiftLegend.Count == 0 ? 1
+            : Math.Max(1, (int)((tableW - S(24)) / legItemW));
+        int itemRowCount = data.ShiftLegend.Count == 0 ? 0
+            : (data.ShiftLegend.Count + itemsPerRow - 1) / itemsPerRow;
+        double legBoxH = data.ShiftLegend.Count > 0
+            ? legPadV + legTitleRowH + legTitleGap + itemRowCount * legItemH + legPadV
             : 0;
+        double legAreaH = data.ShiftLegend.Count > 0 ? legTopGap + legBoxH : 0;
 
         double totalW = tableW;
-        double totalH = titleH + tableH + legendAreaH + 1;
+        double totalH = titleH + tableH + legAreaH + 1;
 
-        var pen05 = FreezePen(Color.FromRgb(0xCC, 0xCC, 0xCC), 0.5);
-        var pen10 = FreezePen(Color.FromRgb(0x99, 0xAA, 0xBB), 1.0);
+        var pen05    = FreezePen(Color.FromRgb(0xCC, 0xCC, 0xCC), 0.5);
+        var pen10    = FreezePen(Color.FromRgb(0x99, 0xAA, 0xBB), 1.0);
+        var outerPen = FreezePen(Color.FromRgb(0x88, 0x99, 0xAA), 1.5);
 
         var visual = new DrawingVisual();
         using (var dc = visual.RenderOpen())
         {
-            // 白底
             dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, totalW, totalH));
 
             // ── 標題列 ──────────────────────────────────────────────────────
-            var titleBg = FreezeColor(Color.FromRgb(0x2A, 0x5C, 0x8A));
-            dc.DrawRectangle(titleBg, null, new Rect(0, 0, totalW, titleH));
-            var titleT = Fmt($"{data.ShopName}　{data.Year} 年 {data.Month} 月　班表", boldFace, 15, Brushes.White);
-            dc.DrawText(titleT, new Point(14, (titleH - titleT.Height) / 2));
+            dc.DrawRectangle(FreezeColor(Color.FromRgb(0x2A, 0x5C, 0x8A)), null,
+                new Rect(0, 0, totalW, titleH));
+            var titleT = Fmt($"{data.ShopName}　{data.Year} 年 {data.Month} 月　班表",
+                boldFace, S(15), Brushes.White);
+            dc.DrawText(titleT, new Point(S(14), (titleH - titleT.Height) / 2));
 
             // ── 欄標題列 ─────────────────────────────────────────────────────
-            double colY = titleH;
-            var colHeaderBg = FreezeColor(Color.FromRgb(0xE3, 0xEE, 0xF7));
+            double colY        = titleH;
+            var    colHeaderBg = FreezeColor(Color.FromRgb(0xE3, 0xEE, 0xF7));
             dc.DrawRectangle(colHeaderBg, null, new Rect(0, colY, totalW, colH));
 
-            // 員工名稱欄標題
             dc.DrawRectangle(null, pen10, new Rect(0, colY, nameW, colH));
-            var nameHdrT = Fmt("員工", semiBoldFace, 12, FreezeColor(Color.FromRgb(0x44, 0x66, 0x88)));
-            dc.DrawText(nameHdrT, new Point((nameW - nameHdrT.Width) / 2, colY + (colH - nameHdrT.Height) / 2));
+            var nameHdrT = Fmt("員工", semiBoldFace, S(12), FreezeColor(Color.FromRgb(0x44, 0x66, 0x88)));
+            dc.DrawText(nameHdrT, new Point((nameW - nameHdrT.Width) / 2,
+                colY + (colH - nameHdrT.Height) / 2));
 
             for (int i = 0; i < data.Columns.Count; i++)
             {
                 var col = data.Columns[i];
-                var x   = nameW + i * cellW;
+                double x = nameW + i * cellW;
 
-                Brush colCellBg;
-                Brush dowFg;
+                Brush colCellBg; Brush dowFg;
                 if (col.IsClosed)
-                {
-                    colCellBg = FreezeColor(Color.FromRgb(0xD5, 0xD5, 0xD5));
-                    dowFg     = Brushes.Gray;
-                }
+                { colCellBg = FreezeColor(Color.FromRgb(0xD5, 0xD5, 0xD5)); dowFg = Brushes.Gray; }
                 else if (col.DayOfWeekLabel == "日")
-                {
-                    colCellBg = FreezeColor(Color.FromRgb(0xFF, 0xE3, 0xE3));
-                    dowFg     = Brushes.Crimson;
-                }
+                { colCellBg = FreezeColor(Color.FromRgb(0xFF, 0xE3, 0xE3)); dowFg = Brushes.Crimson; }
                 else if (col.DayOfWeekLabel == "六")
-                {
-                    colCellBg = FreezeColor(Color.FromRgb(0xE3, 0xEE, 0xFF));
-                    dowFg     = Brushes.RoyalBlue;
-                }
+                { colCellBg = FreezeColor(Color.FromRgb(0xE3, 0xEE, 0xFF)); dowFg = Brushes.RoyalBlue; }
                 else
-                {
-                    colCellBg = colHeaderBg;
-                    dowFg     = FreezeColor(Color.FromRgb(0x44, 0x55, 0x66));
-                }
+                { colCellBg = colHeaderBg; dowFg = FreezeColor(Color.FromRgb(0x44, 0x55, 0x66)); }
 
                 dc.DrawRectangle(colCellBg, null, new Rect(x, colY, cellW, colH));
                 dc.DrawRectangle(null, pen05, new Rect(x, colY, cellW, colH));
 
-                var dayT = Fmt(col.Day.ToString(), boldFace, 14, Brushes.Black);
-                dc.DrawText(dayT, new Point(x + (cellW - dayT.Width) / 2, colY + 4));
+                var dayT = Fmt(col.Day.ToString(), boldFace, S(14), Brushes.Black);
+                dc.DrawText(dayT, new Point(x + (cellW - dayT.Width) / 2, colY + S(4)));
 
-                var dowT = Fmt(col.DayOfWeekLabel, normalFace, 11, dowFg);
-                dc.DrawText(dowT, new Point(x + (cellW - dowT.Width) / 2, colY + colH - dowT.Height - 5));
+                var dowT = Fmt(col.DayOfWeekLabel, normalFace, S(11), dowFg);
+                dc.DrawText(dowT, new Point(x + (cellW - dowT.Width) / 2,
+                    colY + colH - dowT.Height - S(5)));
             }
 
             // ── 資料列 ───────────────────────────────────────────────────────
@@ -155,98 +158,85 @@ public partial class ExportScheduleWindow : Window
                 var row  = data.Rows[r];
                 double y = titleH + colH + r * rowH;
 
-                // 交替底色
-                var rowBg = r % 2 == 0
-                    ? Brushes.White
-                    : (Brush)FreezeColor(Color.FromRgb(0xF6, 0xFA, 0xFD));
-                dc.DrawRectangle(rowBg, null, new Rect(0, y, totalW, rowH));
+                dc.DrawRectangle(r % 2 == 0 ? Brushes.White
+                    : (Brush)FreezeColor(Color.FromRgb(0xF6, 0xFA, 0xFD)),
+                    null, new Rect(0, y, totalW, rowH));
 
-                // 員工姓名格
                 dc.DrawRectangle(null, pen10, new Rect(0, y, nameW, rowH));
-                var nameT = Fmt(row.Name, semiBoldFace, 13, Brushes.Black);
-                dc.DrawText(nameT, new Point(8, y + (rowH - nameT.Height) / 2));
+                var nameT = Fmt(row.Name, semiBoldFace, S(13), Brushes.Black);
+                dc.DrawText(nameT, new Point(S(8), y + (rowH - nameT.Height) / 2));
 
-                // 班次格（以顏色填滿）
                 for (int c = 0; c < row.ShiftIds.Count && c < data.Columns.Count; c++)
                 {
                     var col     = data.Columns[c];
                     var shiftId = row.ShiftIds[c];
-                    var x       = nameW + c * cellW;
+                    double x    = nameW + c * cellW;
 
                     if (col.IsClosed)
                     {
-                        // 店休：深灰格
-                        dc.DrawRectangle(FreezeColor(Color.FromRgb(0xE0, 0xE0, 0xE0)), null, new Rect(x, y, cellW, rowH));
-                        var closedT = Fmt("休", normalFace, 11, Brushes.Gray);
-                        dc.DrawText(closedT, new Point(x + (cellW - closedT.Width) / 2, y + (rowH - closedT.Height) / 2));
+                        dc.DrawRectangle(FreezeColor(Color.FromRgb(0xE0, 0xE0, 0xE0)),
+                            null, new Rect(x, y, cellW, rowH));
+                        var ct = Fmt("休", normalFace, S(11), Brushes.Gray);
+                        dc.DrawText(ct, new Point(x + (cellW - ct.Width) / 2,
+                            y + (rowH - ct.Height) / 2));
                     }
-                    else if (shiftId.HasValue && colorMap.TryGetValue(shiftId.Value, out var shiftColor))
+                    else if (shiftId.HasValue && colorMap.TryGetValue(shiftId.Value, out var sc))
                     {
-                        // 有排班：以班別顏色塗滿（70% 不透明，保持視覺柔和）
-                        var fill = new SolidColorBrush(Color.FromArgb(0xCC, shiftColor.R, shiftColor.G, shiftColor.B));
+                        var fill = new SolidColorBrush(Color.FromArgb(0xCC, sc.R, sc.G, sc.B));
                         fill.Freeze();
                         dc.DrawRectangle(fill, null, new Rect(x, y, cellW, rowH));
                     }
-                    // 未排班：保持列底色（空白）
 
                     dc.DrawRectangle(null, pen05, new Rect(x, y, cellW, rowH));
                 }
             }
 
-            // 表格外框
-            var outerPen = FreezePen(Color.FromRgb(0x88, 0x99, 0xAA), 1.5);
             dc.DrawRectangle(null, outerPen, new Rect(0, titleH, totalW, tableH));
 
             // ── 圖例區 ───────────────────────────────────────────────────────
             if (data.ShiftLegend.Count > 0)
             {
-                double legendY = titleH + tableH;
+                // legTopGap 是白色留白，不需繪製背景（已是白底）
+                double legBoxY = titleH + tableH + legTopGap;
 
-                // 圖例分隔線 + 背景
-                dc.DrawRectangle(FreezeColor(Color.FromRgb(0xF4, 0xF8, 0xFC)), null,
-                    new Rect(0, legendY, totalW, legendAreaH));
-                dc.DrawRectangle(null, FreezePen(Color.FromRgb(0xCC, 0xDD, 0xEE), 1.0),
-                    new Rect(0, legendY, totalW, legendAreaH));
+                dc.DrawRectangle(FreezeColor(Color.FromRgb(0xF1, 0xF6, 0xFB)), null,
+                    new Rect(0, legBoxY, totalW, legBoxH));
+                dc.DrawRectangle(null, FreezePen(Color.FromRgb(0xBB, 0xCC, 0xDD), 1.0),
+                    new Rect(0, legBoxY, totalW, legBoxH));
 
-                // 標題「班別說明」
-                var legHdrT = Fmt("班別說明", semiBoldFace, 12, FreezeColor(Color.FromRgb(0x33, 0x55, 0x77)));
-                dc.DrawText(legHdrT, new Point(12, legendY + legendPad - legHdrT.Height - 2));
+                // 「班別說明」標題
+                var legHdrT = Fmt("班別說明", semiBoldFace, S(12),
+                    FreezeColor(Color.FromRgb(0x33, 0x55, 0x77)));
+                dc.DrawText(legHdrT, new Point(S(12),
+                    legBoxY + legPadV + (legTitleRowH - legHdrT.Height) / 2));
 
-                // 各班別圖例（橫排，自動換行）
-                double legX = 12;
-                double legItemY = legendY + legendPad;
-                double legItemW = 180; // 每個圖例項目的寬度
+                // 圖例項目
+                double itemsY = legBoxY + legPadV + legTitleRowH + legTitleGap;
+                double legX   = S(12);
+                int    col_i  = 0;
 
                 foreach (var leg in data.ShiftLegend)
                 {
-                    // 換行
-                    if (legX + legItemW > totalW - 12)
-                    {
-                        legX  = 12;
-                        legItemY += legendH;
-                    }
+                    if (col_i >= itemsPerRow) { col_i = 0; legX = S(12); itemsY += legItemH; }
 
-                    // 色塊
-                    var sc = ParseHex(leg.ColorHex);
-                    var swatchBrush = new SolidColorBrush(sc); swatchBrush.Freeze();
-                    dc.DrawRectangle(swatchBrush, FreezePen(Color.FromRgb(0x88, 0x88, 0x88), 0.5),
-                        new Rect(legX, legItemY + (legendH - legendSwatchSize) / 2,
-                            legendSwatchSize, legendSwatchSize));
+                    var swatchC = ParseHex(leg.ColorHex);
+                    var swatchB = new SolidColorBrush(swatchC); swatchB.Freeze();
+                    dc.DrawRectangle(swatchB, FreezePen(Color.FromRgb(0x88, 0x88, 0x88), 0.5),
+                        new Rect(legX, itemsY + (legItemH - legSwatchSz) / 2,
+                            legSwatchSz, legSwatchSz));
 
-                    // 班名 + 時間
-                    var legText = Fmt($"{leg.Alias}  {leg.TimeRange}", normalFace, 12, Brushes.Black);
-                    dc.DrawText(legText, new Point(legX + legendSwatchSize + 6,
-                        legItemY + (legendH - legText.Height) / 2));
+                    var legT = Fmt($"{leg.Alias}  {leg.TimeRange}", normalFace, S(12), Brushes.Black);
+                    dc.DrawText(legT, new Point(legX + legSwatchSz + S(6),
+                        itemsY + (legItemH - legT.Height) / 2));
 
                     legX += legItemW;
+                    col_i++;
                 }
             }
         }
 
-        visual.Transform = new ScaleTransform(scale, scale);
-        var rtb = new RenderTargetBitmap(
-            (int)(totalW * scale), (int)(totalH * scale),
-            dpi, dpi, PixelFormats.Pbgra32);
+        // ScaleTransform 移除：DrawingVisual 已在目標解析度直接繪製
+        var rtb = new RenderTargetBitmap((int)totalW, (int)totalH, dpi, dpi, PixelFormats.Pbgra32);
         rtb.Render(visual);
         return rtb;
     }
