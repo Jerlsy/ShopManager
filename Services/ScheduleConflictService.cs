@@ -15,12 +15,18 @@ public class ScheduleConflictService(AppDbContext db, ShopContext shopContext)
     // 觸發點（由各 ViewModel 儲存後呼叫）
     // ══════════════════════════════════════════
 
-    /// <summary>員工設定變更 → 重新檢查所有含此員工班次的班表，回傳總衝突筆數</summary>
+    /// <summary>員工設定變更 → 重新檢查當月及未來月份含此員工班次的班表，回傳總衝突筆數</summary>
     public async Task<int> RecheckByEmployeeAsync(int employeeId)
     {
+        var (year, month) = CurrentYearMonth();
         var ids = await db.ScheduleEntries
             .Where(e => e.EmployeeId == employeeId)
-            .Select(e => e.MonthlyScheduleId)
+            .Join(db.MonthlySchedules,
+                e => e.MonthlyScheduleId,
+                m => m.Id,
+                (e, m) => m)
+            .Where(m => m.Year > year || (m.Year == year && m.Month >= month))
+            .Select(m => m.Id)
             .Distinct()
             .ToListAsync();
         int total = 0;
@@ -28,12 +34,18 @@ public class ScheduleConflictService(AppDbContext db, ShopContext shopContext)
         return total;
     }
 
-    /// <summary>班別設定變更 → 重新檢查所有含此班別班次的班表，回傳總衝突筆數</summary>
+    /// <summary>班別設定變更 → 重新檢查當月及未來月份含此班別班次的班表，回傳總衝突筆數</summary>
     public async Task<int> RecheckByShiftAsync(int shiftId)
     {
+        var (year, month) = CurrentYearMonth();
         var ids = await db.ScheduleEntries
             .Where(e => e.ShiftSettingId == shiftId)
-            .Select(e => e.MonthlyScheduleId)
+            .Join(db.MonthlySchedules,
+                e => e.MonthlyScheduleId,
+                m => m.Id,
+                (e, m) => m)
+            .Where(m => m.Year > year || (m.Year == year && m.Month >= month))
+            .Select(m => m.Id)
             .Distinct()
             .ToListAsync();
         int total = 0;
@@ -41,16 +53,24 @@ public class ScheduleConflictService(AppDbContext db, ShopContext shopContext)
         return total;
     }
 
-    /// <summary>勞基法設定變更 → 重新檢查此店所有班表，回傳總衝突筆數</summary>
+    /// <summary>勞基法設定變更 → 重新檢查此店當月及未來月份的班表，回傳總衝突筆數</summary>
     public async Task<int> RecheckAllForShopAsync()
     {
+        var (year, month) = CurrentYearMonth();
         var ids = await db.MonthlySchedules
-            .Where(m => m.ShopId == shopContext.ShopId)
+            .Where(m => m.ShopId == shopContext.ShopId &&
+                        (m.Year > year || (m.Year == year && m.Month >= month)))
             .Select(m => m.Id)
             .ToListAsync();
         int total = 0;
         foreach (var id in ids) total += await RecheckAsync(id);
         return total;
+    }
+
+    private static (int Year, int Month) CurrentYearMonth()
+    {
+        var today = DateTime.Today;
+        return (today.Year, today.Month);
     }
 
     // ══════════════════════════════════════════

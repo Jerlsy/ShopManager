@@ -51,13 +51,27 @@ public partial class ScheduleViewModel : ObservableObject
         foreach (var opt in CreateClosedDayOptions)
             opt.PropertyChanged += OnClosedDayOptionChanged;
 
-        WeakReferenceMessenger.Default.Register<ShiftSettingChangedMessage>(this, async (_, _) =>
+        WeakReferenceMessenger.Default.Register<ShiftSettingChangedMessage>(this, async (_, msg) =>
         {
             var shifts = await _shiftService.GetAllAsync();
             EnabledShifts.Clear();
             foreach (var s in shifts.Where(s => s.IsEnabled))
                 EnabledShifts.Add(s);
             await LoadScheduleAsync();
+
+            if (ConflictCount > 0 && CurrentSchedule is not null)
+            {
+                // 當前月份有衝突 → 直接開啟面板
+                var items = await _conflictService.GetAsync(CurrentSchedule.Id);
+                ConflictItems.Clear();
+                foreach (var c in items) ConflictItems.Add(c);
+                IsConflictPanelOpen = true;
+            }
+            else if (msg.TotalConflictCount > 0)
+            {
+                // 衝突在其他月份 → 提示使用者切換月份
+                _snackbarService.ShowWarning($"共有 {msg.TotalConflictCount} 條衝突在其他月份，請切換月份後點擊衝突徽章查看");
+            }
         });
 
         ShiftDayAssignments.CollectionChanged += (_, _) =>
