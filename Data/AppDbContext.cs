@@ -30,9 +30,17 @@ public class AppDbContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        var dbPath = OverrideDbPath
-            ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "shopmanager.db");
+        var dbPath = OverrideDbPath ?? DefaultDbPath();
         optionsBuilder.UseSqlite($"Data Source={dbPath}");
+    }
+
+    public static string DefaultDbPath()
+    {
+        var dir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "ShopManager");
+        Directory.CreateDirectory(dir);
+        return Path.Combine(dir, "shopmanager.db");
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
