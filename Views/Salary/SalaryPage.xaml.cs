@@ -15,6 +15,12 @@ public partial class SalaryPage : UserControl
         InitializeComponent();
         _vm = vm;
         DataContext = vm;
+
+        _vm.OpenPayrollRecordRequested += (_, data) =>
+        {
+            var win = new PayrollRecordWindow(data) { Owner = Window.GetWindow(this) };
+            win.ShowDialog();
+        };
     }
 
     private async void UserControl_Loaded(object sender, System.Windows.RoutedEventArgs e)

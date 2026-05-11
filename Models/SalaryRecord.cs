@@ -45,6 +45,10 @@ public class SalaryEmployeeRecord
 
     public List<SalaryBonusItem> BonusItems { get; set; } = new();
 
+    // 支薪狀態
+    public bool IsPaid { get; set; }
+    public DateTime? PaidAt { get; set; }
+
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public decimal TotalAmount => BaseAmount + BonusItems.Sum(b => b.Amount);
 

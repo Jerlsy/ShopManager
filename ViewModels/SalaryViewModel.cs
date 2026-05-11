@@ -7,6 +7,7 @@ using ShopManager.Views.Dialogs;
 using System.Collections.ObjectModel;
 using System.Net.Http;
 using System.Text.Json;
+using System.Threading;
 
 namespace ShopManager.ViewModels;
 
@@ -20,10 +21,15 @@ public partial class SalaryViewModel : ObservableObject
     private readonly ShopContext              _shopContext;
     private readonly IAppSnackbarService      _snackbar;
     private readonly HttpClient               _http;
+    private readonly LineService              _lineService;
+    private readonly BankCodeService          _bankCodeService;
 
     private LaborLawSetting? _laborLaw;
     private List<int> _shopClosedDaysOfWeek = new();
     private SalaryCalculationConfig? _lastConfig;
+    private CancellationTokenSource? _autoSaveCts;
+
+    public event EventHandler<PayrollRecordWindowData>? OpenPayrollRecordRequested;
 
     public SalaryViewModel(
         SalaryCalculationService salaryService,
@@ -33,7 +39,9 @@ public partial class SalaryViewModel : ObservableObject
         ShopSettingService       shopSettingService,
         ShopContext              shopContext,
         IAppSnackbarService      snackbar,
-        HttpClient               http)
+        HttpClient               http,
+        LineService              lineService,
+        BankCodeService          bankCodeService)
     {
         _salaryService        = salaryService;
         _scheduleService      = scheduleService;
@@ -43,6 +51,8 @@ public partial class SalaryViewModel : ObservableObject
         _shopContext          = shopContext;
         _snackbar             = snackbar;
         _http                 = http;
+        _lineService          = lineService;
+        _bankCodeService      = bankCodeService;
     }
 
     // ── 狀態 ────────────────────────────────────────────────────────────
@@ -54,6 +64,7 @@ public partial class SalaryViewModel : ObservableObject
     [ObservableProperty] private bool _hasResult;
     [ObservableProperty] private bool _hasSavedRecord;
     [ObservableProperty] private string _savedLabel = string.Empty;
+    [ObservableProperty] private decimal _totalPersonnelCost;
 
     public ObservableCollection<SalaryScheduleItem> AvailableSchedules { get; } = new();
     public ObservableCollection<EmployeeSalaryItem> EmployeeItems      { get; } = new();
@@ -91,22 +102,65 @@ public partial class SalaryViewModel : ObservableObject
         HasSavedRecord = false;
 
         if (value is not null)
-            _ = CheckSavedAsync(value.Schedule);
+            _ = LoadSavedAsync(value.Schedule);
     }
 
-    private async Task CheckSavedAsync(MonthlySchedule schedule)
+    private async Task LoadSavedAsync(MonthlySchedule schedule)
     {
         var saved = await _salaryService.GetByScheduleAsync(schedule.Id);
-        if (saved is not null)
+        if (saved is null) return;
+
+        IsLoading = true;
+        try
         {
+            EmployeeItems.Clear();
+            foreach (var empRec in saved.EmployeeRecords)
+            {
+                if (empRec.Employee is null) continue;
+
+                var item = new EmployeeSalaryItem
+                {
+                    Employee          = empRec.Employee,
+                    SalaryType        = empRec.SalaryType,
+                    WeekdayHours      = empRec.WeekdayHours,
+                    HolidayHours      = empRec.HolidayHours,
+                    OT1Hours          = empRec.OT1Hours,
+                    OT2Hours          = empRec.OT2Hours,
+                    WeekdayPay        = empRec.WeekdayPay,
+                    HolidayPay        = empRec.HolidayPay,
+                    OT1Pay            = empRec.OT1Pay,
+                    OT2Pay            = empRec.OT2Pay,
+                    OverridePay       = empRec.OverridePay,
+                    BaseAmount        = empRec.BaseAmount,
+                    HourlyRate        = empRec.HourlyRate,
+                    HolidayHourlyRate = empRec.HolidayHourlyRate,
+                    MonthlyBase       = empRec.MonthlyBase,
+                };
+
+                item.OnGlobalChanged = () => { RefreshTotalCost(); ScheduleAutoSave(); };
+
+                foreach (var b in empRec.BonusItems)
+                {
+                    var bonus = new BonusLineItem
+                    {
+                        SelectedPreset = BonusLineItem.Presets.FirstOrDefault(p => p.Type == b.PresetType)
+                                         ?? BonusLineItem.Presets[0],
+                        CustomLabel = b.Label,
+                        Amount      = b.Amount,
+                    };
+                    bonus.OnChanged = () => { item.RefreshTotals(); RefreshTotalCost(); ScheduleAutoSave(); };
+                    item.BonusItems.Add(bonus);
+                }
+
+                EmployeeItems.Add(item);
+            }
+
+            HasResult      = true;
             HasSavedRecord = true;
-            SavedLabel     = $"已有 {saved.UpdatedAt:MM/dd HH:mm} 儲存的記錄";
+            SavedLabel     = $"已儲存 {saved.UpdatedAt:MM/dd HH:mm}";
+            RefreshTotalCost();
         }
-        else
-        {
-            HasSavedRecord = false;
-            SavedLabel     = string.Empty;
-        }
+        finally { IsLoading = false; }
     }
 
     [RelayCommand(CanExecute = nameof(CanCalculate))]
@@ -237,9 +291,11 @@ public partial class SalaryViewModel : ObservableObject
                     Amount      = b.Amount,
                 }).ToList();
 
+            item.OnGlobalChanged = () => { RefreshTotalCost(); ScheduleAutoSave(); };
+
             foreach (var bonus in sourceBonuses)
             {
-                bonus.OnChanged = () => item.RefreshTotals();
+                bonus.OnChanged = () => { item.RefreshTotals(); RefreshTotalCost(); ScheduleAutoSave(); };
                 item.BonusItems.Add(bonus);
             }
 
@@ -250,6 +306,23 @@ public partial class SalaryViewModel : ObservableObject
         }
 
         HasResult = true;
+        RefreshTotalCost();
+    }
+
+    private void RefreshTotalCost() =>
+        TotalPersonnelCost = EmployeeItems.Sum(e => e.GrandTotal);
+
+    private void ScheduleAutoSave()
+    {
+        if (!HasResult || IsLoading) return;
+        _autoSaveCts?.Cancel();
+        _autoSaveCts = new CancellationTokenSource();
+        var local = _autoSaveCts;
+        Task.Delay(800).ContinueWith(_ =>
+        {
+            if (!local.IsCancellationRequested)
+                System.Windows.Application.Current.Dispatcher.InvokeAsync(() => SaveAsync());
+        });
     }
 
     private async Task<List<DateOnly>> FetchNationalHolidaysAsync(int year, int month)
@@ -276,11 +349,10 @@ public partial class SalaryViewModel : ObservableObject
     [RelayCommand]
     private async Task SaveAsync()
     {
-        if (SelectedScheduleItem is null || !HasResult) return;
+        if (SelectedScheduleItem is null || !HasResult || IsSaving) return;
         IsSaving = true;
         try
         {
-            // 直接從 UI 狀態建立記錄（不重算，確保儲存的就是畫面顯示的結果）
             var record = new SalaryRecord
             {
                 ShopId            = _shopContext.ShopId,
@@ -292,10 +364,9 @@ public partial class SalaryViewModel : ObservableObject
 
             foreach (var ui in EmployeeItems)
             {
-                var empRec = new SalaryEmployeeRecord
+                record.EmployeeRecords.Add(new SalaryEmployeeRecord
                 {
                     EmployeeId        = ui.Employee.Id,
-                    Employee          = ui.Employee,
                     SalaryType        = ui.SalaryType,
                     HourlyRate        = ui.HourlyRate,
                     HolidayHourlyRate = ui.HolidayHourlyRate,
@@ -311,19 +382,40 @@ public partial class SalaryViewModel : ObservableObject
                     OverridePay       = ui.OverridePay,
                     BaseAmount        = ui.BaseAmount,
                     BonusItems        = ui.BonusItems.Select(b => b.ToModel()).ToList(),
-                };
-                record.EmployeeRecords.Add(empRec);
+                });
             }
 
             await _salaryService.SaveAsync(record);
             HasSavedRecord = true;
-            SavedLabel     = $"已儲存 {DateTime.Now:MM/dd HH:mm}";
-            _snackbar.ShowSuccess("薪資記錄已儲存");
         }
-        catch
-        {
-            _snackbar.ShowError("儲存失敗，請重試");
-        }
+        catch { /* auto-save：靜默失敗，不打擾使用者 */ }
         finally { IsSaving = false; }
+    }
+
+    [RelayCommand]
+    private async Task OpenPayrollRecordAsync()
+    {
+        if (SelectedScheduleItem is null || !HasResult) return;
+
+        var record = await _salaryService.GetByScheduleAsync(SelectedScheduleItem.Schedule.Id);
+        if (record is null) return;
+
+        var banks       = await _bankCodeService.GetAllAsync();
+        var shopSetting = await _shopSettingService.GetAsync();
+
+        var data = new PayrollRecordWindowData
+        {
+            Record = record,
+            BankCodes = banks,
+            UpdatePaymentStatus = (id, paid) => _salaryService.SetPaymentStatusAsync(id, paid),
+            SendLineMessage = async (userId, msg) =>
+            {
+                var token = shopSetting?.LineChannelAccessToken;
+                if (string.IsNullOrEmpty(token)) return false;
+                return await _lineService.PushMessageAsync(token, userId, msg);
+            },
+        };
+
+        OpenPayrollRecordRequested?.Invoke(this, data);
     }
 }

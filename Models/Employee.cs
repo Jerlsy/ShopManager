@@ -47,6 +47,11 @@ public class Employee
     public string ColorHex { get; set; } = string.Empty;                // 識別色（Hex）
     public string? LineUserId { get; set; }                             // LINE 推播綁定 userId
 
+    // 薪資戶
+    public string? BankCode { get; set; }                               // 銀行代碼（例：822）
+    public string? BankAccount { get; set; }                            // 帳號（純數字）
+    public string? BankAccountName { get; set; }                        // 戶名
+
     public bool IsResigned => ResignDate.HasValue && ResignDate.Value <= DateOnly.FromDateTime(DateTime.Today);
 
     public bool IsBirthdayThisMonth =>

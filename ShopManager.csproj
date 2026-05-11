@@ -27,6 +27,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Resource Include="Resources\logo.png" />
+    <EmbeddedResource Include="Resources\banks.json" />
   </ItemGroup>
 
   <ItemGroup>

@@ -34,25 +34,20 @@
                               IsEnabled="{Binding IsLoading, Converter={StaticResource BoolInverseConverter}}"
                               Margin="0,0,12,0"/>
 
-                    <!-- 已儲存提示 -->
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0"
-                                Visibility="{Binding HasSavedRecord, Converter={StaticResource BoolToVisibilityConverter}}">
-                        <md:PackIcon Kind="CheckCircleOutline" Width="16" Height="16" VerticalAlignment="Center"
-                                     Foreground="{DynamicResource PrimaryHueMidBrush}" Margin="0,0,4,0"/>
-                        <TextBlock Text="{Binding SavedLabel}" Style="{StaticResource SubtleTextStyle}"
-                                   VerticalAlignment="Center"/>
-                    </StackPanel>
-
                     <Button Content="計算薪資"
                             Command="{Binding CalculateCommand}"
                             Style="{StaticResource MaterialDesignRaisedButton}"
                             Margin="0,0,8,0"/>
 
-                    <Button Content="儲存結果"
-                            Command="{Binding SaveCommand}"
-                            Style="{StaticResource MaterialDesignOutlinedButton}"
+                    <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Command="{Binding OpenPayrollRecordCommand}"
                             IsEnabled="{Binding HasResult}"
-                            Visibility="{Binding HasResult, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                            Visibility="{Binding HasResult, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <StackPanel Orientation="Horizontal">
+                            <md:PackIcon Kind="CashCheck" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="發薪紀錄"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
             </Grid>
         </Border>
@@ -110,13 +105,13 @@
                 <md:PackIcon Kind="Calculator" Width="64" Height="64"
                              HorizontalAlignment="Center"
                              Foreground="{DynamicResource MaterialDesignBodyLight}"/>
-                <TextBlock Text="請點選「計算薪資」設定假日規則並開始計算" HorizontalAlignment="Center"
+                <TextBlock Text="此月份尚無薪資記錄，請點選「計算薪資」開始計算" HorizontalAlignment="Center"
                            Style="{StaticResource SubtleTextStyle}" Margin="0,12,0,0"/>
             </StackPanel>
 
             <!-- 計算結果 -->
-            <ItemsControl ItemsSource="{Binding EmployeeItems}" Margin="0,4,0,0"
-                          Visibility="{Binding HasResult, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel Visibility="{Binding HasResult, Converter={StaticResource BoolToVisibilityConverter}}">
+            <ItemsControl ItemsSource="{Binding EmployeeItems}" Margin="0,4,0,0">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:EmployeeSalaryItem}">
                         <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,12"
@@ -407,6 +402,7 @@
                                                         <ColumnDefinition Width="120"/>
                                                         <ColumnDefinition Width="*"/>
                                                         <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="Auto"/>
                                                     </Grid.ColumnDefinitions>
 
                                                     <ComboBox Grid.Column="0"
@@ -433,6 +429,16 @@
                                                              Margin="0,0,6,0"/>
 
                                                     <Button Grid.Column="3"
+                                                            Command="{Binding ConfirmCommand}"
+                                                            Style="{StaticResource MaterialDesignIconForegroundButton}"
+                                                            Width="28" Height="28" Padding="0"
+                                                            Visibility="{Binding IsNew, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                            Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                                            ToolTip="確認並儲存">
+                                                        <md:PackIcon Kind="Check" Width="16" Height="16"/>
+                                                    </Button>
+
+                                                    <Button Grid.Column="4"
                                                             Command="{Binding DataContext.RemoveBonusCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                             CommandParameter="{Binding}"
                                                             Style="{StaticResource MaterialDesignIconForegroundButton}"
@@ -463,6 +469,28 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
+
+            <!-- 當月人事費用合計 -->
+            <Border Style="{StaticResource SectionCardStyle}" Margin="0,0,0,12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <TextBlock Text="當月人事費用合計" Style="{StaticResource SectionTitleStyle}" Margin="0"/>
+                        <TextBlock Text="{Binding EmployeeItems.Count, StringFormat='共 {0} 位員工'}"
+                                   Style="{StaticResource SubtleTextStyle}"/>
+                    </StackPanel>
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding TotalPersonnelCost, StringFormat={}{0:N0} 元}"
+                               FontSize="{DynamicResource FontSizeDialogTitle}"
+                               FontWeight="Bold" VerticalAlignment="Center"
+                               Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                </Grid>
+            </Border>
+
+            </StackPanel>
 
         </Grid>
     </Grid>

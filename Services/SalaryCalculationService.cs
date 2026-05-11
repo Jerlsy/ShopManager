@@ -186,6 +186,15 @@ public class SalaryCalculationService(AppDbContext db)
         return record;
     }
 
+    public async Task SetPaymentStatusAsync(int empRecordId, bool isPaid)
+    {
+        var rec = await db.SalaryEmployeeRecords.FindAsync(empRecordId);
+        if (rec is null) return;
+        rec.IsPaid  = isPaid;
+        rec.PaidAt  = isPaid ? DateTime.Now : null;
+        await db.SaveChangesAsync();
+    }
+
     public async Task DeleteAsync(int recordId) =>
         await db.SalaryRecords.Where(r => r.Id == recordId).ExecuteDeleteAsync();
 }

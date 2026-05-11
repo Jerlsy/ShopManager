@@ -1,0 +1,49 @@
+<UserControl x:Class="ShopManager.Views.Dialogs.BankAccountDialog"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+             Width="440">
+    <Border Background="{DynamicResource AppSurfaceBrush}"
+            BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
+            CornerRadius="20" Padding="28,24,28,16">
+        <StackPanel>
+            <TextBlock Text="薪資帳戶"
+                       FontSize="{DynamicResource FontSizeDialogTitle}" FontWeight="SemiBold"
+                       Margin="0,0,0,20"/>
+
+            <TextBlock Text="銀行" Style="{StaticResource FieldLabelStyle}"/>
+            <ComboBox x:Name="BankComboBox"
+                      DisplayMemberPath="DisplayLabel"
+                      md:HintAssist.Hint="選擇銀行（可搜尋）"
+                      IsEditable="True"
+                      md:TextFieldAssist.HasClearButton="True"
+                      Margin="0,0,0,16"/>
+
+            <TextBlock Text="帳號" Style="{StaticResource FieldLabelStyle}"/>
+            <TextBox x:Name="AccountBox"
+                     md:HintAssist.Hint="10–16 位數字"
+                     Margin="0,0,0,4"/>
+            <TextBlock x:Name="AccountError"
+                       Text="帳號格式不正確（10–16 位數字）"
+                       Foreground="#C62828" FontSize="11"
+                       Visibility="Collapsed" Margin="0,2,0,12"/>
+
+            <TextBlock Text="戶名（選填）" Style="{StaticResource FieldLabelStyle}"/>
+            <TextBox x:Name="AccountNameBox"
+                     md:HintAssist.Hint="與帳戶登記相同的姓名"
+                     Margin="0,0,0,4"/>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                <Button Content="取消"
+                        Style="{StaticResource MaterialDesignFlatButton}"
+                        Command="{x:Static md:DialogHost.CloseDialogCommand}"
+                        CommandParameter="{x:Null}"
+                        Margin="0,0,8,0"/>
+                <Button Content="確認"
+                        Style="{StaticResource MaterialDesignFlatButton}"
+                        Foreground="{DynamicResource PrimaryHueMidBrush}"
+                        Click="OkButton_Click"/>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

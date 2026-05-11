@@ -5,6 +5,7 @@ using ShopManager.Helpers;
 using ShopManager.Models;
 using ShopManager.Services;
 using ShopManager.Views.Dialogs;
+using System.Collections.ObjectModel;
 
 namespace ShopManager.ViewModels;
 
@@ -60,6 +61,7 @@ public partial class EmployeeViewModel : ObservableObject
     private readonly ScheduleConflictService _conflictService;
     private readonly LineFollowerService _lineFollowerService;
     private readonly LineService _lineService;
+    private readonly BankCodeService _bankCodeService;
     private readonly IAppSnackbarService _snackbarService;
     private readonly IAppDialogService _dialogService;
 
@@ -73,6 +75,7 @@ public partial class EmployeeViewModel : ObservableObject
         ScheduleConflictService conflictService,
         LineFollowerService lineFollowerService,
         LineService lineService,
+        BankCodeService bankCodeService,
         IAppSnackbarService snackbarService,
         IAppDialogService dialogService)
     {
@@ -83,6 +86,7 @@ public partial class EmployeeViewModel : ObservableObject
         _conflictService = conflictService;
         _lineFollowerService = lineFollowerService;
         _lineService = lineService;
+        _bankCodeService = bankCodeService;
         _snackbarService = snackbarService;
         _dialogService = dialogService;
 
@@ -182,6 +186,30 @@ public partial class EmployeeViewModel : ObservableObject
         EditLinePictureUrl = pictureUrl;
     }
 
+    // ── 薪資戶 ────────────────────────────────────────────────
+    public ObservableCollection<BankCode> BankCodes { get; } = new();
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BankAccountSummary))]
+    private BankCode? _editBankCode;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BankAccountSummary))]
+    private string _editBankAccount = string.Empty;
+
+    [ObservableProperty] private string _editBankAccountName = string.Empty;
+
+    [ObservableProperty] private bool _isBankUpdating;
+
+    public string BankAccountSummary
+    {
+        get
+        {
+            if (EditBankCode is null || string.IsNullOrWhiteSpace(EditBankAccount)) return "未設定";
+            return $"{EditBankCode.Code} ****{EditBankAccount[^Math.Min(4, EditBankAccount.Length)..]}";
+        }
+    }
+
     [ObservableProperty] private SalarySetting? _editDefaultSalary;
     [ObservableProperty] private SalarySetting? _editHolidaySalary;
     [ObservableProperty] private DateOnly? _editInterviewDate;
@@ -273,6 +301,34 @@ public partial class EmployeeViewModel : ObservableObject
         AvailableSalaries = await _salaryService.GetAllAsync();
         var shopSetting = await _shopSettingService.GetAsync();
         _shopClosedDays = shopSetting?.ClosedDaysOfWeek ?? new List<int>();
+
+        if (BankCodes.Count == 0)
+        {
+            var banks = await _bankCodeService.GetAllAsync();
+            foreach (var b in banks) BankCodes.Add(b);
+        }
+    }
+
+    [RelayCommand]
+    private async Task UpdateBankCodesAsync()
+    {
+        IsBankUpdating = true;
+        try
+        {
+            var (success, message, _) = await _bankCodeService.UpdateFromWebAsync();
+            if (success)
+            {
+                BankCodes.Clear();
+                var banks = await _bankCodeService.GetAllAsync();
+                foreach (var b in banks) BankCodes.Add(b);
+                _snackbarService.ShowSuccess(message);
+            }
+            else
+            {
+                _snackbarService.ShowError(message);
+            }
+        }
+        finally { IsBankUpdating = false; }
     }
 
     private async Task LoadScheduleRuleSourcesAsync(int? currentEmployeeId = null)
@@ -342,6 +398,9 @@ public partial class EmployeeViewModel : ObservableObject
             EditLineDisplayName = null;
             EditLinePictureUrl = null;
         }
+        EditBankCode        = BankCodes.FirstOrDefault(b => b.Code == emp.BankCode);
+        EditBankAccount     = emp.BankAccount ?? string.Empty;
+        EditBankAccountName = emp.BankAccountName ?? string.Empty;
         EditDefaultSalary  = AvailableSalaries.FirstOrDefault(s => s.Id == emp.DefaultSalaryId);
         EditHolidaySalary  = AvailableSalaries.FirstOrDefault(s => s.Id == emp.HolidaySalaryId);
         EditInterviewDate  = emp.InterviewDate;
@@ -353,6 +412,7 @@ public partial class EmployeeViewModel : ObservableObject
         OnPropertyChanged(nameof(SalarySummary));
         OnPropertyChanged(nameof(EmploymentSummary));
         OnPropertyChanged(nameof(ScheduleRulesSummary));
+        OnPropertyChanged(nameof(BankAccountSummary));
         IsEditing = true;
     }
 
@@ -394,6 +454,24 @@ public partial class EmployeeViewModel : ObservableObject
             EditHireDate      = r.HireDate;
             EditResignDate    = r.ResignDate;
             OnPropertyChanged(nameof(EmploymentSummary));
+        }
+    }
+
+    // ══════════════════════════════════════════════════════
+    // 對話框：薪資帳戶
+    // ══════════════════════════════════════════════════════
+    [RelayCommand]
+    private async Task OpenBankAccountDialogAsync()
+    {
+        var dialog = new Views.Dialogs.BankAccountDialog(
+            BankCodes.ToList(), EditBankCode, EditBankAccount, EditBankAccountName);
+        var result = await DialogHost.Show(dialog, "RootDialog");
+        if (result is Views.Dialogs.BankAccountDialogResult r)
+        {
+            EditBankCode        = r.Bank;
+            EditBankAccount     = r.Account;
+            EditBankAccountName = r.AccountName;
+            OnPropertyChanged(nameof(BankAccountSummary));
         }
     }
 
@@ -470,6 +548,9 @@ public partial class EmployeeViewModel : ObservableObject
             : null;
         emp.ContactInfos    = EditContactInfos;
         emp.LineUserId      = string.IsNullOrEmpty(EditLineUserId) ? null : EditLineUserId;
+        emp.BankCode        = EditBankCode?.Code;
+        emp.BankAccount     = string.IsNullOrWhiteSpace(EditBankAccount) ? null : EditBankAccount.Replace("-", "").Replace(" ", "");
+        emp.BankAccountName = string.IsNullOrWhiteSpace(EditBankAccountName) ? null : EditBankAccountName.Trim();
         emp.DefaultSalaryId = EditDefaultSalary?.Id;
         emp.HolidaySalaryId = (EditDefaultSalary?.Type == SalaryType.Hourly) ? EditHolidaySalary?.Id : null;
         emp.InterviewDate   = EditInterviewDate;
@@ -581,6 +662,9 @@ public partial class EmployeeViewModel : ObservableObject
         EditLineUserId      = null;
         EditLineDisplayName = null;
         EditLinePictureUrl  = null;
+        EditBankCode        = null;
+        EditBankAccount     = string.Empty;
+        EditBankAccountName = string.Empty;
         EditDefaultSalary  = null;
         EditHolidaySalary  = null;
         EditInterviewDate  = null;
@@ -597,6 +681,7 @@ public partial class EmployeeViewModel : ObservableObject
         OnPropertyChanged(nameof(SalarySummary));
         OnPropertyChanged(nameof(EmploymentSummary));
         OnPropertyChanged(nameof(ScheduleRulesSummary));
+        OnPropertyChanged(nameof(BankAccountSummary));
     }
 
     private void ApplyRulesToVm(IEnumerable<ScheduleRule> rules)

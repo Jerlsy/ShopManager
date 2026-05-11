@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ShopManager.Models;
 using System.Collections.ObjectModel;
+using System.Text;
 
 namespace ShopManager.ViewModels;
 
@@ -40,6 +41,8 @@ public partial class BonusLineItem : ObservableObject
     [NotifyPropertyChangedFor(nameof(TotalChanged))]
     private decimal _amount;
 
+    [ObservableProperty] private bool _isNew;
+
     public bool TotalChanged => true;
 
     public string Label => SelectedPreset.Type == BonusPresetType.Custom
@@ -47,6 +50,14 @@ public partial class BonusLineItem : ObservableObject
         : SelectedPreset.Label;
 
     public Action? OnChanged { get; set; }
+    public Action? OnConfirm { get; set; }
+
+    [RelayCommand]
+    private void Confirm()
+    {
+        IsNew = false;
+        OnConfirm?.Invoke();
+    }
 
     partial void OnSelectedPresetChanged(BonusPresetOption value)
     {
@@ -132,6 +143,8 @@ public partial class EmployeeSalaryItem : ObservableObject
 
     [ObservableProperty] private bool _isExpanded = true;
 
+    public Action? OnGlobalChanged { get; set; }
+
     public void RefreshTotals()
     {
         OnPropertyChanged(nameof(BonusTotal));
@@ -141,9 +154,10 @@ public partial class EmployeeSalaryItem : ObservableObject
     [RelayCommand]
     private void AddBonus()
     {
-        var item = new BonusLineItem();
-        item.OnChanged = () => RefreshTotals();
-        BonusItems.Add(item);
+        var bonus = new BonusLineItem { IsNew = true };
+        bonus.OnChanged = () => RefreshTotals();
+        bonus.OnConfirm = () => OnGlobalChanged?.Invoke();
+        BonusItems.Add(bonus);
         RefreshTotals();
     }
 
@@ -152,5 +166,117 @@ public partial class EmployeeSalaryItem : ObservableObject
     {
         BonusItems.Remove(item);
         RefreshTotals();
+        OnGlobalChanged?.Invoke();
+    }
+}
+
+// ── 發薪紀錄視窗資料 ─────────────────────────────────────────────────────
+
+public class PayrollRecordWindowData
+{
+    public SalaryRecord Record { get; init; } = null!;
+    public List<BankCode> BankCodes { get; init; } = new();
+    public Func<int, bool, Task> UpdatePaymentStatus { get; init; } = null!;
+    public Func<string, string, Task<bool>> SendLineMessage { get; init; } = null!;
+}
+
+public partial class PayrollEntryItem : ObservableObject
+{
+    public int RecordId { get; init; }
+    public Employee Employee { get; init; } = null!;
+    public decimal GrandTotal { get; init; }
+    public string BankSummary { get; init; } = string.Empty;
+    public bool HasLineBinding { get; init; }
+    // salary data needed for LINE slip
+    public SalaryEmployeeRecord EmpRecord { get; init; } = null!;
+    public int Year { get; init; }
+    public int Month { get; init; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PaidAtLabel))]
+    [NotifyPropertyChangedFor(nameof(CanSendLine))]
+    private bool _isPaid;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PaidAtLabel))]
+    private DateTime? _paidAt;
+
+    [ObservableProperty] private bool _isSending;
+
+    public string PaidAtLabel =>
+        IsPaid && PaidAt.HasValue ? PaidAt.Value.ToString("yyyy/MM/dd HH:mm") : string.Empty;
+
+    public bool CanSendLine => HasLineBinding && IsPaid;
+
+    public Func<bool, Task>? OnIsPaidToggled { get; set; }
+    public Func<Task>? OnSendLine { get; set; }
+
+    // Set initial values without triggering OnIsPaidToggled callback
+    public void SetInitialStatus(bool isPaid, DateTime? paidAt)
+    {
+        _isPaid = isPaid;
+        _paidAt = paidAt;
+    }
+
+    partial void OnIsPaidChanged(bool value) => _ = HandlePaidAsync(value);
+
+    private async Task HandlePaidAsync(bool isPaid)
+    {
+        if (OnIsPaidToggled is not null)
+            await OnIsPaidToggled(isPaid);
+        PaidAt = isPaid ? DateTime.Now : null;
+    }
+
+    [RelayCommand]
+    private async Task SendLineAsync()
+    {
+        if (OnSendLine is null || IsSending) return;
+        IsSending = true;
+        try { await OnSendLine(); }
+        finally { IsSending = false; }
+    }
+
+    public static string BuildSalarySlip(SalaryEmployeeRecord r, int year, int month, DateTime? paidAt)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"【{year}年{month}月 薪資單】");
+        sb.AppendLine();
+        sb.AppendLine($"員工：{r.Employee.Name}");
+        sb.AppendLine(r.SalaryType == SalaryType.Hourly ? "薪資制度：時薪制" : "薪資制度：月薪制");
+        sb.AppendLine("─────────────────");
+
+        if (r.SalaryType == SalaryType.Hourly)
+        {
+            sb.AppendLine($"平日工時：{r.WeekdayHours:N1} hr");
+            if (r.HolidayHours > 0) sb.AppendLine($"假日工時：{r.HolidayHours:N1} hr");
+            if (r.OT1Hours > 0)     sb.AppendLine($"加班一段：{r.OT1Hours:N1} hr");
+            if (r.OT2Hours > 0)     sb.AppendLine($"加班二段：{r.OT2Hours:N1} hr");
+            sb.AppendLine($"平日薪資：{r.WeekdayPay:N0} 元");
+            if (r.HolidayPay > 0)   sb.AppendLine($"假日薪資：{r.HolidayPay:N0} 元");
+            if (r.OT1Pay + r.OT2Pay > 0) sb.AppendLine($"加班費：{r.OT1Pay + r.OT2Pay:N0} 元");
+        }
+        else
+        {
+            sb.AppendLine($"底薪：{r.WeekdayPay:N0} 元");
+            if (r.HolidayPay > 0)            sb.AppendLine($"假日薪資：{r.HolidayPay:N0} 元");
+            if (r.OT1Pay + r.OT2Pay > 0)     sb.AppendLine($"加班費：{r.OT1Pay + r.OT2Pay:N0} 元");
+        }
+        if (r.OverridePay != 0) sb.AppendLine($"特殊薪資：{r.OverridePay:N0} 元");
+
+        if (r.BonusItems.Count > 0)
+        {
+            sb.AppendLine("─────────────────");
+            foreach (var b in r.BonusItems)
+                sb.AppendLine($"{b.Label}：{(b.Amount >= 0 ? "+" : "")}{b.Amount:N0} 元");
+        }
+
+        var grand = r.BaseAmount + r.BonusItems.Sum(b => b.Amount);
+        sb.AppendLine("─────────────────");
+        sb.AppendLine($"應領薪資：{grand:N0} 元");
+
+        if (paidAt.HasValue)
+            sb.AppendLine($"支薪日期：{paidAt.Value:yyyy/MM/dd}");
+
+        return sb.ToString().TrimEnd();
     }
 }

@@ -225,6 +225,11 @@ public partial class App : Application
                 ("SalaryEmployeeRecords", "OverridePay",              "TEXT NOT NULL DEFAULT '0'"),
                 ("ShopSettings",         "Notes",                    "TEXT"),
                 ("ShopSettings",         "OwnerLineBindings",        "TEXT NOT NULL DEFAULT '[]'"),
+                ("Employees",            "BankCode",                 "TEXT"),
+                ("Employees",            "BankAccount",              "TEXT"),
+                ("Employees",            "BankAccountName",          "TEXT"),
+                ("SalaryEmployeeRecords", "IsPaid",                  "INTEGER NOT NULL DEFAULT 0"),
+                ("SalaryEmployeeRecords", "PaidAt",                  "TEXT"),
             };
             foreach (var (table, col, type) in cols)
             {
@@ -281,6 +286,7 @@ private static void ConfigureServices(ServiceCollection services)
         services.AddTransient<ScheduleConflictService>();
         services.AddTransient<SalaryCalculationService>();
         services.AddTransient<AutoScheduleService>();
+        services.AddSingleton<BankCodeService>();
 
         // ViewModel。
         services.AddTransient<MainViewModel>();
