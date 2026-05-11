@@ -197,6 +197,11 @@
                 <Setter Property="BorderBrush"     Value="{DynamicResource AppBorderBrush}"/>
                 <Setter Property="BorderThickness" Value="1"/>
                 <Setter Property="Padding"         Value="16,12"/>
+                <Setter Property="Effect">
+                    <Setter.Value>
+                        <DropShadowEffect ShadowDepth="2" BlurRadius="10" Opacity="0.16" Color="#000000" Direction="270"/>
+                    </Setter.Value>
+                </Setter>
             </Style>
 
             <Style x:Key="PageHeaderStyle" TargetType="Border">
@@ -206,6 +211,11 @@
                 <Setter Property="BorderThickness" Value="1"/>
                 <Setter Property="Padding"         Value="16,12"/>
                 <Setter Property="Margin"          Value="0,0,0,10"/>
+                <Setter Property="Effect">
+                    <Setter.Value>
+                        <DropShadowEffect ShadowDepth="2" BlurRadius="12" Opacity="0.14" Color="#000000" Direction="270"/>
+                    </Setter.Value>
+                </Setter>
             </Style>
 
             <Style x:Key="SectionCardStyle" TargetType="Border">
@@ -214,8 +224,14 @@
                 <Setter Property="BorderBrush"     Value="{DynamicResource AppBorderBrush}"/>
                 <Setter Property="BorderThickness" Value="1"/>
                 <Setter Property="Padding"         Value="14"/>
+                <Setter Property="Effect">
+                    <Setter.Value>
+                        <DropShadowEffect ShadowDepth="2" BlurRadius="16" Opacity="0.18" Color="#000000" Direction="270"/>
+                    </Setter.Value>
+                </Setter>
             </Style>
 
+            <!-- ItemCardStyle 不加陰影：清單中大量重複，DropShadowEffect 逐元素渲染會影響效能 -->
             <Style x:Key="ItemCardStyle" TargetType="Border">
                 <Setter Property="CornerRadius"    Value="12"/>
                 <Setter Property="Background"      Value="{DynamicResource AppPanelAltBrush}"/>
@@ -230,6 +246,11 @@
                 <Setter Property="BorderBrush"     Value="{DynamicResource AppBorderBrush}"/>
                 <Setter Property="BorderThickness" Value="1"/>
                 <Setter Property="Padding"         Value="20"/>
+                <Setter Property="Effect">
+                    <Setter.Value>
+                        <DropShadowEffect ShadowDepth="2" BlurRadius="16" Opacity="0.18" Color="#000000" Direction="270"/>
+                    </Setter.Value>
+                </Setter>
             </Style>
 
             <Style x:Key="InfoBoxStyle" TargetType="Border">

@@ -4,6 +4,11 @@ using Microsoft.Extensions.DependencyInjection;
 using ShopManager.Services;
 using ShopManager.ViewModels;
 using ShopManager.Views.ShopSelection;
+using System.Diagnostics;
+using System.IO;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text.Json;
 using System.Windows;
 
 namespace ShopManager.Views;
@@ -30,6 +35,7 @@ public partial class MainWindow : Window
             _snackbarService.SetQueue(queue);
 
             _ = viewModel.InitializeAsync();
+            _ = CheckForUpdatesAsync();
         };
 
         // ContentRendered 在視窗完整渲染後才觸發，比 Loaded 更晚，
@@ -42,6 +48,70 @@ public partial class MainWindow : Window
             var window = (MainWindow)r;
             window.Dispatcher.Invoke(window.HandleShopClosed);
         });
+    }
+
+    private async Task CheckForUpdatesAsync()
+    {
+        try
+        {
+            var http = App.Services.GetRequiredService<HttpClient>();
+            using var req = new HttpRequestMessage(HttpMethod.Get,
+                "https://api.github.com/repos/Jerlsy/ShopManager/releases/latest");
+            req.Headers.UserAgent.ParseAdd("ShopManager");
+            req.Headers.Authorization = new AuthenticationHeaderValue(
+                "Bearer", "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");
+
+            var resp = await http.SendAsync(req);
+            if (!resp.IsSuccessStatusCode) return;
+
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            var root = doc.RootElement;
+            var tagName = root.GetProperty("tag_name").GetString()!;
+            var latestVersion = Version.Parse(tagName.TrimStart('v'));
+            var asm = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version!;
+            var currentVersion = new Version(asm.Major, asm.Minor, asm.Build);
+
+            if (latestVersion <= currentVersion) return;
+
+            var result = MessageBox.Show(
+                $"發現新版本 {tagName}，是否立即下載並更新？\n（下載完成後將自動執行安裝程式）",
+                "軟體更新", MessageBoxButton.YesNo, MessageBoxImage.Information);
+            if (result != MessageBoxResult.Yes) return;
+
+            string? assetApiUrl = null;
+            string? assetName = null;
+            foreach (var asset in root.GetProperty("assets").EnumerateArray())
+            {
+                var name = asset.GetProperty("name").GetString()!;
+                if (name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                {
+                    assetApiUrl = asset.GetProperty("url").GetString();
+                    assetName = name;
+                    break;
+                }
+            }
+            if (assetApiUrl is null) return;
+
+            using var dlReq = new HttpRequestMessage(HttpMethod.Get, assetApiUrl);
+            dlReq.Headers.UserAgent.ParseAdd("ShopManager");
+            dlReq.Headers.Authorization = new AuthenticationHeaderValue(
+                "Bearer", "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");
+            dlReq.Headers.Accept.ParseAdd("application/octet-stream");
+
+            var dlResp = await http.SendAsync(dlReq);
+            dlResp.EnsureSuccessStatusCode();
+
+            var tempPath = Path.Combine(Path.GetTempPath(), assetName!);
+            await using var fs = File.Create(tempPath);
+            await dlResp.Content.CopyToAsync(fs);
+
+            Process.Start(new ProcessStartInfo(tempPath) { UseShellExecute = true });
+            Application.Current.Shutdown();
+        }
+        catch
+        {
+            // 離線或 GitHub 無法連線時靜默略過
+        }
     }
 
     private void HandleShopClosed()

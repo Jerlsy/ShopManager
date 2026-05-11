@@ -52,6 +52,7 @@ public partial class ExportScheduleWindow : Window
     {
         foreach (var r in _recipients.Where(r => r.Recipient.IsOwner))
             r.IsEnabled = enabled;
+        if (RecipientList is null) return; // InitializeComponent 期間 Checked 事件提前觸發
         RecipientList.ItemsSource = null;
         RecipientList.ItemsSource = _recipients;
     }

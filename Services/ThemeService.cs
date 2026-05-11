@@ -40,14 +40,15 @@ public class ThemeService
 {
     private static readonly IReadOnlyList<ThemePreset> PresetList =
     [
-        new ThemePreset { Accent = AppThemeAccent.SkyBlue, Name = "晴空藍", Primary = Color.FromRgb(3, 169, 244), Secondary = Color.FromRgb(1, 87, 155) },
-        new ThemePreset { Accent = AppThemeAccent.MintGreen, Name = "薄荷綠", Primary = Color.FromRgb(0, 200, 83), Secondary = Color.FromRgb(0, 71, 31) },
-        new ThemePreset { Accent = AppThemeAccent.AmberOrange, Name = "暖陽橘", Primary = Color.FromRgb(255, 171, 0), Secondary = Color.FromRgb(191, 54, 12) },
-        new ThemePreset { Accent = AppThemeAccent.RoyalPurple, Name = "皇家紫", Primary = Color.FromRgb(103, 58, 183), Secondary = Color.FromRgb(49, 27, 146) },
-        new ThemePreset { Accent = AppThemeAccent.SoftPink, Name = "櫻花粉", Primary = Color.FromRgb(233, 30, 99), Secondary = Color.FromRgb(136, 14, 79) },
-        new ThemePreset { Accent = AppThemeAccent.VibrantRed, Name = "熱情紅", Primary = Color.FromRgb(244, 67, 54), Secondary = Color.FromRgb(183, 28, 28) },
-        new ThemePreset { Accent = AppThemeAccent.OceanBlue, Name = "深海藍", Primary = Color.FromRgb(21, 101, 192), Secondary = Color.FromRgb(13, 71, 161) },
-        new ThemePreset { Accent = AppThemeAccent.MidnightCyan, Name = "深夜模式", Primary = Color.FromRgb(20, 30, 48), Secondary = Color.FromRgb(71, 220, 255), IsDark = true },
+        // Secondary 改為跨色相配色，讓背景漸層從主色過渡到不同色調
+        new ThemePreset { Accent = AppThemeAccent.SkyBlue,      Name = "晴空藍",  Primary = Color.FromRgb(3, 169, 244),   Secondary = Color.FromRgb(0, 188, 212)  },  // 藍 → 青
+        new ThemePreset { Accent = AppThemeAccent.MintGreen,    Name = "翡翠青",  Primary = Color.FromRgb(38, 198, 170),  Secondary = Color.FromRgb(102, 187, 106) },  // 青綠 → 草綠
+        new ThemePreset { Accent = AppThemeAccent.AmberOrange,  Name = "暖陽橘",  Primary = Color.FromRgb(255, 171, 0),   Secondary = Color.FromRgb(239, 83, 80)   },  // 琥珀 → 珊瑚紅
+        new ThemePreset { Accent = AppThemeAccent.RoyalPurple,  Name = "星夜紫",  Primary = Color.FromRgb(103, 58, 183),  Secondary = Color.FromRgb(236, 64, 122)  },  // 深紫 → 玫瑰粉
+        new ThemePreset { Accent = AppThemeAccent.SoftPink,     Name = "晚霞粉",  Primary = Color.FromRgb(233, 30, 99),   Secondary = Color.FromRgb(255, 138, 101) },  // 桃紅 → 蜜桃橘
+        new ThemePreset { Accent = AppThemeAccent.VibrantRed,   Name = "活力紅",  Primary = Color.FromRgb(244, 67, 54),   Secondary = Color.FromRgb(255, 109, 0)   },  // 紅 → 深橘
+        new ThemePreset { Accent = AppThemeAccent.OceanBlue,    Name = "深海藍",  Primary = Color.FromRgb(21, 101, 192),  Secondary = Color.FromRgb(0, 172, 193)   },  // 深藍 → 青藍
+        new ThemePreset { Accent = AppThemeAccent.MidnightCyan, Name = "深夜模式", Primary = Color.FromRgb(20, 30, 48),   Secondary = Color.FromRgb(71, 220, 255), IsDark = true },
     ];
 
     private readonly string _preferencePath;
@@ -158,22 +159,23 @@ public class ThemeService
         }
         else
         {
-            // 淺色模式：再次調深背景飽和度，增強品牌視覺感（45% ~ 65%）
-            shellBackground = Mix(primary, Colors.White, 0.50);      // 50% 主色
-            shellGradientStart = Mix(primary, Colors.White, 0.40);   // 40% 主色
-            shellGradientMid = Mix(primary, Colors.White, 0.55);     // 55% 主色
-            shellGradientEnd = Mix(primary, Colors.White, 0.65);     // 65% 主色
-            
-            // 中央主要內容面板（Surface）維持極淺染色（4%），確保與深色背景形成強烈對比
-            surface = Mix(primary, Colors.White, 0.04);              
-            surfaceAlt = Mix(primary, Colors.White, 0.08);           
-            panel = Mix(primary, Colors.White, 0.12);                
-            panelAlt = Mix(primary, Colors.White, 0.16);             
+            // 淺色模式：背景漸層從主色過渡到次色，飽和度拉高讓色彩可見
+            shellBackground    = Mix(Mix(primary, secondary, 0.30), Colors.White, 0.42);
+            shellGradientStart = Mix(primary,                        Colors.White, 0.58);
+            shellGradientMid   = Mix(Mix(primary, secondary, 0.50), Colors.White, 0.55);
+            shellGradientEnd   = Mix(secondary,                      Colors.White, 0.55);
+
+            // 中央主要內容面板（Surface）維持極淺主色染色，確保與深色背景形成強烈對比
+            surface    = Mix(primary, Colors.White, 0.04);
+            surfaceAlt = Mix(primary, Colors.White, 0.08);
+            panel      = Mix(primary, Colors.White, 0.12);
+            panelAlt   = Mix(primary, Colors.White, 0.16);
         }
 
         var border = isDark ? Color.FromArgb(64, 255, 255, 255) : Color.FromArgb(18, 15, 23, 42);
-        var selected = isDark ? Color.FromArgb(70, secondary.R, secondary.G, secondary.B) : Color.FromRgb(220, 235, 250);
-        var hover = isDark ? Color.FromArgb(42, 255, 255, 255) : Color.FromRgb(237, 244, 251);
+        // 選取/Hover 顏色跟隨主題色（從主色衍生淺染），而非固定藍色
+        var selected = isDark ? Color.FromArgb(70, secondary.R, secondary.G, secondary.B) : Mix(primary, Colors.White, 0.15);
+        var hover    = isDark ? Color.FromArgb(42, 255, 255, 255)                         : Mix(primary, Colors.White, 0.08);
         var info = isDark ? Color.FromArgb(38, secondary.R, secondary.G, secondary.B) : Color.FromRgb(234, 243, 250);
         var infoForeground = isDark ? Color.FromRgb(220, 244, 255) : Color.FromRgb(49, 74, 97);
         var subtleForeground = isDark ? Color.FromArgb(184, 255, 255, 255) : Color.FromArgb(158, 15, 23, 42);

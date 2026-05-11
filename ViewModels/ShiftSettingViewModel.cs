@@ -6,7 +6,7 @@ using ShopManager.Services;
 
 namespace ShopManager.ViewModels;
 
-public record ShiftSettingChangedMessage;
+public record ShiftSettingChangedMessage(int TotalConflictCount = 0);
 
 public partial class ShiftSettingViewModel(
     ShiftSettingService service,
@@ -162,30 +162,42 @@ public partial class ShiftSettingViewModel(
         }
         IsEditing = false;
         await LoadAsync();
-        WeakReferenceMessenger.Default.Send(new ShiftSettingChangedMessage());
         snackbarService.ShowSuccess("班別設定已儲存");
 
-        // 班別時間/設定變更 → 重新檢查含此班別的班表
+        // 班別時間/設定變更 → 先 recheck，再發消息（確保排班頁讀到最新衝突數）
+        int totalConflicts = 0;
         if (updatedShiftId.HasValue)
         {
-            var conflictCount = await conflictService.RecheckByShiftAsync(updatedShiftId.Value);
-            if (conflictCount > 0)
-                snackbarService.ShowWarning($"儲存後發現 {conflictCount} 條排班衝突，請至排班頁面調整");
+            totalConflicts = await conflictService.RecheckByShiftAsync(updatedShiftId.Value);
+            if (totalConflicts > 0)
+                snackbarService.ShowWarning($"儲存後發現 {totalConflicts} 條排班衝突");
         }
+        WeakReferenceMessenger.Default.Send(new ShiftSettingChangedMessage(totalConflicts));
     }
 
     [RelayCommand]
     public async Task DeleteAsync(ShiftSetting shift)
     {
-        var confirmed = await dialogService.ShowConfirmAsync(
-            "確認刪除",
-            $"確定要刪除班別「{shift.Alias}」嗎？此操作無法復原。",
-            "刪除", "取消");
+        var entryCount = await service.GetEntryCountAsync(shift.Id);
 
+        var message = entryCount > 0
+            ? $"確定要刪除班別「{shift.Alias}」嗎？此操作無法復原。\n\n⚠️ 此班別有 {entryCount} 筆排班記錄，刪除後將一併移除。"
+            : $"確定要刪除班別「{shift.Alias}」嗎？此操作無法復原。";
+
+        var confirmed = await dialogService.ShowConfirmAsync("確認刪除", message, "刪除", "取消");
         if (!confirmed) return;
+
+        // 刪除前先記錄受影響的班表 ID（cascade 刪除後 entries 已不存在）
+        var affectedIds = await service.GetAffectedScheduleIdsAsync(shift.Id);
 
         await service.DeleteAsync(shift.Id);
         await LoadAsync();
+
+        // 清除孤立衝突記錄，並對受影響班表重新評估
+        int totalConflicts = 0;
+        foreach (var scheduleId in affectedIds)
+            totalConflicts += await conflictService.RecheckAsync(scheduleId);
+        WeakReferenceMessenger.Default.Send(new ShiftSettingChangedMessage(totalConflicts));
     }
 
     [RelayCommand]

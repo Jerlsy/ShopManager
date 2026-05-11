@@ -1,4 +1,8 @@
+publish.ps1
 ## Visual Studio / .NET
+*.pubxml.user
+installer-out/
+publish-out/
 .vs/
 bin/
 obj/
