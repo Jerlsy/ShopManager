@@ -65,8 +65,8 @@ end;
 procedure InitializeWizard;
 begin
   DownloadPage := CreateDownloadPage(
-    '正在安裝必要元件',
-    '請稍候，正在下載必要的系統元件...',
+    'Installing Prerequisites',
+    'Please wait while required components are downloaded...',
     nil);
 end;
 
@@ -98,7 +98,7 @@ begin
         try
           DownloadPage.Download;
         except
-          MsgBox('下載必要元件失敗，請確認網路連線後重試。'#13#10 + GetExceptionMessage, mbError, MB_OK);
+          MsgBox('Failed to download required components. Please check your internet connection.'#13#10 + GetExceptionMessage, mbError, MB_OK);
           Result := False;
           Exit;
         end;
@@ -112,7 +112,7 @@ begin
              '/install /quiet /norestart', '', SW_SHOW, ewWaitUntilTerminated, ResultCode);
         if ResultCode <> 0 then
         begin
-          MsgBox('.NET 10 Desktop Runtime 安裝失敗（代碼 ' + IntToStr(ResultCode) + '）', mbError, MB_OK);
+          MsgBox('Failed to install .NET 10 Desktop Runtime (code ' + IntToStr(ResultCode) + ')', mbError, MB_OK);
           Result := False;
           Exit;
         end;
@@ -124,7 +124,7 @@ begin
              '/install /quiet /norestart', '', SW_SHOW, ewWaitUntilTerminated, ResultCode);
         if ResultCode <> 0 then
         begin
-          MsgBox('Visual C++ Redistributable 安裝失敗（代碼 ' + IntToStr(ResultCode) + '）', mbError, MB_OK);
+          MsgBox('Failed to install Visual C++ Redistributable (code ' + IntToStr(ResultCode) + ')', mbError, MB_OK);
           Result := False;
           Exit;
         end;
