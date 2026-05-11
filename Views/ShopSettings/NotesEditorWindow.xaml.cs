@@ -1,3 +1,5 @@
+using Microsoft.Web.WebView2.Core;
+using System.IO;
 using System.Text.Json;
 using System.Windows;
 
@@ -18,7 +20,11 @@ public partial class NotesEditorWindow : Window
 
     private async void Window_Loaded(object sender, RoutedEventArgs e)
     {
-        await EditorWebView.EnsureCoreWebView2Async();
+        var userDataFolder = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "ShopManager", "WebView2");
+        var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
+        await EditorWebView.EnsureCoreWebView2Async(env);
         EditorWebView.CoreWebView2.NavigationCompleted += async (_, _) =>
         {
             if (_editorReady) return;

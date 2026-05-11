@@ -1,8 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Web.WebView2.Core;
 using Microsoft.Win32;
 using ShopManager.Models;
 using ShopManager.ViewModels;
 using ShopManager.Views.Line;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -31,7 +33,11 @@ public partial class ShopSettingPage : UserControl
 
     private async Task InitNotesPreviewAsync()
     {
-        await NotesPreviewWebView.EnsureCoreWebView2Async();
+        var userDataFolder = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "ShopManager", "WebView2");
+        var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
+        await NotesPreviewWebView.EnsureCoreWebView2Async(env);
         NotesPreviewWebView.NavigationCompleted += OnPreviewNavigationCompleted;
         // WebView2 (HwndHost) 會吞掉 WM_MOUSEWHEEL，PreviewMouseWheel 不會 fire。
         // 在 HTML 端攔 wheel 並透過 postMessage 把 deltaY 送回 WPF，由我們手動捲外層 ScrollViewer。
