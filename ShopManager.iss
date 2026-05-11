@@ -13,6 +13,7 @@ DisableProgramGroupPage=yes
 OutputBaseFilename=ShopManager-Setup-{#AppVersion}
 OutputDir=installer-out
 SetupIconFile=Resources\app.ico
+UninstallDisplayIcon={app}\{#AppExeName}
 Compression=lzma
 SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64compatible
