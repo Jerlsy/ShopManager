@@ -33,6 +33,12 @@ public partial class ShopSettingPage : UserControl
 
     private async Task InitNotesPreviewAsync()
     {
+        if (_previewReady)
+        {
+            LoadNotesPreview(_viewModel.Notes);
+            return;
+        }
+
         var userDataFolder = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "ShopManager", "WebView2");
