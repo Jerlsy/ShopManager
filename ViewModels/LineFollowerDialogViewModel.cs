@@ -61,7 +61,7 @@ public partial class LineFollowerDialogViewModel(
         ErrorMessage = null;
         try
         {
-            var rawList = await followerService.SyncAndGetAllAsync(_workerUrl, _apiKey);
+            var rawList = await followerService.SyncAndGetAllAsync(_workerUrl, _apiKey, _token);
             var employees = await db.Employees
                 .Where(e => e.ShopId == shopContext.ShopId)
                 .ToListAsync();

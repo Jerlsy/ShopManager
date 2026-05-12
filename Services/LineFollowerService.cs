@@ -16,7 +16,7 @@ public class LineFollowerService(AppDbContext db, ShopContext shopContext, LineS
             .OrderBy(f => f.DisplayName)
             .ToListAsync();
 
-    public async Task<List<LineFollower>> SyncAndGetAllAsync(string workerUrl, string apiKey)
+    public async Task<List<LineFollower>> SyncAndGetAllAsync(string workerUrl, string apiKey, string? token = null)
     {
         var workerFollowers = await lineService.GetFollowersFromWorkerAsync(workerUrl, apiKey);
         var returnedIds = new HashSet<string>(workerFollowers.Select(f => f.UserId));
@@ -44,6 +44,22 @@ public class LineFollowerService(AppDbContext db, ShopContext shopContext, LineS
             follower.DisplayName = displayName;
             follower.PictureUrl = pictureUrl;
             follower.LastSyncAt = now;
+        }
+
+        // Worker 回傳的 displayName 可能因 re-follow 而遺失，用 LINE Profile API 補齊
+        if (!string.IsNullOrEmpty(token))
+        {
+            var needProfile = existing
+                .Where(f => returnedIds.Contains(f.UserId) &&
+                            (string.IsNullOrWhiteSpace(f.DisplayName) || f.DisplayName == "未知"))
+                .ToList();
+
+            foreach (var follower in needProfile)
+            {
+                var (name, pic) = await lineService.GetProfileAsync(token, follower.UserId);
+                follower.DisplayName = name;
+                if (pic is not null) follower.PictureUrl = pic;
+            }
         }
 
         await db.SaveChangesAsync();
