@@ -1753,7 +1753,8 @@
                                                         DragOver="ShiftBlock_DragOver"
                                                         Drop="ShiftBlock_Drop">
                                                     <!-- 班別標題 -->
-                                                    <StackPanel>
+                                                    <Grid>
+                                                        <StackPanel>
                                                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                                                             <Border CornerRadius="6" Padding="8,3" Margin="0,0,10,0"
                                                                     Background="{Binding ShiftSetting.Color, Converter={StaticResource HexToBrushConverter}}">
@@ -1816,17 +1817,16 @@
                                                                    FontSize="{DynamicResource FontSizeSmall}"
                                                                    Foreground="{DynamicResource AppSubtleForegroundBrush}"
                                                                    Visibility="{Binding EntryItems.Count, Converter={StaticResource ZeroToVisibilityConverter}}"/>
-                                                        <Button HorizontalAlignment="Right" Margin="0,8,0,0"
-                                                                Height="26" Padding="8,0" FontSize="11"
-                                                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                        </StackPanel>
+                                                        <Button HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                                Style="{StaticResource MaterialDesignIconButton}"
+                                                                Width="28" Height="28" Padding="0"
+                                                                ToolTip="推薦可排班員工"
                                                                 Command="{Binding DataContext.OpenRecommendPanelCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                 CommandParameter="{Binding}">
-                                                            <StackPanel Orientation="Horizontal">
-                                                                <md:PackIcon Kind="AccountSearch" Width="13" Height="13" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                                                                <TextBlock Text="推薦" VerticalAlignment="Center"/>
-                                                            </StackPanel>
+                                                            <md:PackIcon Kind="AccountSearch" Width="15" Height="15"/>
                                                         </Button>
-                                                    </StackPanel>
+                                                    </Grid>
                                                 </Border>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
