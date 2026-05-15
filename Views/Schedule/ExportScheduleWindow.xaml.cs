@@ -157,7 +157,7 @@ public partial class ExportScheduleWindow : Window
 
             hasAny = true;
             if (legendById.TryGetValue(shiftId.Value, out var leg))
-                sb.AppendLine($"{_data.Month:D2}/{col.Day:D2}（{col.DayOfWeekLabel}）{leg.Alias}　{leg.TimeRange}");
+                sb.AppendLine($"{_data.Month:D2}/{col.Day:D2}（{col.DayOfWeekLabel}）{leg.TimeRange}");
         }
         if (!hasAny)
             sb.AppendLine("本月尚無排班紀錄。");

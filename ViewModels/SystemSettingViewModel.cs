@@ -34,7 +34,15 @@ public partial class SystemSettingViewModel(
         "官方網站", "其他"
     };
 
-    [ObservableProperty] private int _weekStartDay = 1;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectedWeekStartDay))]
+    private int _weekStartDay = 1;
+
+    public WeekStartOption? SelectedWeekStartDay
+    {
+        get => WeekStartOptions.FirstOrDefault(o => o.Value == WeekStartDay);
+        set { if (value is not null) WeekStartDay = value.Value; }
+    }
     [ObservableProperty] private bool _nationalHolidaysOff = true;
 
     // ── LINE 推播設定 ────────────────────────────────────────────────────────

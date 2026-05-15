@@ -163,7 +163,7 @@
                                                 <Image Source="{Binding Employee.AvatarPhotoData, Converter={StaticResource BytesToImageConverter}}"
                                                        Stretch="UniformToFill"
                                                        Visibility="{Binding Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}}"/>
-                                                <TextBlock Text="{Binding Employee.Name, Converter={StaticResource NameInitialConverter}}"
+                                                <TextBlock Text="{Binding Employee.DisplayInitial}"
                                                            FontSize="13" FontWeight="Bold" Foreground="White"
                                                            HorizontalAlignment="Center" VerticalAlignment="Center"
                                                            Visibility="{Binding Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"/>
@@ -380,7 +380,7 @@
                                                                                                                         <Grid>
                                                                                                                             <Image Source="{Binding Employee.AvatarPhotoData, Converter={StaticResource BytesToImageConverter}}" Stretch="UniformToFill"
                                                                                                                                    Visibility="{Binding Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}}"/>
-                                                                                                                            <TextBlock Text="{Binding Employee.Name, Converter={StaticResource NameInitialConverter}}"
+                                                                                                                            <TextBlock Text="{Binding Employee.DisplayInitial}"
                                                                                                                                        FontSize="9" FontWeight="Bold" Foreground="White"
                                                                                                                                        HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                                                                                        Visibility="{Binding Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"/>
@@ -639,7 +639,7 @@
                                                                                                             <Grid>
                                                                                                                 <Image Source="{Binding Employee.AvatarPhotoData, Converter={StaticResource BytesToImageConverter}}" Stretch="UniformToFill"
                                                                                                                        Visibility="{Binding Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}}"/>
-                                                                                                                <TextBlock Text="{Binding Employee.Name, Converter={StaticResource NameInitialConverter}}"
+                                                                                                                <TextBlock Text="{Binding Employee.DisplayInitial}"
                                                                                                                            FontSize="9" FontWeight="Bold" Foreground="White"
                                                                                                                            HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                                                                            Visibility="{Binding Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"/>
@@ -671,7 +671,7 @@
                                                                                 <Run Text="–"/>
                                                                                 <Run Text="{Binding ShiftSetting.EndTime, StringFormat=HH:mm, Mode=OneWay}"/>
                                                                             </TextBlock>
-                                                                            <!-- 員工縮圖：垂直堆疊，Viewbox 等比放大 -->
+                                                                            <!-- 員工縮圖 + 姓名 -->
                                                                             <ItemsControl Grid.Row="2" ItemsSource="{Binding EntryItems}" Margin="0,4,0,0">
                                                                                 <ItemsControl.ItemsPanel>
                                                                                     <ItemsPanelTemplate>
@@ -680,28 +680,30 @@
                                                                                 </ItemsControl.ItemsPanel>
                                                                                 <ItemsControl.ItemTemplate>
                                                                                     <DataTemplate DataType="{x:Type vm:EntryItem}">
-                                                                                        <Viewbox Stretch="Uniform" MaxHeight="48" HorizontalAlignment="Stretch" VerticalAlignment="Top" Margin="1,0">
-                                                                                            <Border Width="36" Height="36" CornerRadius="18" ClipToBounds="True"
-                                                                                                    BorderThickness="2" BorderBrush="White"
-                                                                                                    Background="{Binding Employee.ColorHex, Converter={StaticResource HexToBrushConverter}}"
-                                                                                                    AllowDrop="True"
-                                                                                                    DragOver="EntryChip_DragOver"
-                                                                                                    Drop="EntryChip_Drop"
+                                                                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,3"
                                                                                                     PreviewMouseLeftButtonDown="EntryRow_PreviewMouseLeftButtonDown"
                                                                                                     MouseMove="EntryRow_MouseMove"
                                                                                                     MouseLeftButtonUp="EntryRow_MouseLeftButtonUp"
                                                                                                     Cursor="Hand">
+                                                                                            <Border Width="22" Height="22" CornerRadius="11" ClipToBounds="True"
+                                                                                                    Margin="0,0,5,0" BorderThickness="1.5" BorderBrush="White"
+                                                                                                    Background="{Binding Employee.ColorHex, Converter={StaticResource HexToBrushConverter}}"
+                                                                                                    AllowDrop="True"
+                                                                                                    DragOver="EntryChip_DragOver"
+                                                                                                    Drop="EntryChip_Drop">
                                                                                                 <Grid>
                                                                                                     <Image Source="{Binding Employee.AvatarPhotoData, Converter={StaticResource BytesToImageConverter}}"
                                                                                                            Stretch="UniformToFill"
                                                                                                            Visibility="{Binding Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}}"/>
-                                                                                                    <TextBlock Text="{Binding Employee.Name, Converter={StaticResource NameInitialConverter}}"
-                                                                                                               FontSize="13" FontWeight="Bold" Foreground="White"
+                                                                                                    <TextBlock Text="{Binding Employee.DisplayInitial}"
+                                                                                                               FontSize="9" FontWeight="Bold" Foreground="White"
                                                                                                                HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                                                                Visibility="{Binding Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"/>
                                                                                                 </Grid>
                                                                                             </Border>
-                                                                                        </Viewbox>
+                                                                                            <TextBlock Text="{Binding Employee.Name}" FontSize="11" Foreground="White"
+                                                                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                                                        </StackPanel>
                                                                                     </DataTemplate>
                                                                                 </ItemsControl.ItemTemplate>
                                                                             </ItemsControl>
@@ -921,7 +923,7 @@
                                                                                         <Grid>
                                                                                             <Image Source="{Binding Employee.AvatarPhotoData, Converter={StaticResource BytesToImageConverter}}" Stretch="UniformToFill"
                                                                                                    Visibility="{Binding Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}}"/>
-                                                                                            <TextBlock Text="{Binding Employee.Name, Converter={StaticResource NameInitialConverter}}"
+                                                                                            <TextBlock Text="{Binding Employee.DisplayInitial}"
                                                                                                        FontSize="10" FontWeight="Bold" Foreground="White"
                                                                                                        HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                                                        Visibility="{Binding Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"/>
@@ -938,48 +940,58 @@
                                                             </Grid>
                                                         </ToolTip>
                                                     </Border.ToolTip>
-                                                    <StackPanel Margin="12,8">
-                                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                                            <TextBlock Text="{Binding ShiftSetting.Name}"
-                                                                       FontSize="14" Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
-                                                            <Border CornerRadius="4" Padding="6,1" Margin="8,0,0,0"
-                                                                    Background="#30FFFFFF">
-                                                                <TextBlock Text="{Binding ShiftSetting.Alias}" FontSize="11" Foreground="White"/>
-                                                            </Border>
+                                                    <Grid Margin="12,8">
+                                                        <StackPanel>
+                                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                                <TextBlock Text="{Binding ShiftSetting.Name}"
+                                                                           FontSize="14" Foreground="White" FontWeight="Bold" VerticalAlignment="Center"/>
+                                                                <Border CornerRadius="4" Padding="6,1" Margin="8,0,0,0"
+                                                                        Background="#30FFFFFF">
+                                                                    <TextBlock Text="{Binding ShiftSetting.Alias}" FontSize="11" Foreground="White"/>
+                                                                </Border>
+                                                            </StackPanel>
+                                                            <TextBlock FontSize="12" Foreground="White" Opacity="0.85" Margin="0,0,0,8">
+                                                                <Run Text="{Binding ShiftSetting.StartTime, StringFormat=HH:mm, Mode=OneWay}"/>
+                                                                <Run Text="–"/>
+                                                                <Run Text="{Binding ShiftSetting.EndTime, StringFormat=HH:mm, Mode=OneWay}"/>
+                                                            </TextBlock>
+                                                            <ItemsControl ItemsSource="{Binding EntryItems}">
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate DataType="{x:Type vm:EntryItem}">
+                                                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6"
+                                                                                    PreviewMouseLeftButtonDown="EntryRow_PreviewMouseLeftButtonDown"
+                                                                                    MouseMove="EntryRow_MouseMove"
+                                                                                    MouseLeftButtonUp="EntryRow_MouseLeftButtonUp"
+                                                                                    Cursor="Hand">
+                                                                            <Border Width="28" Height="28" CornerRadius="14" ClipToBounds="True" Margin="0,0,8,0"
+                                                                                    Background="{Binding Employee.ColorHex, Converter={StaticResource HexToBrushConverter}}"
+                                                                                    AllowDrop="True"
+                                                                                    DragOver="EntryChip_DragOver"
+                                                                                    Drop="EntryChip_Drop">
+                                                                                <Grid>
+                                                                                    <Image Source="{Binding Employee.AvatarPhotoData, Converter={StaticResource BytesToImageConverter}}" Stretch="UniformToFill"
+                                                                                           Visibility="{Binding Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                                                    <TextBlock Text="{Binding Employee.DisplayInitial}"
+                                                                                               FontSize="10" FontWeight="Bold" Foreground="White"
+                                                                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                                               Visibility="{Binding Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                                                                                </Grid>
+                                                                            </Border>
+                                                                            <TextBlock Text="{Binding Employee.Name}" FontSize="13" VerticalAlignment="Center" Foreground="White"/>
+                                                                        </StackPanel>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
                                                         </StackPanel>
-                                                        <TextBlock FontSize="12" Foreground="White" Opacity="0.85" Margin="0,0,0,8">
-                                                            <Run Text="{Binding ShiftSetting.StartTime, StringFormat=HH:mm, Mode=OneWay}"/>
-                                                            <Run Text="–"/>
-                                                            <Run Text="{Binding ShiftSetting.EndTime, StringFormat=HH:mm, Mode=OneWay}"/>
-                                                        </TextBlock>
-                                                        <ItemsControl ItemsSource="{Binding EntryItems}">
-                                                            <ItemsControl.ItemTemplate>
-                                                                <DataTemplate DataType="{x:Type vm:EntryItem}">
-                                                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6"
-                                                                                PreviewMouseLeftButtonDown="EntryRow_PreviewMouseLeftButtonDown"
-                                                                                MouseMove="EntryRow_MouseMove"
-                                                                                MouseLeftButtonUp="EntryRow_MouseLeftButtonUp"
-                                                                                Cursor="Hand">
-                                                                        <Border Width="28" Height="28" CornerRadius="14" ClipToBounds="True" Margin="0,0,8,0"
-                                                                                Background="{Binding Employee.ColorHex, Converter={StaticResource HexToBrushConverter}}"
-                                                                                AllowDrop="True"
-                                                                                DragOver="EntryChip_DragOver"
-                                                                                Drop="EntryChip_Drop">
-                                                                            <Grid>
-                                                                                <Image Source="{Binding Employee.AvatarPhotoData, Converter={StaticResource BytesToImageConverter}}" Stretch="UniformToFill"
-                                                                                       Visibility="{Binding Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}}"/>
-                                                                                <TextBlock Text="{Binding Employee.Name, Converter={StaticResource NameInitialConverter}}"
-                                                                                           FontSize="10" FontWeight="Bold" Foreground="White"
-                                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                                                           Visibility="{Binding Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"/>
-                                                                            </Grid>
-                                                                        </Border>
-                                                                        <TextBlock Text="{Binding Employee.Name}" FontSize="13" VerticalAlignment="Center" Foreground="White"/>
-                                                                    </StackPanel>
-                                                                </DataTemplate>
-                                                            </ItemsControl.ItemTemplate>
-                                                        </ItemsControl>
-                                                    </StackPanel>
+                                                        <Button HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                                Style="{StaticResource MaterialDesignIconButton}"
+                                                                Foreground="White" Width="28" Height="28" Padding="0"
+                                                                ToolTip="推薦可排班員工"
+                                                                Command="{Binding DataContext.OpenRecommendPanelCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                CommandParameter="{Binding}">
+                                                            <md:PackIcon Kind="AccountSearch" Width="15" Height="15"/>
+                                                        </Button>
+                                                    </Grid>
                                                 </Border>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
@@ -1107,7 +1119,7 @@
                                         <Grid>
                                             <Image Source="{Binding EntryCardEmployee.AvatarPhotoData, Converter={StaticResource BytesToImageConverter}}" Stretch="UniformToFill"
                                                    Visibility="{Binding EntryCardEmployee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}}"/>
-                                            <TextBlock Text="{Binding EntryCardEmployee.Name, Converter={StaticResource NameInitialConverter}}"
+                                            <TextBlock Text="{Binding EntryCardEmployee.DisplayInitial}"
                                                        FontSize="20" FontWeight="Bold" Foreground="White"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center"
                                                        Visibility="{Binding EntryCardEmployee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"/>
@@ -1785,7 +1797,7 @@
                                                                                     <Image Source="{Binding Employee.AvatarPhotoData, Converter={StaticResource BytesToImageConverter}}"
                                                                                            Stretch="UniformToFill"
                                                                                            Visibility="{Binding Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}}"/>
-                                                                                    <TextBlock Text="{Binding Employee.Name, Converter={StaticResource NameInitialConverter}}"
+                                                                                    <TextBlock Text="{Binding Employee.DisplayInitial}"
                                                                                                FontSize="10" FontWeight="Bold" Foreground="White"
                                                                                                HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                                                Visibility="{Binding Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"/>
@@ -1804,6 +1816,16 @@
                                                                    FontSize="{DynamicResource FontSizeSmall}"
                                                                    Foreground="{DynamicResource AppSubtleForegroundBrush}"
                                                                    Visibility="{Binding EntryItems.Count, Converter={StaticResource ZeroToVisibilityConverter}}"/>
+                                                        <Button HorizontalAlignment="Right" Margin="0,8,0,0"
+                                                                Height="26" Padding="8,0" FontSize="11"
+                                                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                                Command="{Binding DataContext.OpenRecommendPanelCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                CommandParameter="{Binding}">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <md:PackIcon Kind="AccountSearch" Width="13" Height="13" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                                <TextBlock Text="推薦" VerticalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </Button>
                                                     </StackPanel>
                                                 </Border>
                                             </DataTemplate>
@@ -1867,6 +1889,133 @@
                 </Grid>
             </Border>
 
+            <!-- 推薦員工浮層 -->
+            <Border Grid.ColumnSpan="3" Panel.ZIndex="30"
+                    Visibility="{Binding IsRecommendPanelOpen, Converter={StaticResource BoolToVisibilityConverter}}"
+                    Background="#88000000"
+                    MouseLeftButtonDown="RecommendOverlay_Click">
+                <Border Background="{DynamicResource AppSurfaceBrush}"
+                        CornerRadius="16" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
+                        MinWidth="520" MaxWidth="680" MaxHeight="520"
+                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Border.Effect>
+                        <DropShadowEffect ShadowDepth="4" BlurRadius="20" Opacity="0.25"/>
+                    </Border.Effect>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <!-- 標題列 -->
+                        <Border Grid.Row="0" Padding="20,14"
+                                BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Border CornerRadius="6" Padding="8,3" Margin="0,0,10,0"
+                                            Background="{Binding RecommendTargetShift.ShiftSetting.Color, Converter={StaticResource HexToBrushConverter}}">
+                                        <TextBlock Text="{Binding RecommendTargetShift.ShiftSetting.Alias}"
+                                                   FontSize="12" Foreground="White" FontWeight="Bold"/>
+                                    </Border>
+                                    <TextBlock Text="推薦可排班員工"
+                                               FontWeight="SemiBold" FontSize="{DynamicResource FontSizeSubTitle}"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Style="{StaticResource MaterialDesignIconButton}"
+                                        Width="32" Height="32" VerticalAlignment="Top"
+                                        Command="{Binding CloseRecommendPanelCommand}">
+                                    <md:PackIcon Kind="Close" Width="16" Height="16"/>
+                                </Button>
+                            </Grid>
+                        </Border>
+                        <!-- 候選人列表 -->
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <TextBlock Text="目前無符合條件的員工"
+                                           Style="{StaticResource SubtleTextStyle}"
+                                           HorizontalAlignment="Center" Margin="0,24"
+                                           Visibility="{Binding RecommendCandidates.Count, Converter={StaticResource ZeroToVisibilityConverter}}"/>
+                                <ItemsControl ItemsSource="{Binding RecommendCandidates}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:RecommendEmployeeItem}">
+                                            <Border Padding="20,12"
+                                                    BorderBrush="{DynamicResource AppBorderBrush}"
+                                                    BorderThickness="0,0,0,1">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <!-- 員工頭像 + 姓名 -->
+                                                    <StackPanel Grid.Column="0" Orientation="Horizontal"
+                                                                VerticalAlignment="Center" Margin="0,0,16,0">
+                                                        <Border Width="32" Height="32" CornerRadius="16"
+                                                                ClipToBounds="True" Margin="0,0,8,0"
+                                                                Background="{Binding Employee.ColorHex, Converter={StaticResource HexToBrushConverter}}">
+                                                            <Grid>
+                                                                <Image Source="{Binding Employee.AvatarPhotoData, Converter={StaticResource BytesToImageConverter}}"
+                                                                       Stretch="UniformToFill"
+                                                                       Visibility="{Binding Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                                <TextBlock Text="{Binding Employee.DisplayInitial}"
+                                                                           FontSize="12" FontWeight="Bold" Foreground="White"
+                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                           Visibility="{Binding Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                                                            </Grid>
+                                                        </Border>
+                                                        <TextBlock Text="{Binding Employee.Name}"
+                                                                   VerticalAlignment="Center" FontWeight="Medium"/>
+                                                    </StackPanel>
+                                                    <!-- 班別統計 -->
+                                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                        <StackPanel.Resources>
+                                                            <DataTemplate x:Key="RecommendShiftChip" DataType="{x:Type vm:EmployeeDetailShiftStat}">
+                                                                <Border Background="{Binding ColorHex, Converter={StaticResource HexToBrushConverter}}"
+                                                                        CornerRadius="4" Padding="5,2" Margin="0,0,4,0">
+                                                                    <StackPanel Orientation="Horizontal">
+                                                                        <TextBlock Text="{Binding ShiftAlias}" FontSize="12" Foreground="White" FontWeight="Medium"/>
+                                                                        <TextBlock Text="{Binding Count, StringFormat=' ×{0}'}" FontSize="12" Foreground="White" Opacity="0.8"/>
+                                                                    </StackPanel>
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </StackPanel.Resources>
+                                                        <ItemsControl ItemsSource="{Binding ShiftStatsRow1}"
+                                                                      ItemTemplate="{StaticResource RecommendShiftChip}">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                        </ItemsControl>
+                                                        <ItemsControl ItemsSource="{Binding ShiftStatsRow2}"
+                                                                      ItemTemplate="{StaticResource RecommendShiftChip}"
+                                                                      Margin="0,4,0,0"
+                                                                      Visibility="{Binding ShiftStatsRow2.Count, Converter={StaticResource ZeroToVisibilityConverter}, ConverterParameter=Inverse}">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                        </ItemsControl>
+                                                    </StackPanel>
+                                                    <!-- 加入按鈕 -->
+                                                    <Button Grid.Column="2" VerticalAlignment="Center"
+                                                            Style="{StaticResource MaterialDesignIconButton}"
+                                                            Width="36" Height="36"
+                                                            Command="{Binding DataContext.AssignRecommendedEmployeeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}">
+                                                        <md:PackIcon Kind="Plus" Width="18" Height="18"/>
+                                                    </Button>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+            </Border>
+
             <!-- 員工本月排班詳情浮層 -->
             <Border Grid.ColumnSpan="3" Panel.ZIndex="40"
                     Visibility="{Binding IsEmployeeDetailOpen, Converter={StaticResource BoolToVisibilityConverter}}"
@@ -1874,7 +2023,7 @@
                     MouseLeftButtonDown="EmployeeDetailOverlay_Click">
                 <Border Background="{DynamicResource AppSurfaceBrush}"
                         CornerRadius="20" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
-                        Width="600" MaxHeight="560"
+                        MinWidth="600" MaxHeight="560"
                         HorizontalAlignment="Center" VerticalAlignment="Center">
                     <Border.Effect>
                         <DropShadowEffect ShadowDepth="4" BlurRadius="20" Opacity="0.25"/>
@@ -1889,14 +2038,18 @@
                         <Border Grid.Row="0" Padding="20,16"
                                 BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1">
                             <Grid>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                                     <Border Width="44" Height="44" CornerRadius="22" ClipToBounds="True" Margin="0,0,12,0"
                                             Background="{Binding EmployeeDetailItem.Employee.ColorHex, Converter={StaticResource HexToBrushConverter}}">
                                         <Grid>
                                             <Image Source="{Binding EmployeeDetailItem.Employee.AvatarPhotoData, Converter={StaticResource BytesToImageConverter}}"
                                                    Stretch="UniformToFill"
                                                    Visibility="{Binding EmployeeDetailItem.Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}}"/>
-                                            <TextBlock Text="{Binding EmployeeDetailItem.Employee.Name, Converter={StaticResource NameInitialConverter}}"
+                                            <TextBlock Text="{Binding EmployeeDetailItem.Employee.DisplayInitial}"
                                                        FontSize="17" FontWeight="Bold" Foreground="White"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center"
                                                        Visibility="{Binding EmployeeDetailItem.Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"/>
@@ -1914,8 +2067,39 @@
                                             <Run Text=" 班"/>
                                         </TextBlock>
                                     </StackPanel>
+                                    <!-- 班別統計 -->
+                                    <Border Width="1" Margin="12,4" Background="{DynamicResource AppBorderBrush}"
+                                            Visibility="{Binding EmployeeDetailShiftStatsRow1.Count, Converter={StaticResource ZeroToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                                    <StackPanel VerticalAlignment="Center"
+                                                Visibility="{Binding EmployeeDetailShiftStatsRow1.Count, Converter={StaticResource ZeroToVisibilityConverter}, ConverterParameter=Inverse}">
+                                        <StackPanel.Resources>
+                                            <DataTemplate x:Key="ShiftStatChip" DataType="{x:Type vm:EmployeeDetailShiftStat}">
+                                                <Border Background="{Binding ColorHex, Converter={StaticResource HexToBrushConverter}}"
+                                                        CornerRadius="4" Padding="6,3" Margin="0,0,4,0">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding ShiftAlias}" FontSize="13" Foreground="White" FontWeight="Medium"/>
+                                                        <TextBlock Text="{Binding Count, StringFormat=' ×{0}'}" FontSize="13" Foreground="White" Opacity="0.8"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </StackPanel.Resources>
+                                        <ItemsControl ItemsSource="{Binding EmployeeDetailShiftStatsRow1}"
+                                                      ItemTemplate="{StaticResource ShiftStatChip}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                        </ItemsControl>
+                                        <ItemsControl ItemsSource="{Binding EmployeeDetailShiftStatsRow2}"
+                                                      ItemTemplate="{StaticResource ShiftStatChip}"
+                                                      Margin="0,4,0,0"
+                                                      Visibility="{Binding EmployeeDetailShiftStatsRow2.Count, Converter={StaticResource ZeroToVisibilityConverter}, ConverterParameter=Inverse}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                        </ItemsControl>
+                                    </StackPanel>
                                 </StackPanel>
-                                <Button HorizontalAlignment="Right" VerticalAlignment="Top"
+                                <Button Grid.Column="1" VerticalAlignment="Top"
                                         Style="{StaticResource MaterialDesignIconButton}"
                                         Width="32" Height="32"
                                         Command="{Binding CloseEmployeeDetailCommand}">
@@ -2056,18 +2240,21 @@
                                                     <Grid>
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="60"/>
-                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="110"/>
                                                             <ColumnDefinition Width="120"/>
-                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
                                                         </Grid.ColumnDefinitions>
                                                         <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                                             <TextBlock Text="{Binding DateText}" FontWeight="Medium" FontSize="13"/>
                                                             <TextBlock Text="{Binding DayOfWeekText}" FontSize="11"
                                                                        Foreground="{DynamicResource AppSubtleForegroundBrush}"/>
                                                         </StackPanel>
-                                                        <TextBlock Grid.Column="1" Text="{Binding ShiftAlias}"
-                                                                   VerticalAlignment="Center" FontWeight="Medium"
-                                                                   Margin="8,0"/>
+                                                        <Border Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0"
+                                                                Background="{Binding ColorHex, Converter={StaticResource HexToBrushConverter}}"
+                                                                CornerRadius="4" Padding="6,3">
+                                                            <TextBlock Text="{Binding ShiftAlias}"
+                                                                       Foreground="White" FontWeight="Medium"/>
+                                                        </Border>
                                                         <TextBlock Grid.Column="2" Text="{Binding TimeRange}"
                                                                    VerticalAlignment="Center" FontSize="11"
                                                                    Foreground="{DynamicResource AppSubtleForegroundBrush}"/>
@@ -2095,7 +2282,7 @@
                                                                                             <Image Source="{Binding AvatarPhotoData, Converter={StaticResource BytesToImageConverter}}"
                                                                                                    Stretch="UniformToFill"
                                                                                                    Visibility="{Binding AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}}"/>
-                                                                                            <TextBlock Text="{Binding Name, Converter={StaticResource NameInitialConverter}}"
+                                                                                            <TextBlock Text="{Binding DisplayInitial}"
                                                                                                        FontSize="9" FontWeight="Bold" Foreground="White"
                                                                                                        HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                                                        Visibility="{Binding AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"/>
@@ -2109,7 +2296,7 @@
                                                                             <Image Source="{Binding AvatarPhotoData, Converter={StaticResource BytesToImageConverter}}"
                                                                                    Stretch="UniformToFill"
                                                                                    Visibility="{Binding AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}}"/>
-                                                                            <TextBlock Text="{Binding Name, Converter={StaticResource NameInitialConverter}}"
+                                                                            <TextBlock Text="{Binding DisplayInitial}"
                                                                                        FontSize="11" FontWeight="Bold" Foreground="White"
                                                                                        HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                                        Visibility="{Binding AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"/>

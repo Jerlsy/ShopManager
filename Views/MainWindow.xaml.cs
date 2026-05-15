@@ -58,11 +58,13 @@ public partial class MainWindow : Window
             using var req = new HttpRequestMessage(HttpMethod.Get,
                 "https://api.github.com/repos/Jerlsy/ShopManager/releases/latest");
             req.Headers.UserAgent.ParseAdd("ShopManager");
-            req.Headers.Authorization = new AuthenticationHeaderValue(
-                "Bearer", "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");
 
             var resp = await http.SendAsync(req);
-            if (!resp.IsSuccessStatusCode) return;
+            if (!resp.IsSuccessStatusCode)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Update] API 回應 {(int)resp.StatusCode}");
+                return;
+            }
 
             using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
             var root = doc.RootElement;
@@ -78,38 +80,41 @@ public partial class MainWindow : Window
                 "軟體更新", MessageBoxButton.YesNo, MessageBoxImage.Information);
             if (result != MessageBoxResult.Yes) return;
 
-            string? assetApiUrl = null;
+            string? downloadUrl = null;
             string? assetName = null;
             foreach (var asset in root.GetProperty("assets").EnumerateArray())
             {
                 var name = asset.GetProperty("name").GetString()!;
                 if (name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
                 {
-                    assetApiUrl = asset.GetProperty("url").GetString();
+                    downloadUrl = asset.GetProperty("browser_download_url").GetString();
                     assetName = name;
                     break;
                 }
             }
-            if (assetApiUrl is null) return;
+            if (downloadUrl is null)
+            {
+                MessageBox.Show("找不到安裝檔，請至 GitHub 手動下載。", "更新失敗",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
 
-            using var dlReq = new HttpRequestMessage(HttpMethod.Get, assetApiUrl);
+            using var dlReq = new HttpRequestMessage(HttpMethod.Get, downloadUrl);
             dlReq.Headers.UserAgent.ParseAdd("ShopManager");
-            dlReq.Headers.Authorization = new AuthenticationHeaderValue(
-                "Bearer", "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");
-            dlReq.Headers.Accept.ParseAdd("application/octet-stream");
 
-            var dlResp = await http.SendAsync(dlReq);
+            var dlResp = await http.SendAsync(dlReq, HttpCompletionOption.ResponseHeadersRead);
             dlResp.EnsureSuccessStatusCode();
 
             var tempPath = Path.Combine(Path.GetTempPath(), assetName!);
-            await using var fs = File.Create(tempPath);
-            await dlResp.Content.CopyToAsync(fs);
+            await using (var fs = File.Create(tempPath))
+                await dlResp.Content.CopyToAsync(fs);
 
             Process.Start(new ProcessStartInfo(tempPath) { UseShellExecute = true });
             Application.Current.Shutdown();
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[Update] 失敗: {ex.Message}");
             // 離線或 GitHub 無法連線時靜默略過
         }
     }

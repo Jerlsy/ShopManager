@@ -165,8 +165,23 @@ public class EmployeeDetailEntry
     public string DateText      { get; init; } = string.Empty;
     public string DayOfWeekText { get; init; } = string.Empty;
     public string ShiftAlias    { get; init; } = string.Empty;
+    public string ColorHex      { get; init; } = "#4A90D9";
     public string TimeRange     { get; init; } = string.Empty;
     public IReadOnlyList<Employee> Colleagues { get; init; } = [];
+}
+
+public class EmployeeDetailShiftStat
+{
+    public string ShiftAlias { get; init; } = string.Empty;
+    public string ColorHex   { get; init; } = "#4A90D9";
+    public int    Count      { get; init; }
+}
+
+public class RecommendEmployeeItem
+{
+    public Employee Employee { get; init; } = null!;
+    public List<EmployeeDetailShiftStat> ShiftStatsRow1 { get; init; } = [];
+    public List<EmployeeDetailShiftStat> ShiftStatsRow2 { get; init; } = [];
 }
 
 public class EmployeeRuleDisplayItem

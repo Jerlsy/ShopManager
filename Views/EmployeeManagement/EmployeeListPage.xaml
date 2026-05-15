@@ -117,16 +117,16 @@
                                             <!-- 大頭貼 -->
                                             <Border Grid.Column="0"
                                                     Width="40" Height="40" CornerRadius="20" ClipToBounds="True"
-                                                    Background="#70FFFFFF"
+                                                    Background="{Binding ColorHex, Converter={StaticResource HexToBrushConverter}}"
                                                     Margin="0,0,10,0" VerticalAlignment="Top">
                                                 <Grid>
                                                     <Image Source="{Binding AvatarPhotoData, Converter={StaticResource BytesToImageConverter}}"
                                                            Stretch="UniformToFill"
                                                            Visibility="{Binding AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}}"/>
-                                                    <TextBlock Text="{Binding Name, Converter={StaticResource NameInitialConverter}}"
+                                                    <TextBlock Text="{Binding DisplayInitial}"
                                                                FontWeight="Bold" FontSize="16"
                                                                HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                               Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                                               Foreground="White"
                                                                Visibility="{Binding AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"/>
                                                 </Grid>
                                             </Border>
@@ -340,6 +340,64 @@
                                     <TextBox Text="{Binding EditEnglishName}"/>
                                 </StackPanel>
                             </Grid>
+
+                            <!-- 代表顏色 -->
+                            <StackPanel Margin="0,8,0,16">
+                                <TextBlock Text="代表顏色" Style="{StaticResource FieldLabelStyle}" Margin="0,0,0,6"/>
+                                <ItemsControl ItemsSource="{Binding ColorPalette}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Width="26" Height="26" Margin="0,0,6,4" CornerRadius="10" Cursor="Hand"
+                                                    Background="{Binding Converter={StaticResource HexToBrushConverter}}"
+                                                    MouseLeftButtonDown="EmployeeColorSwatch_Click">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Value="True">
+                                                                <DataTrigger.Binding>
+                                                                    <MultiBinding Converter="{StaticResource ColorMatchConverter}">
+                                                                        <Binding/>
+                                                                        <Binding Path="DataContext.EditColorHex" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                                                                    </MultiBinding>
+                                                                </DataTrigger.Binding>
+                                                                <Setter Property="Effect">
+                                                                    <Setter.Value>
+                                                                        <DropShadowEffect BlurRadius="8" ShadowDepth="0" Opacity="0.9" Color="Black"/>
+                                                                    </Setter.Value>
+                                                                </Setter>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <md:PackIcon Kind="Check" Width="16" Height="16" Foreground="White"
+                                                             HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <md:PackIcon.Style>
+                                                        <Style TargetType="md:PackIcon">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Value="True">
+                                                                    <DataTrigger.Binding>
+                                                                        <MultiBinding Converter="{StaticResource ColorMatchConverter}">
+                                                                            <Binding/>
+                                                                            <Binding Path="DataContext.EditColorHex" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                                                                        </MultiBinding>
+                                                                    </DataTrigger.Binding>
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </md:PackIcon.Style>
+                                                </md:PackIcon>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
 
                             <!-- 身分證 + 生日 -->
                             <Grid Margin="0,0,0,16">

@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ShopManager.Models;
+using ShopManager.Services;
 using System.Collections.ObjectModel;
 
 namespace ShopManager.ViewModels;
@@ -32,6 +33,11 @@ public partial class ScheduleViewModel
     // ── 衝突面板附屬狀態 ─────────────────────────────────────────────────
     [ObservableProperty] private bool _isConflictPanelOpen;
     public ObservableCollection<ScheduleConflict> ConflictItems { get; } = new();
+
+    // ── 推薦員工面板 ──────────────────────────────────────────────────────
+    [ObservableProperty] private bool _isRecommendPanelOpen;
+    [ObservableProperty] private ShiftBlock? _recommendTargetShift;
+    public ObservableCollection<RecommendEmployeeItem> RecommendCandidates { get; } = new();
 
     // ══════════════════════════════════════════
     // 日期詳情浮層
@@ -271,7 +277,6 @@ public partial class ScheduleViewModel
         var label = $"{entry?.Employee?.Name ?? "員工"} {entry?.Date:MM/dd} {entry?.ShiftSetting?.Alias ?? ""}".Trim();
 
         IsEntryCardOpen = false;
-        IsDayDetailOpen = false;
         await _entryService.RemoveEntryAsync(_entryCardEntryId);
         await LoadScheduleAsync();
         _snackbarService.ShowSuccess("已從班表移除");
@@ -300,4 +305,83 @@ public partial class ScheduleViewModel
 
     [RelayCommand]
     private void CloseConflictPanel() => IsConflictPanelOpen = false;
+
+    [RelayCommand]
+    private void OpenRecommendPanel(ShiftBlock block)
+    {
+        RecommendTargetShift = block;
+        RecommendCandidates.Clear();
+
+        if (CurrentSchedule is null) return;
+
+        var shiftLookup = EnabledShifts.ToDictionary(s => s.Id);
+
+        foreach (var emp in ActiveEmployees)
+        {
+            if (CurrentSchedule.Entries.Any(e =>
+                    e.EmployeeId == emp.Id &&
+                    e.Date == block.Date &&
+                    e.ShiftSettingId == block.ShiftSetting.Id)) continue;
+
+            var ctx = new ShiftValidationContext(
+                Employee:        emp,
+                Date:            block.Date,
+                TargetShift:     block.ShiftSetting,
+                Schedule:        CurrentSchedule,
+                ActiveEmployees: ActiveEmployees,
+                LaborLaw:        _laborLaw,
+                ShiftLookup:     shiftLookup);
+
+            if (ShiftRuleEngine.Evaluate(ctx).IsBlocked) continue;
+
+            var stats = CurrentSchedule.Entries
+                .Where(e => e.EmployeeId == emp.Id && e.ShiftSetting is not null)
+                .GroupBy(e => e.ShiftSettingId)
+                .Select(g => new EmployeeDetailShiftStat
+                {
+                    ShiftAlias = g.First().ShiftSetting!.Alias,
+                    ColorHex   = g.First().ShiftSetting!.Color,
+                    Count      = g.Count(),
+                })
+                .OrderBy(s => s.ShiftAlias)
+                .ToList();
+
+            int half = (int)Math.Ceiling(stats.Count / 2.0);
+            RecommendCandidates.Add(new RecommendEmployeeItem
+            {
+                Employee       = emp,
+                ShiftStatsRow1 = stats.Take(half).ToList(),
+                ShiftStatsRow2 = stats.Skip(half).ToList(),
+            });
+        }
+
+        IsRecommendPanelOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseRecommendPanel()
+    {
+        IsRecommendPanelOpen = false;
+        RecommendTargetShift = null;
+        RecommendCandidates.Clear();
+    }
+
+    [RelayCommand]
+    private async Task AssignRecommendedEmployeeAsync(RecommendEmployeeItem item)
+    {
+        if (RecommendTargetShift is null || CurrentSchedule is null) return;
+
+        await _entryService.AddEntryAsync(new ScheduleEntry
+        {
+            MonthlyScheduleId = CurrentSchedule.Id,
+            EmployeeId        = item.Employee.Id,
+            Date              = RecommendTargetShift.Date,
+            ShiftSettingId    = RecommendTargetShift.ShiftSetting.Id,
+        });
+
+        RecommendCandidates.Remove(item);
+        await LoadScheduleAsync();
+        if (DayDetailDay is not null) RebuildDayDetailGroups(DayDetailDay);
+        _snackbarService.ShowSuccess($"{item.Employee.Name} 已排入");
+    }
 }

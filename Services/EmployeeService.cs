@@ -16,6 +16,13 @@ public class EmployeeService(AppDbContext db, ShopContext shopContext)
             .OrderBy(e => e.Name)
             .ToListAsync();
 
+    public async Task<List<Employee>> GetAllNoTrackingAsync() =>
+        await db.Employees
+            .AsNoTracking()
+            .Where(e => e.ShopId == shopContext.ShopId)
+            .OrderBy(e => e.Name)
+            .ToListAsync();
+
     public async Task<Employee?> GetByIdAsync(int id) =>
         await db.Employees
             .Include(e => e.DefaultShift)

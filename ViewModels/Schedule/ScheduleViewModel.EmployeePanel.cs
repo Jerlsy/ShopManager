@@ -16,6 +16,8 @@ public partial class ScheduleViewModel
     public ObservableCollection<EmployeeRuleDisplayItem> EmployeeDetailRules          { get; } = new();
     public ObservableCollection<int>                     EmployeeDetailDayOffs        { get; } = new();
     public ObservableCollection<string>                  EmployeeDetailPriorityShifts { get; } = new();
+    public ObservableCollection<EmployeeDetailShiftStat> EmployeeDetailShiftStatsRow1 { get; } = new();
+    public ObservableCollection<EmployeeDetailShiftStat> EmployeeDetailShiftStatsRow2 { get; } = new();
 
     public List<int> AvailableEmployeeDetailDays
     {
@@ -39,6 +41,8 @@ public partial class ScheduleViewModel
         EmployeeDetailRules.Clear();
         EmployeeDetailDayOffs.Clear();
         EmployeeDetailPriorityShifts.Clear();
+        EmployeeDetailShiftStatsRow1.Clear();
+        EmployeeDetailShiftStatsRow2.Clear();
         EmployeeDetailNewDayOff = null;
 
         if (CurrentSchedule is not null)
@@ -61,6 +65,7 @@ public partial class ScheduleViewModel
                     DateText      = $"{entry.Date:MM/dd}",
                     DayOfWeekText = GetDayOfWeekText(entry.Date.DayOfWeek),
                     ShiftAlias    = entry.ShiftSetting!.Alias,
+                    ColorHex      = entry.ShiftSetting!.Color,
                     TimeRange     = $"{entry.ShiftSetting.StartTime:HH\\:mm} – {entry.ShiftSetting.EndTime:HH\\:mm}",
                     Colleagues    = colleagues,
                 });
@@ -125,6 +130,25 @@ public partial class ScheduleViewModel
                 EmployeeDetailPriorityShifts.Add($"{i + 1}. {shift.Alias}");
         }
 
+        // 班別統計（依班別分組計數，平均分配至兩列）
+        if (CurrentSchedule is not null)
+        {
+            var stats = CurrentSchedule.Entries
+                .Where(e => e.EmployeeId == item.Employee.Id && e.ShiftSetting is not null)
+                .GroupBy(e => e.ShiftSettingId)
+                .Select(g => new EmployeeDetailShiftStat
+                {
+                    ShiftAlias = g.First().ShiftSetting!.Alias,
+                    ColorHex   = g.First().ShiftSetting!.Color,
+                    Count      = g.Count(),
+                })
+                .OrderBy(s => s.ShiftAlias)
+                .ToList();
+            int half = (int)Math.Ceiling(stats.Count / 2.0);
+            for (int i = 0; i < stats.Count; i++)
+                (i < half ? EmployeeDetailShiftStatsRow1 : EmployeeDetailShiftStatsRow2).Add(stats[i]);
+        }
+
         IsEmployeeDetailOpen = true;
     }
 
@@ -137,6 +161,8 @@ public partial class ScheduleViewModel
         EmployeeDetailRules.Clear();
         EmployeeDetailDayOffs.Clear();
         EmployeeDetailPriorityShifts.Clear();
+        EmployeeDetailShiftStatsRow1.Clear();
+        EmployeeDetailShiftStatsRow2.Clear();
         EmployeeDetailNewDayOff = null;
     }
 

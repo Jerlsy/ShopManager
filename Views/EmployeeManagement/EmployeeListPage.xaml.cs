@@ -6,6 +6,7 @@ using ShopManager.ViewModels;
 using ShopManager.Views.Line;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace ShopManager.Views.EmployeeManagement;
 
@@ -61,6 +62,16 @@ public partial class EmployeeListPage : UserControl
         if (e.AddedItems.Count == 0) return;
         if (e.AddedItems[0] is not Employee emp) return;
         await _viewModel.StartEditAsync(emp);
+    }
+
+    private void EmployeeColorSwatch_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement fe
+            && fe.DataContext is string color
+            && DataContext is EmployeeViewModel vm)
+        {
+            vm.EditColorHex = color;
+        }
     }
 
     private void PickAvatar_Click(object sender, RoutedEventArgs e)

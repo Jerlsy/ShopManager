@@ -24,6 +24,7 @@ public partial class ScheduleViewModel : ObservableObject
     private readonly AutoScheduleService _autoScheduleService;
     private readonly HttpClient _http;
     private LaborLawSetting? _laborLaw;
+    private int _weekStartDay = 1;
 
     public ScheduleViewModel(
         MonthlyScheduleService scheduleService,
@@ -347,6 +348,9 @@ public partial class ScheduleViewModel : ObservableObject
 
         _laborLaw = await _salaryService.GetLaborLawAsync();
 
+        var shopSetting = await _shopSettingService.GetAsync();
+        _weekStartDay = shopSetting?.WeekStartDay ?? 1;
+
         await LoadForMonthChangeAsync();
     }
 
@@ -459,7 +463,7 @@ public partial class ScheduleViewModel : ObservableObject
 
         var daysInMonth = DateTime.DaysInMonth(SelectedYear, SelectedMonth);
         var firstDay    = new DateOnly(SelectedYear, SelectedMonth, 1);
-        var weekStart   = CurrentSchedule.WeekStartDay;
+        var weekStart   = _weekStartDay;
 
         var dayNames = new[] { "日", "一", "二", "三", "四", "五", "六" };
         DayHeaders = Enumerable.Range(0, 7).Select(i => dayNames[(weekStart + i) % 7]).ToList();
@@ -771,7 +775,7 @@ public partial class ScheduleViewModel : ObservableObject
 
     private DateOnly GetCurrentWeekStart()
     {
-        var weekStart   = CurrentSchedule?.WeekStartDay ?? 1;
+        var weekStart   = _weekStartDay;
         var selectedDow = (int)SelectedDate.DayOfWeek;
         var offset      = (selectedDow - weekStart + 7) % 7;
         return SelectedDate.AddDays(-offset);

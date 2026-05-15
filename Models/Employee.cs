@@ -70,6 +70,10 @@ public class Employee
 
     public string ShiftPreferenceLabel =>
         PreferredShiftIds.Count == 0 ? "班別不限" : $"偏好 {PreferredShiftIds.Count} 個班別";
+
+    public string DisplayInitial =>
+        !string.IsNullOrEmpty(EnglishName) ? EnglishName[0].ToString() :
+        Name.Length > 0 ? Name[0].ToString() : "?";
 }
 
 /// <summary>自訂聯絡方式</summary>

@@ -387,6 +387,16 @@ public partial class SchedulePage : UserControl
         }
     }
 
+    // ── 推薦員工面板背景點擊 → 關閉 ──
+    private void RecommendOverlay_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (e.Source == sender && DataContext is ScheduleViewModel vm)
+        {
+            vm.CloseRecommendPanelCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
     // ── 轉存班表 ────────────────────────────────────────────────────────────
     private async void ExportSchedule_Click(object sender, RoutedEventArgs e)
     {

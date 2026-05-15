@@ -129,6 +129,8 @@ public partial class EmployeeViewModel : ObservableObject
     [ObservableProperty] private List<ColleagueCheckItem> _notWithDayItems = new();
     public bool HasNoColleagues => NotWithItems.Count == 0 && NotWithDayItems.Count == 0;
 
+    public static IReadOnlyList<string> ColorPalette { get; } = App.EmployeeColorPalette;
+
     // ── 基本編輯欄位 ───────────────────────────────────────
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IdNumberError))]
@@ -153,6 +155,7 @@ public partial class EmployeeViewModel : ObservableObject
     [ObservableProperty] private int? _editBirthDay;
 
     [ObservableProperty] private byte[]? _editAvatarPhotoData;
+    [ObservableProperty] private string _editColorHex = string.Empty;
 
     [ObservableProperty] private List<ContactInfo> _editContactInfos = new();
 
@@ -377,6 +380,7 @@ public partial class EmployeeViewModel : ObservableObject
         EditEnglishName = emp.EnglishName ?? string.Empty;
         EditIdNumber = emp.IdNumber;
         EditAvatarPhotoData = emp.AvatarPhotoData;
+        EditColorHex = emp.ColorHex;
 
         if (emp.BirthDate.HasValue)
         {
@@ -560,15 +564,13 @@ public partial class EmployeeViewModel : ObservableObject
         emp.ScheduleRules = BuildRulesFromVm(emp.Id);
 
         bool isUpdate = SelectedEmployee is not null;
+        emp.ColorHex = !string.IsNullOrEmpty(EditColorHex)
+            ? EditColorHex
+            : App.EmployeeColorPalette[Employees.Count % App.EmployeeColorPalette.Length];
         if (!isUpdate)
-        {
-            emp.ColorHex = App.EmployeeColorPalette[Employees.Count % App.EmployeeColorPalette.Length];
             await _employeeService.AddAsync(emp);
-        }
         else
-        {
             await _employeeService.UpdateAsync(emp);
-        }
 
         // 同步 LineFollower 綁定狀態
         if (!string.IsNullOrEmpty(emp.LineUserId))
@@ -655,6 +657,7 @@ public partial class EmployeeViewModel : ObservableObject
         EditEnglishName    = string.Empty;
         EditIdNumber       = string.Empty;
         EditAvatarPhotoData = null;
+        EditColorHex = App.EmployeeColorPalette[Employees.Count % App.EmployeeColorPalette.Length];
         EditBirthYear      = null;
         EditBirthMonth     = null;
         EditBirthDay       = null;

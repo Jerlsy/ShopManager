@@ -88,14 +88,17 @@ public partial class App : Application
         Current.Resources["PageMargin"] = new Thickness(hMargin, 6, hMargin, vMargin);
     }
 
-    // 員工識別色色盤（中飽和度、淺色調，確保深色文字可讀）
+    // 員工識別色色盤（深→淺排列，每色相深/中/淺各一，白色文字皆可讀）
     internal static readonly string[] EmployeeColorPalette =
     [
-        "#A8D8EA", "#A8E6CF", "#FFCCB6", "#C6ADFF", "#FFD3B6",
-        "#B5EAD7", "#C7CEEA", "#FFB7C5", "#B5E7B0", "#FAE5A0",
-        "#F4C2C2", "#AEE1E1", "#F9D8A0", "#B8D8F8", "#D4EAB0",
-        "#F0B8D8", "#B8E8D0", "#E8D0F8", "#F8D0B8", "#C8E8F8",
-        "#F8E8B0", "#D0D8F8", "#B8F0D8", "#F8C8C8"
+        // 深色（文字用白色清晰可讀）
+        "#C62828", "#1565C0", "#2E7D32", "#6A1B9A", "#E65100", "#00695C",
+        // 中色
+        "#E53935", "#1E88E5", "#43A047", "#8E24AA", "#F57C00", "#00897B",
+        // 中淺色
+        "#EF5350", "#42A5F5", "#66BB6A", "#AB47BC", "#FFA726", "#26C6DA",
+        // 淺色（白色文字仍可讀）
+        "#EF9A9A", "#90CAF9", "#A5D6A7", "#CE93D8", "#FFCC80", "#80DEEA"
     ];
 
     private static void MigrateTables(Data.AppDbContext db)
