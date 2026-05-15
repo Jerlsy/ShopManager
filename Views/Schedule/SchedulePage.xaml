@@ -1818,7 +1818,7 @@
                                                                    Foreground="{DynamicResource AppSubtleForegroundBrush}"
                                                                    Visibility="{Binding EntryItems.Count, Converter={StaticResource ZeroToVisibilityConverter}}"/>
                                                         </StackPanel>
-                                                        <Button HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                        <Button HorizontalAlignment="Right" VerticalAlignment="Bottom"
                                                                 Style="{StaticResource MaterialDesignIconButton}"
                                                                 Width="28" Height="28" Padding="0"
                                                                 ToolTip="推薦可排班員工"
