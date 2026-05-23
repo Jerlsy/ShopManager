@@ -53,9 +53,12 @@ public partial class PayrollRecordWindow : Window
 
         entry.OnSendLine = async () =>
         {
-            var msg = PayrollEntryItem.BuildSalarySlip(r, data.Record.Year, data.Record.Month,
-                entry.IsPaid ? entry.PaidAt : null);
-            var success = await data.SendLineMessage(r.Employee.LineUserId!, msg);
+            var flexContents = PayrollEntryItem.BuildSalarySlipFlex(
+                r, data.Record.Year, data.Record.Month,
+                entry.IsPaid ? entry.PaidAt : null,
+                data.ShopName);
+            var altText = $"{data.Record.Year}年{data.Record.Month}月 薪資單";
+            var success = await data.SendLineFlexMessage(r.Employee.LineUserId!, altText, flexContents);
             if (!success)
                 MessageBox.Show("LINE 推播失敗，請確認 Channel Access Token 設定。", "推播失敗",
                     MessageBoxButton.OK, MessageBoxImage.Warning);

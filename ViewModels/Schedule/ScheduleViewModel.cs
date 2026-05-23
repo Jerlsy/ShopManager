@@ -745,6 +745,53 @@ public partial class ScheduleViewModel : ObservableObject
         return result;
     }
 
+    /// <summary>
+    /// 驗證交換是否合規：
+    ///   • dragEmp 進入 target 的格子（排除 sourceEntryId）
+    ///   • targetEmp 進入 source 的格子（排除 targetEntryId）
+    ///   任一被阻擋 → 整體不允許
+    /// </summary>
+    public ShiftValidationResult ValidateSwap(Employee dragEmp, int sourceEntryId, EntryItem targetEntry)
+    {
+        if (CurrentSchedule is null || targetEntry.ShiftSetting is null)
+            return ShiftValidationResult.Allow;
+
+        var sourceEntry = CurrentSchedule.Entries.FirstOrDefault(e => e.Id == sourceEntryId);
+        if (sourceEntry is null) return ShiftValidationResult.Allow;
+
+        var shiftLookup    = EnabledShifts.ToDictionary(s => s.Id);
+        var sourceShift    = shiftLookup.GetValueOrDefault(sourceEntry.ShiftSettingId);
+        if (sourceShift is null) return ShiftValidationResult.Allow;
+
+        // 用 ActiveEmployees 內的完整實例，確保 ScheduleRules 等載入完整
+        var targetEmpFull = ActiveEmployees.FirstOrDefault(e => e.Id == targetEntry.Employee.Id)
+                            ?? targetEntry.Employee;
+
+        // Check #1: dragEmp 進入 target 班別格
+        var r1 = ShiftRuleEngine.Evaluate(new ShiftValidationContext(
+            Employee:        dragEmp,
+            Date:            targetEntry.Date,
+            TargetShift:     targetEntry.ShiftSetting,
+            Schedule:        CurrentSchedule,
+            ActiveEmployees: ActiveEmployees,
+            ExcludeEntryId:  sourceEntryId,
+            LaborLaw:        _laborLaw,
+            ShiftLookup:     shiftLookup));
+        if (r1.IsBlocked) return r1;
+
+        // Check #2: targetEmp 進入 source 班別格
+        var r2 = ShiftRuleEngine.Evaluate(new ShiftValidationContext(
+            Employee:        targetEmpFull,
+            Date:            sourceEntry.Date,
+            TargetShift:     sourceShift,
+            Schedule:        CurrentSchedule,
+            ActiveEmployees: ActiveEmployees,
+            ExcludeEntryId:  targetEntry.EntryId,
+            LaborLaw:        _laborLaw,
+            ShiftLookup:     shiftLookup));
+        return r2;
+    }
+
     // 複製模式：僅群組 C（時間重疊 + 每日工時上限）
     private ShiftValidationResult EvaluateShiftForDropCopy(DateOnly date, ShiftSetting shift)
     {

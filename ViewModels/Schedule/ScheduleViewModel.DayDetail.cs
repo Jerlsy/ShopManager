@@ -33,6 +33,7 @@ public partial class ScheduleViewModel
     // ── 衝突面板附屬狀態 ─────────────────────────────────────────────────
     [ObservableProperty] private bool _isConflictPanelOpen;
     public ObservableCollection<ScheduleConflict> ConflictItems { get; } = new();
+    public ObservableCollection<EmptyShiftItem> EmptyShiftItems { get; } = new();
 
     // ── 推薦員工面板 ──────────────────────────────────────────────────────
     [ObservableProperty] private bool _isRecommendPanelOpen;
@@ -301,10 +302,29 @@ public partial class ScheduleViewModel
         ConflictItems.Clear();
         foreach (var c in items) ConflictItems.Add(c);
 
+        // 收集當前視圖內所有空班別
+        EmptyShiftItems.Clear();
+        foreach (var day in CalendarDays
+                            .Where(d => !d.IsPlaceholder && !d.IsClosed && !d.IsOutOfScope)
+                            .OrderBy(d => d.Date))
+        {
+            foreach (var b in day.ShiftBlocks.Where(b => b.IsEmpty))
+            {
+                EmptyShiftItems.Add(new EmptyShiftItem
+                {
+                    Date          = day.Date,
+                    DayOfWeekText = GetDayOfWeekText(day.Date.DayOfWeek),
+                    ShiftAlias    = b.ShiftSetting.Alias,
+                    ShiftName     = b.ShiftSetting.Name,
+                    ShiftColor    = b.ShiftSetting.Color,
+                });
+            }
+        }
+
         IsConflictPanelOpen = true;
 
-        if (ConflictCount == 0)
-            _snackbarService.ShowSuccess("太棒了！目前班表無任何規則衝突");
+        if (ConflictCount == 0 && EmptyShiftItems.Count == 0)
+            _snackbarService.ShowSuccess("太棒了！目前班表無任何規則衝突或空班別");
     }
 
     [RelayCommand]

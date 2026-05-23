@@ -177,7 +177,9 @@ public class PayrollRecordWindowData
     public SalaryRecord Record { get; init; } = null!;
     public List<BankCode> BankCodes { get; init; } = new();
     public Func<int, bool, Task> UpdatePaymentStatus { get; init; } = null!;
-    public Func<string, string, Task<bool>> SendLineMessage { get; init; } = null!;
+    /// <summary>推送 Flex Message：(userId, altText, flex contents object) → success</summary>
+    public Func<string, string, object, Task<bool>> SendLineFlexMessage { get; init; } = null!;
+    public string ShopName { get; init; } = string.Empty;
 }
 
 public partial class PayrollEntryItem : ObservableObject
@@ -206,7 +208,32 @@ public partial class PayrollEntryItem : ObservableObject
     public string PaidAtLabel =>
         IsPaid && PaidAt.HasValue ? PaidAt.Value.ToString("yyyy/MM/dd HH:mm") : string.Empty;
 
-    public bool CanSendLine => HasLineBinding && IsPaid;
+    public bool CanSendLine    => HasLineBinding && IsPaid;
+    public bool HasBankAccount => !string.IsNullOrEmpty(Employee.BankCode)
+                                  && !string.IsNullOrEmpty(Employee.BankAccount);
+
+    // 轉帳 QR Popup 狀態與快取圖
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(QrBitmap))]
+    private bool _isQrPopupOpen;
+
+    private System.Windows.Media.Imaging.BitmapImage? _cachedQr;
+    public System.Windows.Media.Imaging.BitmapImage? QrBitmap
+    {
+        get
+        {
+            if (!HasBankAccount) return null;
+            if (_cachedQr is not null) return _cachedQr;
+            var payload = Services.TaiwanPayQrService.BuildPayload(
+                Employee.BankCode!, Employee.BankAccount!,
+                GrandTotal, Employee.BankAccountName);
+            _cachedQr = Services.TaiwanPayQrService.BuildBitmap(payload, 8);
+            return _cachedQr;
+        }
+    }
+
+    [RelayCommand]
+    private void ToggleQrPopup() => IsQrPopupOpen = !IsQrPopupOpen;
 
     public Func<bool, Task>? OnIsPaidToggled { get; set; }
     public Func<Task>? OnSendLine { get; set; }
@@ -236,47 +263,56 @@ public partial class PayrollEntryItem : ObservableObject
         finally { IsSending = false; }
     }
 
-    public static string BuildSalarySlip(SalaryEmployeeRecord r, int year, int month, DateTime? paidAt)
+    /// <summary>建構薪資單 Flex Message 內容（bubble 結構，未含 altText/外層 push payload）</summary>
+    public static object BuildSalarySlipFlex(SalaryEmployeeRecord r, int year, int month, DateTime? paidAt, string shopName)
     {
-        var sb = new StringBuilder();
-        sb.AppendLine($"【{year}年{month}月 薪資單】");
-        sb.AppendLine();
-        sb.AppendLine($"員工：{r.Employee.Name}");
-        sb.AppendLine(r.SalaryType == SalaryType.Hourly ? "薪資制度：時薪制" : "薪資制度：月薪制");
-        sb.AppendLine("─────────────────");
+        var body = new List<object>
+        {
+            Services.LineFlexHelpers.Row("員工", r.Employee.Name),
+            Services.LineFlexHelpers.Row("制度", r.SalaryType == SalaryType.Hourly ? "時薪制" : "月薪制"),
+            Services.LineFlexHelpers.Separator(),
+        };
 
         if (r.SalaryType == SalaryType.Hourly)
         {
-            sb.AppendLine($"平日工時：{r.WeekdayHours:N1} hr");
-            if (r.HolidayHours > 0) sb.AppendLine($"假日工時：{r.HolidayHours:N1} hr");
-            if (r.OT1Hours > 0)     sb.AppendLine($"加班一段：{r.OT1Hours:N1} hr");
-            if (r.OT2Hours > 0)     sb.AppendLine($"加班二段：{r.OT2Hours:N1} hr");
-            sb.AppendLine($"平日薪資：{r.WeekdayPay:N0} 元");
-            if (r.HolidayPay > 0)   sb.AppendLine($"假日薪資：{r.HolidayPay:N0} 元");
-            if (r.OT1Pay + r.OT2Pay > 0) sb.AppendLine($"加班費：{r.OT1Pay + r.OT2Pay:N0} 元");
+            body.Add(Services.LineFlexHelpers.Row("平日工時", $"{r.WeekdayHours:N1} hr"));
+            if (r.HolidayHours > 0) body.Add(Services.LineFlexHelpers.Row("假日工時", $"{r.HolidayHours:N1} hr"));
+            if (r.OT1Hours > 0)     body.Add(Services.LineFlexHelpers.Row("加班一段", $"{r.OT1Hours:N1} hr"));
+            if (r.OT2Hours > 0)     body.Add(Services.LineFlexHelpers.Row("加班二段", $"{r.OT2Hours:N1} hr"));
+            body.Add(Services.LineFlexHelpers.Row("平日薪資", $"${r.WeekdayPay:N0}"));
+            if (r.HolidayPay > 0) body.Add(Services.LineFlexHelpers.Row("假日薪資", $"${r.HolidayPay:N0}"));
+            if (r.OT1Pay + r.OT2Pay > 0) body.Add(Services.LineFlexHelpers.Row("加班費", $"${r.OT1Pay + r.OT2Pay:N0}"));
         }
         else
         {
-            sb.AppendLine($"底薪：{r.WeekdayPay:N0} 元");
-            if (r.HolidayPay > 0)            sb.AppendLine($"假日薪資：{r.HolidayPay:N0} 元");
-            if (r.OT1Pay + r.OT2Pay > 0)     sb.AppendLine($"加班費：{r.OT1Pay + r.OT2Pay:N0} 元");
+            body.Add(Services.LineFlexHelpers.Row("底薪", $"${r.WeekdayPay:N0}"));
+            if (r.HolidayPay > 0)        body.Add(Services.LineFlexHelpers.Row("假日薪資", $"${r.HolidayPay:N0}"));
+            if (r.OT1Pay + r.OT2Pay > 0) body.Add(Services.LineFlexHelpers.Row("加班費",   $"${r.OT1Pay + r.OT2Pay:N0}"));
         }
-        if (r.OverridePay != 0) sb.AppendLine($"特殊薪資：{r.OverridePay:N0} 元");
+
+        if (r.OverridePay != 0)
+            body.Add(Services.LineFlexHelpers.Row("特殊薪資", $"${r.OverridePay:N0}"));
 
         if (r.BonusItems.Count > 0)
         {
-            sb.AppendLine("─────────────────");
+            body.Add(Services.LineFlexHelpers.Separator());
             foreach (var b in r.BonusItems)
-                sb.AppendLine($"{b.Label}：{(b.Amount >= 0 ? "+" : "")}{b.Amount:N0} 元");
+                body.Add(Services.LineFlexHelpers.Row(b.Label,
+                    $"{(b.Amount >= 0 ? "+" : "")}${b.Amount:N0}",
+                    valueColor: b.Amount >= 0 ? "#222222" : "#E53935"));
         }
 
         var grand = r.BaseAmount + r.BonusItems.Sum(b => b.Amount);
-        sb.AppendLine("─────────────────");
-        sb.AppendLine($"應領薪資：{grand:N0} 元");
+        body.Add(Services.LineFlexHelpers.Separator("lg"));
+        body.Add(Services.LineFlexHelpers.RowEmphasis("應領薪資", $"${grand:N0}"));
 
         if (paidAt.HasValue)
-            sb.AppendLine($"支薪日期：{paidAt.Value:yyyy/MM/dd}");
+        {
+            body.Add(Services.LineFlexHelpers.Separator());
+            body.Add(Services.LineFlexHelpers.Row("支薪日期", paidAt.Value.ToString("yyyy/MM/dd")));
+        }
 
-        return sb.ToString().TrimEnd();
+        var header = Services.LineFlexHelpers.Header(shopName, $"{year}年{month}月 薪資單");
+        return Services.LineFlexHelpers.Bubble(header, body);
     }
 }

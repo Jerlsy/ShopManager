@@ -400,6 +400,13 @@ public partial class SalaryViewModel : ObservableObject
         var record = await _salaryService.GetByScheduleAsync(SelectedScheduleItem.Schedule.Id);
         if (record is null) return;
 
+        // 雙重保險：用 NoTracking 重抓員工資料，覆寫 record 內可能 stale 的 Employee 參照
+        var freshEmployees = await _employeeService.GetAllNoTrackingAsync();
+        var empMap = freshEmployees.ToDictionary(e => e.Id);
+        foreach (var er in record.EmployeeRecords)
+            if (empMap.TryGetValue(er.EmployeeId, out var fresh))
+                er.Employee = fresh;
+
         var banks       = await _bankCodeService.GetAllAsync();
         var shopSetting = await _shopSettingService.GetAsync();
 
@@ -407,12 +414,13 @@ public partial class SalaryViewModel : ObservableObject
         {
             Record = record,
             BankCodes = banks,
+            ShopName = shopSetting?.Name ?? string.Empty,
             UpdatePaymentStatus = (id, paid) => _salaryService.SetPaymentStatusAsync(id, paid),
-            SendLineMessage = async (userId, msg) =>
+            SendLineFlexMessage = async (userId, altText, contents) =>
             {
                 var token = shopSetting?.LineChannelAccessToken;
                 if (string.IsNullOrEmpty(token)) return false;
-                return await _lineService.PushMessageAsync(token, userId, msg);
+                return await _lineService.PushFlexMessageAsync(token, userId, altText, contents);
             },
         };
 

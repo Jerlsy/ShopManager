@@ -94,11 +94,12 @@ public partial class ExportScheduleWindow : Window
 
         if (isPersonal)
         {
-            // 個人班表：每位員工收到自己的文字班表
+            // 個人班表：每位員工收到 Flex Message 卡片
+            var altText = $"{_data.Year}年{_data.Month}月 個人班表";
             var tasks = targets.Select(r =>
-                lineService.PushMessageAsync(
+                lineService.PushFlexMessageAsync(
                     _data.LineChannelAccessToken!, r.Recipient.UserId,
-                    BuildPersonalText(r.Recipient)));
+                    altText, BuildPersonalScheduleFlex(r.Recipient)));
             ok = (await Task.WhenAll(tasks)).Count(r => r);
         }
         else
@@ -138,31 +139,70 @@ public partial class ExportScheduleWindow : Window
         }
     }
 
-    private string BuildPersonalText(ExportScheduleData.PushRecipient recipient)
+    private object BuildPersonalScheduleFlex(ExportScheduleData.PushRecipient recipient)
     {
-        var sb = new StringBuilder();
-        sb.AppendLine($"【{_data.ShopName}】{_data.Year} 年 {_data.Month} 月 個人班表");
-        sb.AppendLine($"您好 {recipient.DisplayName}，以下是您本月的排班：");
-        sb.AppendLine();
-
-        if (recipient.ShiftIds is null) return sb.ToString();
-
-        var legendById = _data.ShiftLegend.ToDictionary(l => l.Id);
-        bool hasAny = false;
-        for (int i = 0; i < recipient.ShiftIds.Count && i < _data.Columns.Count; i++)
+        var body = new List<object>
         {
-            var col     = _data.Columns[i];
-            var shiftId = recipient.ShiftIds[i];
-            if (!shiftId.HasValue) continue;
+            new
+            {
+                type   = "text",
+                text   = $"您好 {recipient.DisplayName}，以下是您本月的排班：",
+                size   = "sm",
+                color  = "#888888",
+                wrap   = true,
+            },
+            LineFlexHelpers.Separator(),
+        };
 
-            hasAny = true;
-            if (legendById.TryGetValue(shiftId.Value, out var leg))
-                sb.AppendLine($"{_data.Month:D2}/{col.Day:D2}（{col.DayOfWeekLabel}）{leg.TimeRange}");
+        bool hasAny = false;
+        if (recipient.ShiftIds is not null)
+        {
+            var legendById = _data.ShiftLegend.ToDictionary(l => l.Id);
+            for (int i = 0; i < recipient.ShiftIds.Count && i < _data.Columns.Count; i++)
+            {
+                var col     = _data.Columns[i];
+                var shiftId = recipient.ShiftIds[i];
+                if (!shiftId.HasValue) continue;
+                if (!legendById.TryGetValue(shiftId.Value, out var leg)) continue;
+                hasAny = true;
+
+                // 一列：日期 (週幾) [色塊班別] 時間
+                body.Add(new
+                {
+                    type     = "box",
+                    layout   = "horizontal",
+                    spacing  = "sm",
+                    contents = new object[]
+                    {
+                        new { type = "text", text = $"{_data.Month:D2}/{col.Day:D2}", flex = 2, size = "sm", color = "#222222" },
+                        new { type = "text", text = $"({col.DayOfWeekLabel})",        flex = 1, size = "sm", color = "#888888" },
+                        new
+                        {
+                            type            = "box",
+                            layout          = "vertical",
+                            flex            = 2,
+                            backgroundColor = leg.ColorHex,
+                            cornerRadius    = "md",
+                            paddingTop      = "2px",
+                            paddingBottom   = "2px",
+                            paddingStart    = "4px",
+                            paddingEnd      = "4px",
+                            contents = new object[]
+                            {
+                                new { type = "text", text = leg.Alias, color = "#FFFFFF", weight = "bold", size = "xs", align = "center" },
+                            }
+                        },
+                        new { type = "text", text = leg.TimeRange, flex = 4, size = "sm", color = "#222222", align = "end" },
+                    }
+                });
+            }
         }
-        if (!hasAny)
-            sb.AppendLine("本月尚無排班紀錄。");
 
-        return sb.ToString().TrimEnd();
+        if (!hasAny)
+            body.Add(new { type = "text", text = "本月尚無排班紀錄", size = "sm", color = "#888888", align = "center", margin = "lg" });
+
+        var header = LineFlexHelpers.Header(_data.ShopName, $"{_data.Year}年{_data.Month}月 個人班表");
+        return LineFlexHelpers.Bubble(header, body);
     }
 
     private void SaveImage_Click(object sender, RoutedEventArgs e)

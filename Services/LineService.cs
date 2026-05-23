@@ -151,4 +151,33 @@ public class LineService
         var res = await _http.SendAsync(req);
         return res.IsSuccessStatusCode;
     }
+
+    /// <summary>
+    /// 推播 Flex Message（LINE 的卡片式訊息，等同 Teams Adaptive Card）。
+    /// contents 為 bubble / carousel 結構的物件（會以 JsonSerializer 序列化）。
+    /// </summary>
+    public async Task<bool> PushFlexMessageAsync(string token, string userId, string altText, object contents)
+    {
+        // altText 最長 400 字
+        if (altText.Length > 400) altText = altText[..400];
+
+        var body = JsonSerializer.Serialize(new
+        {
+            to       = userId,
+            messages = new object[]
+            {
+                new
+                {
+                    type     = "flex",
+                    altText  = altText,
+                    contents = contents,
+                }
+            }
+        });
+
+        using var req = CreateAuthorizedRequest(HttpMethod.Post, "https://api.line.me/v2/bot/message/push", token);
+        req.Content = new StringContent(body, Encoding.UTF8, "application/json");
+        var res = await _http.SendAsync(req);
+        return res.IsSuccessStatusCode;
+    }
 }

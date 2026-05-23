@@ -3,7 +3,12 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:vm="clr-namespace:ShopManager.ViewModels"
-             xmlns:models="clr-namespace:ShopManager.Models">
+             xmlns:models="clr-namespace:ShopManager.Models"
+             Focusable="True">
+
+    <UserControl.InputBindings>
+        <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}"/>
+    </UserControl.InputBindings>
 
     <UserControl.Resources>
         <!-- EntryItem 右鍵選單：透過 PlacementTarget.Tag 取得 ViewModel；x:Shared=False 確保多個 EntryItem 可共用同一資源 -->
@@ -98,6 +103,22 @@
                         </StackPanel>
                     </Button>
 
+                    <!-- 空班別徽章 -->
+                    <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Command="{Binding CheckConflictsCommand}"
+                            Visibility="{Binding HasEmptyShifts, Converter={StaticResource BoolToVisibilityConverter}}"
+                            Margin="0,0,8,0" Padding="8,0"
+                            ToolTip="班別尚未排入任何員工"
+                            Foreground="#F57C00" BorderBrush="#F57C00">
+                        <StackPanel Orientation="Horizontal">
+                            <md:PackIcon Kind="CalendarAlert" Width="16" Height="16" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                            <TextBlock VerticalAlignment="Center">
+                                <Run Text="{Binding EmptyShiftTotalCount, Mode=OneWay}"/>
+                                <Run Text=" 個空班"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </Button>
+
                     <!-- 還原 -->
                     <Button Style="{StaticResource MaterialDesignOutlinedButton}"
                             Command="{Binding UndoCommand}"
@@ -156,6 +177,42 @@
                 <ColumnDefinition Width="20"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
+
+            <!-- 多選浮動工具列 -->
+            <Border Grid.ColumnSpan="3" Panel.ZIndex="50"
+                    HorizontalAlignment="Center" VerticalAlignment="Top"
+                    Margin="0,12,0,0"
+                    Background="{DynamicResource AppSurfaceBrush}"
+                    BorderBrush="#1976D2" BorderThickness="1.5"
+                    CornerRadius="20" Padding="14,8"
+                    Visibility="{Binding HasSelection, Converter={StaticResource BoolToVisibilityConverter}}">
+                <Border.Effect>
+                    <DropShadowEffect ShadowDepth="2" BlurRadius="12" Opacity="0.25"/>
+                </Border.Effect>
+                <StackPanel Orientation="Horizontal">
+                    <md:PackIcon Kind="CheckCircle" Width="18" Height="18"
+                                 Foreground="#1976D2" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <TextBlock VerticalAlignment="Center" FontWeight="SemiBold">
+                        <Run Text="已選 "/>
+                        <Run Text="{Binding SelectionCount, Mode=OneWay}"/>
+                        <Run Text=" 筆"/>
+                    </TextBlock>
+                    <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Command="{Binding DeleteSelectedCommand}"
+                            Margin="14,0,0,0" Padding="10,0" Height="30"
+                            Foreground="#E53935" BorderBrush="#E53935">
+                        <StackPanel Orientation="Horizontal">
+                            <md:PackIcon Kind="DeleteOutline" Width="15" Height="15" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="批次刪除" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource MaterialDesignIconButton}"
+                            Command="{Binding ClearSelectionCommand}"
+                            ToolTip="取消選取" Width="30" Height="30" Padding="0" Margin="6,0,0,0">
+                        <md:PackIcon Kind="Close" Width="15" Height="15"/>
+                    </Button>
+                </StackPanel>
+            </Border>
 
             <!-- 左側員工列表 (支援拖曳) -->
             <Border Grid.Column="0" Style="{StaticResource SectionCardStyle}"
@@ -439,6 +496,18 @@
                                                                         </ItemsControl.ItemTemplate>
                                                                     </ItemsControl>
 
+                                                                    <!-- 空班別警示（紅點 badge，數字表示空班數）-->
+                                                                    <Border Grid.Row="2" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                                            CornerRadius="7" Padding="4,1" Background="#F57C00"
+                                                                            ToolTip="此日有班別尚未排入員工" Cursor="Help"
+                                                                            Visibility="{Binding HasEmptyShifts, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                                        <StackPanel Orientation="Horizontal">
+                                                                            <md:PackIcon Kind="CalendarAlert" Width="9" Height="9" Foreground="White" VerticalAlignment="Center"/>
+                                                                            <TextBlock Text="{Binding EmptyShiftCount}" FontSize="9" FontWeight="Bold"
+                                                                                       Foreground="White" Margin="2,0,0,0" VerticalAlignment="Center"/>
+                                                                        </StackPanel>
+                                                                    </Border>
+
                                                                     <!-- 人力不足警示 -->
                                                                     <Border Grid.Row="2" HorizontalAlignment="Left" VerticalAlignment="Center"
                                                                             ToolTip="自動排班後人力不足" Cursor="Help" Background="Transparent"
@@ -635,9 +704,16 @@
                                                                         <Border.Style>
                                                                             <Style TargetType="Border">
                                                                                 <Setter Property="Background" Value="{Binding ShiftSetting.Color, Converter={StaticResource HexToBrushConverter}}"/>
+                                                                                <Setter Property="BorderBrush"     Value="Transparent"/>
+                                                                                <Setter Property="BorderThickness" Value="0"/>
                                                                                 <Style.Triggers>
                                                                                     <DataTrigger Binding="{Binding IsDisabled}" Value="True">
                                                                                         <Setter Property="Opacity" Value="0.35"/>
+                                                                                    </DataTrigger>
+                                                                                    <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                                                                                        <Setter Property="Opacity"         Value="0.55"/>
+                                                                                        <Setter Property="BorderBrush"     Value="#F57C00"/>
+                                                                                        <Setter Property="BorderThickness" Value="2"/>
                                                                                     </DataTrigger>
                                                                                 </Style.Triggers>
                                                                             </Style>
@@ -715,6 +791,16 @@
                                                                                                     Cursor="Hand"
                                                                                                     Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                                                     ContextMenu="{StaticResource EntryItemContextMenu}">
+                                                                                            <StackPanel.Style>
+                                                                                                <Style TargetType="StackPanel">
+                                                                                                    <Setter Property="Background" Value="Transparent"/>
+                                                                                                    <Style.Triggers>
+                                                                                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                                                            <Setter Property="Background" Value="#552196F3"/>
+                                                                                                        </DataTrigger>
+                                                                                                    </Style.Triggers>
+                                                                                                </Style>
+                                                                                            </StackPanel.Style>
                                                                                             <Border Width="22" Height="22" CornerRadius="11" ClipToBounds="True"
                                                                                                     Margin="0,0,5,0" BorderThickness="1.5" BorderBrush="White"
                                                                                                     Background="{Binding Employee.ColorHex, Converter={StaticResource HexToBrushConverter}}"
@@ -921,9 +1007,16 @@
                                                     <Border.Style>
                                                         <Style TargetType="Border">
                                                             <Setter Property="Background" Value="{Binding ShiftSetting.Color, Converter={StaticResource HexToBrushConverter}}"/>
+                                                            <Setter Property="BorderBrush"     Value="Transparent"/>
+                                                            <Setter Property="BorderThickness" Value="0"/>
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding IsDisabled}" Value="True">
                                                                     <Setter Property="Opacity" Value="0.35"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                                                                    <Setter Property="Opacity"         Value="0.55"/>
+                                                                    <Setter Property="BorderBrush"     Value="#F57C00"/>
+                                                                    <Setter Property="BorderThickness" Value="2"/>
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
@@ -995,6 +1088,16 @@
                                                                                     Cursor="Hand"
                                                                                     Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                                     ContextMenu="{StaticResource EntryItemContextMenu}">
+                                                                            <StackPanel.Style>
+                                                                                <Style TargetType="StackPanel">
+                                                                                    <Setter Property="Background" Value="Transparent"/>
+                                                                                    <Style.Triggers>
+                                                                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                                            <Setter Property="Background" Value="#552196F3"/>
+                                                                                        </DataTrigger>
+                                                                                    </Style.Triggers>
+                                                                                </Style>
+                                                                            </StackPanel.Style>
                                                                             <Border Width="28" Height="28" CornerRadius="14" ClipToBounds="True" Margin="0,0,8,0"
                                                                                     Background="{Binding Employee.ColorHex, Converter={StaticResource HexToBrushConverter}}"
                                                                                     AllowDrop="True"
@@ -1054,10 +1157,8 @@
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                         <md:PackIcon Kind="AlertCircleOutline" Width="20" Height="20"
                                                      Foreground="#E53935" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                        <TextBlock FontWeight="Bold" FontSize="{DynamicResource FontSizeSubTitle}" VerticalAlignment="Center">
-                                            <Run Text="{Binding ConflictCount, Mode=OneWay}"/>
-                                            <Run Text=" 條衝突需調整"/>
-                                        </TextBlock>
+                                        <TextBlock FontWeight="Bold" FontSize="{DynamicResource FontSizeSubTitle}" VerticalAlignment="Center"
+                                                   Text="班表檢查"/>
                                     </StackPanel>
                                     <Button HorizontalAlignment="Right"
                                             Style="{StaticResource MaterialDesignIconButton}"
@@ -1067,43 +1168,124 @@
                                     </Button>
                                 </Grid>
 
-                                <!-- 衝突清單 -->
+                                <!-- 內容區（衝突 + 空班別） -->
                                 <ScrollViewer DockPanel.Dock="Top" Margin="0" Padding="24,0,24,0"
                                               VerticalScrollBarVisibility="Auto">
-                                    <ItemsControl ItemsSource="{Binding ConflictItems}" Margin="0,0,0,16">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate DataType="{x:Type models:ScheduleConflict}">
-                                                <Border Margin="0,0,0,8" Padding="14,10"
-                                                        Background="{DynamicResource AppPanelAltBrush}"
-                                                        BorderBrush="#E5393540" BorderThickness="0,0,0,2"
-                                                        CornerRadius="10">
-                                                    <Grid>
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="*"/>
-                                                            <ColumnDefinition Width="Auto"/>
-                                                        </Grid.ColumnDefinitions>
-                                                        <StackPanel>
-                                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                                                <TextBlock Text="{Binding EmployeeName}"
-                                                                           FontWeight="SemiBold" Margin="0,0,8,0"/>
-                                                                <TextBlock Text="{Binding ShiftAlias}"
-                                                                           Foreground="{DynamicResource AppSubtleForegroundBrush}"/>
-                                                            </StackPanel>
-                                                            <TextBlock Text="{Binding Reason}"
-                                                                       FontSize="{DynamicResource FontSizeSmall}"
-                                                                       Foreground="#E53935"
-                                                                       TextWrapping="Wrap"/>
-                                                        </StackPanel>
-                                                        <TextBlock Grid.Column="1"
-                                                                   Text="{Binding Date, StringFormat=MM/dd}"
-                                                                   Foreground="{DynamicResource AppSubtleForegroundBrush}"
-                                                                   FontSize="{DynamicResource FontSizeSmall}"
-                                                                   VerticalAlignment="Top" Margin="12,0,0,0"/>
-                                                    </Grid>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
+                                    <StackPanel>
+                                        <!-- 規則衝突區 -->
+                                        <StackPanel Visibility="{Binding HasConflicts, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                                <md:PackIcon Kind="AlertCircleOutline" Width="16" Height="16"
+                                                             Foreground="#E53935" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                <TextBlock FontWeight="SemiBold" Foreground="#E53935" VerticalAlignment="Center">
+                                                    <Run Text="規則衝突 ("/><Run Text="{Binding ConflictCount, Mode=OneWay}"/><Run Text=")"/>
+                                                </TextBlock>
+                                            </StackPanel>
+                                            <ItemsControl ItemsSource="{Binding ConflictItems}" Margin="0,0,0,16">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate DataType="{x:Type models:ScheduleConflict}">
+                                                        <Border Margin="0,0,0,8" Padding="14,10"
+                                                                Background="{DynamicResource AppPanelAltBrush}"
+                                                                BorderBrush="#E5393540" BorderThickness="0,0,0,2"
+                                                                CornerRadius="10">
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <StackPanel>
+                                                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                                        <TextBlock Text="{Binding EmployeeName}"
+                                                                                   FontWeight="SemiBold" Margin="0,0,8,0"/>
+                                                                        <TextBlock Text="{Binding ShiftAlias}"
+                                                                                   Foreground="{DynamicResource AppSubtleForegroundBrush}"/>
+                                                                    </StackPanel>
+                                                                    <TextBlock Text="{Binding Reason}"
+                                                                               FontSize="{DynamicResource FontSizeSmall}"
+                                                                               Foreground="#E53935"
+                                                                               TextWrapping="Wrap"/>
+                                                                </StackPanel>
+                                                                <TextBlock Grid.Column="1"
+                                                                           Text="{Binding Date, StringFormat=MM/dd}"
+                                                                           Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                                                           FontSize="{DynamicResource FontSizeSmall}"
+                                                                           VerticalAlignment="Top" Margin="12,0,0,0"/>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+
+                                        <!-- 空班別區 -->
+                                        <StackPanel Visibility="{Binding HasEmptyShifts, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                                <md:PackIcon Kind="CalendarAlert" Width="16" Height="16"
+                                                             Foreground="#F57C00" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                <TextBlock FontWeight="SemiBold" Foreground="#F57C00" VerticalAlignment="Center">
+                                                    <Run Text="空班別 ("/><Run Text="{Binding EmptyShiftTotalCount, Mode=OneWay}"/><Run Text=")"/>
+                                                </TextBlock>
+                                            </StackPanel>
+                                            <ItemsControl ItemsSource="{Binding EmptyShiftItems}" Margin="0,0,0,16">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate DataType="{x:Type vm:EmptyShiftItem}">
+                                                        <Border Margin="0,0,0,8" Padding="14,10"
+                                                                Background="#FFF3E0"
+                                                                BorderBrush="#F57C00" BorderThickness="0,0,0,2"
+                                                                CornerRadius="10">
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <Border CornerRadius="4" Padding="6,2"
+                                                                        Background="{Binding ShiftColor, Converter={StaticResource HexToBrushConverter}}">
+                                                                    <TextBlock Text="{Binding ShiftAlias}"
+                                                                               FontSize="11" Foreground="White" FontWeight="Bold"/>
+                                                                </Border>
+                                                                <TextBlock Grid.Column="1" Text="{Binding ShiftName}"
+                                                                           VerticalAlignment="Center" Margin="8,0,0,0"
+                                                                           Foreground="{DynamicResource AppForegroundBrush}"/>
+                                                                <TextBlock Grid.Column="2"
+                                                                           Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                                                           FontSize="{DynamicResource FontSizeSmall}"
+                                                                           VerticalAlignment="Center" Margin="12,0,0,0">
+                                                                    <Run Text="{Binding Date, StringFormat=MM/dd}"/>
+                                                                    <Run Text=" 週"/>
+                                                                    <Run Text="{Binding DayOfWeekText, Mode=OneWay}"/>
+                                                                </TextBlock>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+
+                                        <!-- 空狀態 -->
+                                        <StackPanel HorizontalAlignment="Center" Margin="0,40,0,0">
+                                            <StackPanel.Style>
+                                                <Style TargetType="StackPanel">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <MultiDataTrigger>
+                                                            <MultiDataTrigger.Conditions>
+                                                                <Condition Binding="{Binding HasConflicts}" Value="False"/>
+                                                                <Condition Binding="{Binding HasEmptyShifts}" Value="False"/>
+                                                            </MultiDataTrigger.Conditions>
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </MultiDataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </StackPanel.Style>
+                                            <md:PackIcon Kind="CheckCircleOutline" Width="48" Height="48"
+                                                         Foreground="#43A047" HorizontalAlignment="Center"/>
+                                            <TextBlock Text="班表完整、無衝突"
+                                                       Margin="0,10,0,0" HorizontalAlignment="Center"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource AppSubtleForegroundBrush}"/>
+                                        </StackPanel>
+                                    </StackPanel>
                                 </ScrollViewer>
 
                                 <!-- 再次檢查按鈕 -->
@@ -1779,11 +1961,24 @@
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate DataType="{x:Type vm:ShiftBlock}">
                                                 <Border Margin="0,0,0,12"
-                                                        Background="{DynamicResource AppPanelAltBrush}"
                                                         CornerRadius="12" Padding="14,10"
                                                         AllowDrop="True"
                                                         DragOver="ShiftBlock_DragOver"
                                                         Drop="ShiftBlock_Drop">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Background"      Value="{DynamicResource AppPanelAltBrush}"/>
+                                                            <Setter Property="BorderBrush"     Value="Transparent"/>
+                                                            <Setter Property="BorderThickness" Value="0"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                                                                    <Setter Property="Background"      Value="#FFF3E0"/>
+                                                                    <Setter Property="BorderBrush"     Value="#F57C00"/>
+                                                                    <Setter Property="BorderThickness" Value="1.5"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
                                                     <!-- 班別標題 -->
                                                     <Grid>
                                                         <StackPanel>
@@ -1812,8 +2007,6 @@
                                                             <ItemsControl.ItemTemplate>
                                                                 <DataTemplate DataType="{x:Type vm:EntryItem}">
                                                                     <Border CornerRadius="16" Padding="8,4" Margin="0,0,8,6"
-                                                                            Background="{DynamicResource AppSurfaceBrush}"
-                                                                            BorderBrush="{DynamicResource AppBorderBrush}"
                                                                             BorderThickness="1"
                                                                             AllowDrop="True"
                                                                             DragOver="EntryChip_DragOver"
@@ -1824,6 +2017,18 @@
                                                                             Cursor="Hand"
                                                                             Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                             ContextMenu="{StaticResource EntryItemContextMenu}">
+                                                                        <Border.Style>
+                                                                            <Style TargetType="Border">
+                                                                                <Setter Property="Background"  Value="{DynamicResource AppSurfaceBrush}"/>
+                                                                                <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+                                                                                <Style.Triggers>
+                                                                                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                                        <Setter Property="Background"  Value="#552196F3"/>
+                                                                                        <Setter Property="BorderBrush" Value="#1976D2"/>
+                                                                                    </DataTrigger>
+                                                                                </Style.Triggers>
+                                                                            </Style>
+                                                                        </Border.Style>
                                                                         <StackPanel Orientation="Horizontal">
                                                                             <Border Width="26" Height="26" CornerRadius="13"
                                                                                     ClipToBounds="True" Margin="0,0,6,0"
@@ -1847,10 +2052,16 @@
                                                             </ItemsControl.ItemTemplate>
                                                         </ItemsControl>
 
-                                                        <TextBlock Text="（尚無排班員工）"
-                                                                   FontSize="{DynamicResource FontSizeSmall}"
-                                                                   Foreground="{DynamicResource AppSubtleForegroundBrush}"
-                                                                   Visibility="{Binding EntryItems.Count, Converter={StaticResource ZeroToVisibilityConverter}}"/>
+                                                        <StackPanel Orientation="Horizontal"
+                                                                    Visibility="{Binding EntryItems.Count, Converter={StaticResource ZeroToVisibilityConverter}}">
+                                                            <md:PackIcon Kind="CalendarAlert" Width="14" Height="14"
+                                                                         Foreground="#F57C00" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                            <TextBlock Text="待排班"
+                                                                       FontSize="{DynamicResource FontSizeSmall}"
+                                                                       FontWeight="SemiBold"
+                                                                       Foreground="#F57C00"
+                                                                       VerticalAlignment="Center"/>
+                                                        </StackPanel>
                                                         </StackPanel>
                                                         <Button HorizontalAlignment="Right" VerticalAlignment="Bottom"
                                                                 Style="{StaticResource MaterialDesignIconButton}"

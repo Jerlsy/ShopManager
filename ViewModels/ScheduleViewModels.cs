@@ -14,12 +14,13 @@ public enum CalendarViewMode { Month, Week, Day }
 public record ViewModeOption(CalendarViewMode Value, string Label);
 
 /// <summary>排班記錄顯示單位（含 EntryId 供右鍵操作使用）</summary>
-public class EntryItem
+public partial class EntryItem : ObservableObject
 {
     public int EntryId { get; set; }
     public Employee Employee { get; set; } = null!;
     public DateOnly Date { get; set; }
     public ShiftSetting? ShiftSetting { get; set; }
+    [ObservableProperty] private bool _isSelected;
 }
 
 public partial class CalendarDay : ObservableObject
@@ -214,6 +215,15 @@ public class RecommendEmployeeItem
     public Employee Employee { get; init; } = null!;
     public List<EmployeeDetailShiftStat> ShiftStatsRow1 { get; init; } = [];
     public List<EmployeeDetailShiftStat> ShiftStatsRow2 { get; init; } = [];
+}
+
+public class EmptyShiftItem
+{
+    public DateOnly Date { get; init; }
+    public string DayOfWeekText { get; init; } = string.Empty;
+    public string ShiftAlias { get; init; } = string.Empty;
+    public string ShiftName  { get; init; } = string.Empty;
+    public string ShiftColor { get; init; } = "#4A90D9";
 }
 
 public class EmployeeRuleDisplayItem

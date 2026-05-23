@@ -126,11 +126,22 @@ public partial class SchedulePage : UserControl
         var entry = _dragEntryCandidate;
         _dragEntryCandidate = null;
 
-        if (DataContext is ScheduleViewModel vm)
+        if (DataContext is not ScheduleViewModel vm) return;
+
+        // Ctrl+Click：切換選取（不開卡片）
+        if ((Keyboard.Modifiers & ModifierKeys.Control) != 0)
         {
-            vm.OpenEntryCardCommand.Execute(entry);
+            entry.IsSelected = !entry.IsSelected;
+            vm.RefreshSelectionCount();
             e.Handled = true;
+            return;
         }
+
+        // 一般點擊：若有既存選取，先清除（避免誤操作）
+        if (vm.HasSelection) vm.ClearSelectionCommand.Execute(null);
+
+        vm.OpenEntryCardCommand.Execute(entry);
+        e.Handled = true;
     }
 
     // ── 拖放到班別格子（移動 / 複製 / 新增）────────────────────────────
@@ -270,14 +281,30 @@ public partial class SchedulePage : UserControl
         if (!isEntryDrag || ctrlHeld)
             return; // 不處理 → 冒泡到 ShiftBlock_DragOver
 
-        if (sender is FrameworkElement fe && fe.DataContext is EntryItem targetEntry
-            && e.Data.GetData("Employee") is Employee dragEmp
-            && targetEntry.Employee?.Id != dragEmp.Id)
+        if (DataContext is not ScheduleViewModel vm) return;
+        if (sender is not FrameworkElement fe || fe.DataContext is not EntryItem targetEntry) return;
+        if (e.Data.GetData("Employee") is not Employee dragEmp) return;
+        if (targetEntry.Employee?.Id == dragEmp.Id) return;
+
+        int sourceEntryId = e.Data.GetData("EntryId") is int sid ? sid : -1;
+
+        // 規則驗證：雙向都要符合
+        var v = vm.ValidateSwap(dragEmp, sourceEntryId, targetEntry);
+        if (v.IsBlocked)
         {
-            e.Effects = DragDropEffects.Move;
+            e.Effects = DragDropEffects.None;
             e.Handled = true;
-            DragTooltipPopup.IsOpen = false;
+            if (!string.IsNullOrEmpty(v.Reason))
+            {
+                DragTooltipText.Text = v.Reason;
+                DragTooltipPopup.IsOpen = true;
+            }
+            return;
         }
+
+        e.Effects = DragDropEffects.Move;
+        e.Handled = true;
+        DragTooltipPopup.IsOpen = false;
     }
 
     private async void EntryChip_Drop(object sender, DragEventArgs e)
@@ -293,6 +320,9 @@ public partial class SchedulePage : UserControl
         if (e.Data.GetData("Employee") is not Employee dragEmp) return;
         if (e.Data.GetData("EntryId") is not int sourceEntryId) return;
         if (targetEntry.Employee?.Id == dragEmp.Id) return;
+
+        // 防禦性檢查：即使 DragOver 沒擋住，Drop 也要再驗證一次
+        if (vm.ValidateSwap(dragEmp, sourceEntryId, targetEntry).IsBlocked) return;
 
         DragTooltipPopup.IsOpen = false;
         await vm.SwapEmployeeAsync(dragEmp, sourceEntryId, targetEntry);

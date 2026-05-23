@@ -14,7 +14,10 @@ public class SalaryCalculationService(AppDbContext db)
             .ToListAsync();
 
     public async Task<SalaryRecord?> GetByScheduleAsync(int monthlyScheduleId) =>
+        // AsNoTracking 確保不返回 DbContext 識別映射內的快取實體
+        // （避免員工資料更新後仍顯示舊銀行帳號等問題）
         await db.SalaryRecords
+            .AsNoTracking()
             .Include(r => r.EmployeeRecords)
                 .ThenInclude(e => e.Employee)
             .Include(r => r.EmployeeRecords)
