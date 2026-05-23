@@ -16,4 +16,8 @@ public class AppSnackbarService : IAppSnackbarService
 
     public void ShowWarning(string message) =>
         _queue?.Enqueue("⚠ " + message, null, null, null, false, true, TimeSpan.FromSeconds(5));
+
+    // 帶可點擊動作按鈕（如「復原」）的 snackbar：5 秒停留以方便使用者反應
+    public void ShowSuccessWithAction(string message, string actionLabel, Action action) =>
+        _queue?.Enqueue(message, actionLabel, (Action<object?>)(_ => action()), null, false, true, TimeSpan.FromSeconds(5));
 }

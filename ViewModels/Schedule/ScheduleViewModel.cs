@@ -256,6 +256,12 @@ public partial class ScheduleViewModel : ObservableObject
     private int _conflictCount;
     public bool HasConflicts => ConflictCount > 0;
 
+    // ── 空班別總數（Optimistic UI helpers 維護）─────────────────────────
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasEmptyShifts))]
+    private int _emptyShiftTotalCount;
+    public bool HasEmptyShifts => EmptyShiftTotalCount > 0;
+
     // ══════════════════════════════════════════
     // 還原（Undo）
     // ══════════════════════════════════════════
@@ -274,6 +280,16 @@ public partial class ScheduleViewModel : ObservableObject
         _undoStack.Push(action);
         CanUndo = true;
         OnPropertyChanged(nameof(UndoDescription));
+    }
+
+    // 同時推入 Undo + 顯示帶「復原」按鈕的 snackbar
+    private void PushUndoAndNotify(string description, Func<Task> undoExecute, string snackbarMessage)
+    {
+        PushUndo(new UndoAction(description, undoExecute));
+        _snackbarService.ShowSuccessWithAction(snackbarMessage, "復原", () =>
+        {
+            _ = UndoCommand.ExecuteAsync(null);
+        });
     }
 
     private void ClearUndoStack()
@@ -453,6 +469,19 @@ public partial class ScheduleViewModel : ObservableObject
             case CalendarViewMode.Week:  BuildWeekView();  break;
             case CalendarViewMode.Day:   BuildDayView();   break;
         }
+        RecomputeEmptyShiftTotals();
+    }
+
+    private void RecomputeEmptyShiftTotals()
+    {
+        int total = 0;
+        foreach (var day in CalendarDays)
+        {
+            if (day.IsPlaceholder || day.IsClosed || day.IsOutOfScope) continue;
+            day.RecomputeEmptyShiftCount();
+            total += day.EmptyShiftCount;
+        }
+        EmptyShiftTotalCount = total;
     }
 
     private void BuildMonthView()
@@ -679,6 +708,20 @@ public partial class ScheduleViewModel : ObservableObject
     // 同一次 BuildCalendarView 內，相同 (date, shiftId) 只評估一次
     private readonly Dictionary<(DateOnly, int), ShiftValidationResult> _evalDropCache  = new();
     private readonly Dictionary<(DateOnly, int), ShiftValidationResult> _evalCopyCache  = new();
+
+    // 精準失效：增刪排班後只需作廢受影響的 (date, shiftId) 條目
+    private void InvalidateEvalCache(DateOnly date, int shiftId)
+    {
+        _evalDropCache.Remove((date, shiftId));
+        _evalCopyCache.Remove((date, shiftId));
+    }
+
+    private void InvalidateEvalCacheForEmployee()
+    {
+        // 員工切換時（拖曳選取的員工）需全清，因為快取以 SelectedEmployee 為前提
+        _evalDropCache.Clear();
+        _evalCopyCache.Clear();
+    }
 
     private ShiftValidationResult EvaluateShiftForDrop(DateOnly date, ShiftSetting shift)
     {

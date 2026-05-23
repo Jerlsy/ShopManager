@@ -22,7 +22,7 @@ public class EntryItem
     public ShiftSetting? ShiftSetting { get; set; }
 }
 
-public class CalendarDay
+public partial class CalendarDay : ObservableObject
 {
     public DateOnly Date { get; set; }
     public int Day { get; set; }
@@ -36,6 +36,14 @@ public class CalendarDay
     public bool IsOutOfScope { get; set; }   // 周視圖跨月且無班表
     public string? HolidayName { get; set; }
     public ObservableCollection<ShiftBlock> ShiftBlocks { get; } = new();
+
+    // 空班別狀態（由 Optimistic UI helpers 更新）
+    [ObservableProperty] private int _emptyShiftCount;
+    public bool HasEmptyShifts => EmptyShiftCount > 0;
+    partial void OnEmptyShiftCountChanged(int value) => OnPropertyChanged(nameof(HasEmptyShifts));
+
+    public void RecomputeEmptyShiftCount()
+        => EmptyShiftCount = ShiftBlocks.Count(b => b.IsEmpty);
 }
 
 public class CalendarWeekRow
@@ -44,21 +52,45 @@ public class CalendarWeekRow
     public List<CalendarDay> Days { get; } = new();
 }
 
-public class ShiftBlock
+public partial class ShiftBlock : ObservableObject
 {
     public ShiftSetting ShiftSetting { get; set; } = null!;
     public DateOnly Date { get; set; }
-    public ObservableCollection<EntryItem> EntryItems { get; set; } = new();
+
+    private ObservableCollection<EntryItem> _entryItems = new();
+    public ObservableCollection<EntryItem> EntryItems
+    {
+        get => _entryItems;
+        set
+        {
+            if (ReferenceEquals(_entryItems, value)) return;
+            _entryItems.CollectionChanged -= OnEntryItemsChanged;
+            _entryItems = value;
+            _entryItems.CollectionChanged += OnEntryItemsChanged;
+            IsEmpty = _entryItems.Count == 0;
+        }
+    }
+
+    private void OnEntryItemsChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        => IsEmpty = _entryItems.Count == 0;
+
     // 移動模式：全部規則 #1-#6（能否進入此班表位置）
-    public bool IsDisabled { get; set; }
-    public string DisabledReason { get; set; } = string.Empty;
+    [ObservableProperty] private bool _isDisabled;
+    [ObservableProperty] private string _disabledReason = string.Empty;
     // 複製模式：僅群組 C（#5 時間重疊 + #6 每日工時）
-    public bool IsDisabledForCopy { get; set; }
-    public string DisabledReasonForCopy { get; set; } = string.Empty;
+    [ObservableProperty] private bool _isDisabledForCopy;
+    [ObservableProperty] private string _disabledReasonForCopy = string.Empty;
+    // 空班別狀態：EntryItems 為空時為 true（由 EntryItems CollectionChanged 驅動更新）
+    [ObservableProperty] private bool _isEmpty = true;
     // 時間軸定位（周/日視圖）
     public double BlockTop { get; set; }
     public double BlockHeight { get; set; }
     public System.Windows.Thickness BlockMargin => new(2, BlockTop, 2, 0);
+
+    public ShiftBlock()
+    {
+        _entryItems.CollectionChanged += OnEntryItemsChanged;
+    }
 }
 
 public class CalendarTimeSlot

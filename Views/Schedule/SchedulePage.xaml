@@ -5,6 +5,34 @@
              xmlns:vm="clr-namespace:ShopManager.ViewModels"
              xmlns:models="clr-namespace:ShopManager.Models">
 
+    <UserControl.Resources>
+        <!-- EntryItem 右鍵選單：透過 PlacementTarget.Tag 取得 ViewModel；x:Shared=False 確保多個 EntryItem 可共用同一資源 -->
+        <ContextMenu x:Key="EntryItemContextMenu" x:Shared="False">
+            <MenuItem Header="編輯排班"
+                      Command="{Binding PlacementTarget.Tag.OpenEditEntryCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                      CommandParameter="{Binding PlacementTarget.DataContext.EntryId, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                <MenuItem.Icon>
+                    <md:PackIcon Kind="Pencil"/>
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="複製到下週"
+                      Command="{Binding PlacementTarget.Tag.CopyToNextWeekCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                      CommandParameter="{Binding PlacementTarget.DataContext.EntryId, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                <MenuItem.Icon>
+                    <md:PackIcon Kind="ContentCopy"/>
+                </MenuItem.Icon>
+            </MenuItem>
+            <Separator/>
+            <MenuItem Header="從班表移除"
+                      Command="{Binding PlacementTarget.Tag.DeleteEntryCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                      CommandParameter="{Binding PlacementTarget.DataContext.EntryId, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                <MenuItem.Icon>
+                    <md:PackIcon Kind="DeleteOutline" Foreground="#E53935"/>
+                </MenuItem.Icon>
+            </MenuItem>
+        </ContextMenu>
+    </UserControl.Resources>
+
     <Grid Margin="{DynamicResource PageMargin}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -684,7 +712,9 @@
                                                                                                     PreviewMouseLeftButtonDown="EntryRow_PreviewMouseLeftButtonDown"
                                                                                                     MouseMove="EntryRow_MouseMove"
                                                                                                     MouseLeftButtonUp="EntryRow_MouseLeftButtonUp"
-                                                                                                    Cursor="Hand">
+                                                                                                    Cursor="Hand"
+                                                                                                    Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                                                    ContextMenu="{StaticResource EntryItemContextMenu}">
                                                                                             <Border Width="22" Height="22" CornerRadius="11" ClipToBounds="True"
                                                                                                     Margin="0,0,5,0" BorderThickness="1.5" BorderBrush="White"
                                                                                                     Background="{Binding Employee.ColorHex, Converter={StaticResource HexToBrushConverter}}"
@@ -962,7 +992,9 @@
                                                                                     PreviewMouseLeftButtonDown="EntryRow_PreviewMouseLeftButtonDown"
                                                                                     MouseMove="EntryRow_MouseMove"
                                                                                     MouseLeftButtonUp="EntryRow_MouseLeftButtonUp"
-                                                                                    Cursor="Hand">
+                                                                                    Cursor="Hand"
+                                                                                    Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                                    ContextMenu="{StaticResource EntryItemContextMenu}">
                                                                             <Border Width="28" Height="28" CornerRadius="14" ClipToBounds="True" Margin="0,0,8,0"
                                                                                     Background="{Binding Employee.ColorHex, Converter={StaticResource HexToBrushConverter}}"
                                                                                     AllowDrop="True"
@@ -1789,7 +1821,9 @@
                                                                             PreviewMouseLeftButtonDown="EntryRow_PreviewMouseLeftButtonDown"
                                                                             MouseMove="EntryRow_MouseMove"
                                                                             MouseLeftButtonUp="EntryRow_MouseLeftButtonUp"
-                                                                            Cursor="Hand">
+                                                                            Cursor="Hand"
+                                                                            Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                            ContextMenu="{StaticResource EntryItemContextMenu}">
                                                                         <StackPanel Orientation="Horizontal">
                                                                             <Border Width="26" Height="26" CornerRadius="13"
                                                                                     ClipToBounds="True" Margin="0,0,6,0"

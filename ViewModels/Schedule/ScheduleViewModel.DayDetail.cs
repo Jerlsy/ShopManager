@@ -277,13 +277,17 @@ public partial class ScheduleViewModel
         var label = $"{entry?.Employee?.Name ?? "員工"} {entry?.Date:MM/dd} {entry?.ShiftSetting?.Alias ?? ""}".Trim();
 
         IsEntryCardOpen = false;
-        await _entryService.RemoveEntryAsync(_entryCardEntryId);
-        await LoadScheduleAsync();
-        _snackbarService.ShowSuccess("已從班表移除");
+        var entryId = _entryCardEntryId;
+        ApplyEntryRemoveLocally(entryId);
+        await _entryService.RemoveEntryAsync(entryId);
 
         if (restore is not null)
-            PushUndo(new UndoAction($"移除 {label}",
-                () => _entryService.AddEntryAsync(restore)));
+            PushUndoAndNotify(
+                $"移除 {label}",
+                () => _entryService.AddEntryAsync(restore),
+                "已從班表移除");
+        else
+            _snackbarService.ShowSuccess("已從班表移除");
     }
 
     [RelayCommand]
@@ -371,7 +375,7 @@ public partial class ScheduleViewModel
     {
         if (RecommendTargetShift is null || CurrentSchedule is null) return;
 
-        await _entryService.AddEntryAsync(new ScheduleEntry
+        var added = await _entryService.AddEntryAsync(new ScheduleEntry
         {
             MonthlyScheduleId = CurrentSchedule.Id,
             EmployeeId        = item.Employee.Id,
@@ -380,8 +384,7 @@ public partial class ScheduleViewModel
         });
 
         RecommendCandidates.Remove(item);
-        await LoadScheduleAsync();
-        if (DayDetailDay is not null) RebuildDayDetailGroups(DayDetailDay);
+        ApplyEntryAddLocally(added);
         _snackbarService.ShowSuccess($"{item.Employee.Name} 已排入");
     }
 }

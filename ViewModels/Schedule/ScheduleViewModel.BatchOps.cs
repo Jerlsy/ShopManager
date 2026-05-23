@@ -98,16 +98,18 @@ public partial class ScheduleViewModel
         var addedEntries = await _entryService.AddEntriesAsync(entriesToAdd);
         IsBatchMode = false;
         await LoadScheduleAsync();
-        _snackbarService.ShowSuccess(
-            $"已新增 {addedEntries.Count} 筆排班（略過 {entriesToAdd.Count - addedEntries.Count} 筆重複）");
+        var msg = $"已新增 {addedEntries.Count} 筆排班（略過 {entriesToAdd.Count - addedEntries.Count} 筆重複）";
 
         if (addedEntries.Count > 0)
         {
             var ids = addedEntries.Select(e => e.Id).ToList();
-            PushUndo(new UndoAction(
+            PushUndoAndNotify(
                 $"批次新增 {BatchEmployee?.Name ?? "員工"} {addedEntries.Count} 筆排班",
-                () => _entryService.RemoveEntriesAsync(ids)));
+                () => _entryService.RemoveEntriesAsync(ids),
+                msg);
         }
+        else
+            _snackbarService.ShowSuccess(msg);
     }
 
     // ══════════════════════════════════════════
@@ -161,10 +163,11 @@ public partial class ScheduleViewModel
             _snackbarService.ShowError("本週已有相同排班，無需複製");
         else
         {
-            _snackbarService.ShowSuccess($"已複製 {addedEntries.Count} 筆排班到本週");
             var ids = addedEntries.Select(e => e.Id).ToList();
-            PushUndo(new UndoAction($"複製上週 {addedEntries.Count} 筆排班",
-                () => _entryService.RemoveEntriesAsync(ids)));
+            PushUndoAndNotify(
+                $"複製上週 {addedEntries.Count} 筆排班",
+                () => _entryService.RemoveEntriesAsync(ids),
+                $"已複製 {addedEntries.Count} 筆排班到本週");
         }
     }
 }

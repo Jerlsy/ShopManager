@@ -60,10 +60,11 @@ public partial class ScheduleViewModel
         });
 
         IsQuickAdding = false;
-        await LoadScheduleAsync();
-        _snackbarService.ShowSuccess($"已新增 {employee.Name} {date:MM/dd} {shift.Alias}");
-        PushUndo(new UndoAction($"新增 {employee.Name} {date:MM/dd} {shift.Alias}",
-            () => _entryService.RemoveEntryAsync(added.Id)));
+        ApplyEntryAddLocally(added);
+        PushUndoAndNotify(
+            $"新增 {employee.Name} {date:MM/dd} {shift.Alias}",
+            () => _entryService.RemoveEntryAsync(added.Id),
+            $"已新增 {employee.Name} {date:MM/dd} {shift.Alias}");
     }
 
     // ══════════════════════════════════════════
@@ -83,13 +84,16 @@ public partial class ScheduleViewModel
         };
         var label = $"{entry?.Employee?.Name ?? "員工"} {entry?.Date:MM/dd} {entry?.ShiftSetting?.Alias ?? ""}".Trim();
 
+        ApplyEntryRemoveLocally(entryId);
         await _entryService.RemoveEntryAsync(entryId);
-        await LoadScheduleAsync();
-        _snackbarService.ShowSuccess("排班已刪除");
 
         if (restore is not null)
-            PushUndo(new UndoAction($"刪除 {label}",
-                () => _entryService.AddEntryAsync(restore)));
+            PushUndoAndNotify(
+                $"刪除 {label}",
+                () => _entryService.AddEntryAsync(restore),
+                "排班已刪除");
+        else
+            _snackbarService.ShowSuccess("排班已刪除");
     }
 
     [RelayCommand]
@@ -101,7 +105,8 @@ public partial class ScheduleViewModel
         if (entry is null) return;
 
         var targetDate     = entry.Date.AddDays(7);
-        var targetSchedule = targetDate.Year == SelectedYear && targetDate.Month == SelectedMonth
+        var sameMonth      = targetDate.Year == SelectedYear && targetDate.Month == SelectedMonth;
+        var targetSchedule = sameMonth
             ? CurrentSchedule
             : await _scheduleService.GetAsync(targetDate.Year, targetDate.Month);
 
@@ -130,10 +135,12 @@ public partial class ScheduleViewModel
             ShiftSettingId    = entry.ShiftSettingId,
         });
 
-        await LoadScheduleAsync();
-        _snackbarService.ShowSuccess($"已複製到 {targetDate:MM/dd}");
-        PushUndo(new UndoAction($"複製 {entry.Employee?.Name ?? "員工"} 到 {targetDate:MM/dd}",
-            () => _entryService.RemoveEntryAsync(added.Id)));
+        if (sameMonth) ApplyEntryAddLocally(added);   // 跨月時不影響當前視圖
+
+        PushUndoAndNotify(
+            $"複製 {entry.Employee?.Name ?? "員工"} 到 {targetDate:MM/dd}",
+            () => _entryService.RemoveEntryAsync(added.Id),
+            $"已複製到 {targetDate:MM/dd}");
     }
 
     // ── 功能二補充：編輯排班 ─────────────────────
@@ -171,14 +178,17 @@ public partial class ScheduleViewModel
         var originalNote    = original?.Note ?? string.Empty;
         var entryLabel      = $"{original?.Employee?.Name ?? "員工"} {original?.Date:MM/dd}";
         var id              = _editEntryId;
+        var newShiftId      = EditEntryShift.Id;
+        var newNote         = EditEntryNote;
 
-        await _entryService.UpdateEntryAsync(id, EditEntryShift.Id, EditEntryNote);
+        await _entryService.UpdateEntryAsync(id, newShiftId, newNote);
         IsEditEntryOpen = false;
-        await LoadScheduleAsync();
-        _snackbarService.ShowSuccess("排班已更新");
+        ApplyEntryUpdateLocally(id, newShiftId, newNote);
 
-        PushUndo(new UndoAction($"編輯 {entryLabel} 排班",
-            () => _entryService.UpdateEntryAsync(id, originalShiftId, originalNote)));
+        PushUndoAndNotify(
+            $"編輯 {entryLabel} 排班",
+            () => _entryService.UpdateEntryAsync(id, originalShiftId, originalNote),
+            "排班已更新");
     }
 
     [RelayCommand]
@@ -245,25 +255,34 @@ public partial class ScheduleViewModel
         var dstRestore = SnapshotEntry(destEntry);
         var empName    = employee.Name;
         var destName   = destEntry.Employee?.Name ?? "員工";
+        var srcId      = sourceEntry.Id;
+        var dstId      = destEntry.Id;
 
         var added = await _entryService.AddEntriesAsync([
             new ScheduleEntry { MonthlyScheduleId = CurrentSchedule!.Id, EmployeeId = employee.Id,          Date = date,             ShiftSettingId = shift.Id                },
             new ScheduleEntry { MonthlyScheduleId = CurrentSchedule.Id,  EmployeeId = destEntry.EmployeeId, Date = sourceEntry.Date, ShiftSettingId = sourceEntry.ShiftSettingId },
         ]);
-        await _entryService.RemoveEntriesAsync([sourceEntry.Id, destEntry.Id]);
-        await LoadScheduleAsync();
-        _snackbarService.ShowSuccess($"已交換 {empName} 與 {destName} 的排班");
+        await _entryService.RemoveEntriesAsync([srcId, dstId]);
+
+        // Optimistic：先移除舊兩筆、再加入新兩筆
+        ApplyEntryRemoveLocally(srcId);
+        ApplyEntryRemoveLocally(dstId);
+        foreach (var e in added) ApplyEntryAddLocally(e);
 
         if (added.Count == 2)
         {
             var addedIds = added.Select(e => e.Id).ToList();
-            PushUndo(new UndoAction($"交換 {empName} 與 {destName} 的排班",
+            PushUndoAndNotify(
+                $"交換 {empName} 與 {destName} 的排班",
                 async () =>
                 {
                     await _entryService.RemoveEntriesAsync(addedIds);
                     await _entryService.AddEntriesAsync([srcRestore, dstRestore]);
-                }));
+                },
+                $"已交換 {empName} 與 {destName} 的排班");
         }
+        else
+            _snackbarService.ShowSuccess($"已交換 {empName} 與 {destName} 的排班");
     }
 
     // ── 操作②③④：移動 / 複製 / 新增 ──────────────────────────────
@@ -285,24 +304,33 @@ public partial class ScheduleViewModel
             ShiftSettingId    = shift.Id,
         });
 
+        // 補齊 navigation 後再做 Optimistic 更新（順序：先移除來源、再加入新項）
+        if (sourceEntryId.HasValue && !isCopy)
+            ApplyEntryRemoveLocally(sourceEntryId.Value);
+        ApplyEntryAddLocally(added);
+
         if (sourceEntryId.HasValue && !isCopy)
             await _entryService.RemoveEntryAsync(sourceEntryId.Value);
 
-        await LoadScheduleAsync();
-
         var addedId = added.Id;
         if (sourceEntryId.HasValue && !isCopy)
-            PushUndo(new UndoAction($"移動 {employee.Name} 到 {date:MM/dd} {shift.Alias}",
+            PushUndoAndNotify(
+                $"移動 {employee.Name} 到 {date:MM/dd} {shift.Alias}",
                 async () =>
                 {
                     await _entryService.RemoveEntryAsync(addedId);
                     if (srcSnapshot is not null) await _entryService.AddEntryAsync(srcSnapshot);
-                }));
+                },
+                $"已移動 {employee.Name} 到 {date:MM/dd} {shift.Alias}");
         else
-            PushUndo(new UndoAction(
-                isCopy ? $"複製 {employee.Name} 到 {date:MM/dd} {shift.Alias}"
-                       : $"新增 {employee.Name} {date:MM/dd} {shift.Alias}",
-                () => _entryService.RemoveEntryAsync(addedId)));
+        {
+            var label = isCopy ? $"複製 {employee.Name} 到 {date:MM/dd} {shift.Alias}"
+                               : $"新增 {employee.Name} {date:MM/dd} {shift.Alias}";
+            PushUndoAndNotify(
+                label,
+                () => _entryService.RemoveEntryAsync(addedId),
+                "已" + label);
+        }
     }
 
     // ── 工具：建立 ScheduleEntry 快照（用於 Undo 還原）────────────

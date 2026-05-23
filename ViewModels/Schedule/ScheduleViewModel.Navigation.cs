@@ -48,9 +48,54 @@ public partial class ScheduleViewModel
 
     partial void OnSelectedEmployeeChanged(Employee? value)
     {
-        BuildCalendarView();
+        // 只更新 IsDisabled 旗標，不重建 CalendarDays（避免拖曳時的 UI 抖動）
+        InvalidateEvalCacheForEmployee();
+        foreach (var day in CalendarDays)
+        {
+            if (day.IsPlaceholder || day.IsClosed || day.IsOutOfScope) continue;
+            foreach (var block in day.ShiftBlocks)
+            {
+                if (value is null)
+                {
+                    block.IsDisabled            = false;
+                    block.DisabledReason        = string.Empty;
+                    block.IsDisabledForCopy     = false;
+                    block.DisabledReasonForCopy = string.Empty;
+                }
+                else
+                {
+                    var v     = EvaluateShiftForDrop(day.Date, block.ShiftSetting);
+                    var vCopy = EvaluateShiftForDropCopy(day.Date, block.ShiftSetting);
+                    block.IsDisabled            = v.IsBlocked;
+                    block.DisabledReason        = v.Reason;
+                    block.IsDisabledForCopy     = vCopy.IsBlocked;
+                    block.DisabledReasonForCopy = vCopy.Reason;
+                }
+            }
+        }
+        // DayDetail 浮層的 group 也是 ShiftBlock，獨立更新
         if (IsDayDetailOpen && DayDetailDay is not null)
-            RebuildDayDetailGroups(DayDetailDay);
+        {
+            foreach (var block in DayDetailGroups)
+            {
+                if (value is null)
+                {
+                    block.IsDisabled            = false;
+                    block.DisabledReason        = string.Empty;
+                    block.IsDisabledForCopy     = false;
+                    block.DisabledReasonForCopy = string.Empty;
+                }
+                else
+                {
+                    var v     = EvaluateShiftForDrop(DayDetailDay.Date, block.ShiftSetting);
+                    var vCopy = EvaluateShiftForDropCopy(DayDetailDay.Date, block.ShiftSetting);
+                    block.IsDisabled            = v.IsBlocked;
+                    block.DisabledReason        = v.Reason;
+                    block.IsDisabledForCopy     = vCopy.IsBlocked;
+                    block.DisabledReasonForCopy = vCopy.Reason;
+                }
+            }
+        }
     }
 
     // ── 視圖模式旗標 ─────────────────────────────────────────────────────
