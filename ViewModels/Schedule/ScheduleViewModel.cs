@@ -352,31 +352,51 @@ public partial class ScheduleViewModel : ObservableObject
     // ══════════════════════════════════════════
     public async Task LoadAsync()
     {
-        var shifts = await _shiftService.GetAllAsync();
+        // 4 個 Service 各自有獨立 DbContext（Transient），可平行查詢
+        var shiftsTask      = _shiftService.GetAllAsync();
+        var employeesTask   = _employeeService.GetAllAsync();
+        var laborLawTask    = _salaryService.GetLaborLawAsync();
+        var shopSettingTask = _shopSettingService.GetAsync();
+        await Task.WhenAll(shiftsTask, employeesTask, laborLawTask, shopSettingTask);
+
         EnabledShifts.Clear();
-        foreach (var s in shifts.Where(s => s.IsEnabled))
+        foreach (var s in shiftsTask.Result.Where(s => s.IsEnabled))
             EnabledShifts.Add(s);
 
-        var employees = await _employeeService.GetAllAsync();
         ActiveEmployees.Clear();
-        foreach (var e in employees.Where(e => !e.IsResigned))
+        foreach (var e in employeesTask.Result.Where(e => !e.IsResigned))
             ActiveEmployees.Add(e);
 
-        _laborLaw = await _salaryService.GetLaborLawAsync();
+        _laborLaw     = laborLawTask.Result;
+        _weekStartDay = shopSettingTask.Result?.WeekStartDay ?? 1;
 
-        var shopSetting = await _shopSettingService.GetAsync();
-        _weekStartDay = shopSetting?.WeekStartDay ?? 1;
+        // 排班視圖先用 DB 快取的衝突計數立刻顯示；不再每次切換月份都重跑 RecheckAsync
+        // （規則重算只在實際修改後透過 ScheduleConflictRefresh / 各 Recheck 事件觸發）
+        await LoadScheduleAsync();
 
-        await LoadForMonthChangeAsync();
+        // 假日資料延後到背景抓，不阻塞首屏顯示
+        _ = LoadMonthHolidaysAndRefreshAsync();
     }
 
-    // 月份切換或初次載入：先抓假日（一次性 HTTP），再重建排班視圖，並重新評估衝突
+    // 月份切換（PreviousMonth / NextMonth 等命令呼叫）
     private async Task LoadForMonthChangeAsync()
     {
-        await LoadMonthHolidaysAsync();
         await LoadScheduleAsync();
-        if (CurrentSchedule is not null)
-            ConflictCount = await _conflictService.RecheckAsync(CurrentSchedule.Id);
+        // 跨月時清掉舊月份假日快取，再背景抓新月份
+        _ = LoadMonthHolidaysAndRefreshAsync();
+    }
+
+    // 背景抓假日資料；完成後重建 CalendarDay.HolidayName，但不重建整個視圖
+    private async Task LoadMonthHolidaysAndRefreshAsync()
+    {
+        await LoadMonthHolidaysAsync();
+        // 假日只用於月視圖的 HolidayName 顯示；只 patch 既有 CalendarDay 即可
+        foreach (var day in CalendarDays)
+        {
+            if (day.IsPlaceholder || day.Date.Month != SelectedMonth || day.Date.Year != SelectedYear)
+                continue;
+            day.HolidayName = _monthHolidays.GetValueOrDefault(day.Date.Day);
+        }
     }
 
     // 排班操作後的快速重整：只查 DB，不重抓假日（已快取在 _monthHolidays）

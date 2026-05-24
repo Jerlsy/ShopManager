@@ -35,7 +35,7 @@ public partial class CalendarDay : ObservableObject
     public bool IsPlaceholder { get; set; }
     public bool HasStaffingGap { get; set; }
     public bool IsOutOfScope { get; set; }   // 周視圖跨月且無班表
-    public string? HolidayName { get; set; }
+    [ObservableProperty] private string? _holidayName;
     public ObservableCollection<ShiftBlock> ShiftBlocks { get; } = new();
 
     // 空班別狀態（由 Optimistic UI helpers 更新）

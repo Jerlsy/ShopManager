@@ -233,7 +233,9 @@
                                             </MultiBinding>
                                         </Grid.MinHeight>
                                         
-                                        <Border MaxWidth="{Binding ElementName=ContentArea, Path=ActualWidth, Converter={StaticResource MultiplyDoubleConverter}, ConverterParameter=0.98}">
+                                        <!-- HorizontalAlignment="Left" 確保左邊距與導航欄維持固定 8px gap，不會因捲軸顯示與否而偏移 -->
+                                        <Border HorizontalAlignment="Left"
+                                                Width="{Binding ElementName=PageScrollViewer, Path=ViewportWidth}">
                                             <ContentControl Content="{Binding CurrentContent}" Focusable="False"/>
                                         </Border>
                                     </Grid>

@@ -62,6 +62,14 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void ToggleNav() => IsNavExpanded = !IsNavExpanded;
 
+    /// <summary>導航欄縮折狀態下，點擊圖示按鈕切換頁面（展開狀態由 ListBox.SelectedItem 雙向綁定處理）</summary>
+    [RelayCommand]
+    private void SelectNavItem(NavItem? item)
+    {
+        if (item is null) return;
+        SelectedNavItem = item;
+    }
+
     public object? CurrentContent => _navigation.CurrentContent;
 
     public List<NavItem> AllNavItems { get; } = new()

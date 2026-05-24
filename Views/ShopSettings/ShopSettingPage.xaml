@@ -375,7 +375,7 @@
                                                             ClipToBounds="True" Margin="0,0,12,0"
                                                             Background="{DynamicResource AppPanelBrush}">
                                                         <Grid>
-                                                            <Image Source="{Binding PictureUrl, Converter={StaticResource UrlToImageConverter}}"
+                                                            <Image Source="{Binding PictureUrl}"
                                                                    Stretch="UniformToFill"
                                                                    Visibility="{Binding PictureUrl, Converter={StaticResource NullToVisibilityConverter}}"/>
                                                             <md:PackIcon Kind="AccountCircleOutline" Width="22" Height="22" Opacity="0.45"

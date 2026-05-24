@@ -118,7 +118,7 @@ public class LineService
 
     public async Task<bool> PushImageAsync(string token, string userId, string imageUrl)
     {
-        var body = JsonSerializer.Serialize(new
+        var body = JsonSerializer.Serialize(new 
         {
             to       = userId,
             messages = new[] { new { type = "image", originalContentUrl = imageUrl, previewImageUrl = imageUrl } }

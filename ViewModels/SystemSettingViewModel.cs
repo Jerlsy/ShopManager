@@ -253,9 +253,12 @@ public partial class SystemSettingViewModel(
         ContactInfos = list;
     }
 
-    public void AddOwnerBinding(OwnerLineBinding item)
+    /// <summary>新增業主綁定。回傳 false 表示該 UserId 已存在（不重複加入）</summary>
+    public bool AddOwnerBinding(OwnerLineBinding item)
     {
+        if (OwnerLineBindings.Any(b => b.UserId == item.UserId)) return false;
         OwnerLineBindings = new List<OwnerLineBinding>(OwnerLineBindings) { item };
+        return true;
     }
 
     [RelayCommand]

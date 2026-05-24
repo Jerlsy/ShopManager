@@ -134,7 +134,7 @@
 
             <!-- ── 響應式佈局尺寸（由 App.xaml.cs ApplyLayoutScale 依螢幕寬度覆寫） ── -->
             <sys:Double x:Key="LayoutNavExpandedWidth">200</sys:Double>
-            <GridLength x:Key="LayoutSideListGridWidth">220</GridLength>
+            <GridLength x:Key="LayoutSideListGridWidth">280</GridLength>
             <sys:Double x:Key="LayoutEmployeeCardWidth">240</sys:Double>
 
             <!-- ── 統一 UI 樣式管理 ── -->

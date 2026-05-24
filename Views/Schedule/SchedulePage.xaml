@@ -88,10 +88,10 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- 衝突徽章 -->
+                    <!-- 衝突徽章（Hidden 保留版面） -->
                     <Button Style="{StaticResource MaterialDesignOutlinedButton}"
                             Command="{Binding CheckConflictsCommand}"
-                            Visibility="{Binding HasConflicts, Converter={StaticResource BoolToVisibilityConverter}}"
+                            Visibility="{Binding HasConflicts, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Hidden}"
                             Margin="0,0,8,0" Padding="8,0"
                             Foreground="#E53935" BorderBrush="#E53935">
                         <StackPanel Orientation="Horizontal">
@@ -103,10 +103,10 @@
                         </StackPanel>
                     </Button>
 
-                    <!-- 空班別徽章 -->
+                    <!-- 空班別徽章（Hidden 保留版面） -->
                     <Button Style="{StaticResource MaterialDesignOutlinedButton}"
                             Command="{Binding CheckConflictsCommand}"
-                            Visibility="{Binding HasEmptyShifts, Converter={StaticResource BoolToVisibilityConverter}}"
+                            Visibility="{Binding HasEmptyShifts, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Hidden}"
                             Margin="0,0,8,0" Padding="8,0"
                             ToolTip="班別尚未排入任何員工"
                             Foreground="#F57C00" BorderBrush="#F57C00">
@@ -129,36 +129,39 @@
                         <md:PackIcon Kind="UndoVariant" Width="18" Height="18"/>
                     </Button>
 
-                    <!-- 新增班表 -->
-                    <Button Style="{StaticResource MaterialDesignRaisedButton}"
-                            Command="{Binding StartCreateScheduleCommand}"
-                            Visibility="{Binding HasSchedule, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
-                        <StackPanel Orientation="Horizontal">
-                            <md:PackIcon Kind="CalendarPlus" Width="18" Height="18" Margin="0,0,8,0"/>
-                            <TextBlock Text="新增班表"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Style="{StaticResource MaterialDesignOutlinedButton}"
-                            Command="{Binding StartCreateScheduleCommand}"
-                            Visibility="{Binding HasSchedule, Converter={StaticResource BoolToVisibilityConverter}}"
-                            ToolTip="重新建立本月班表"
-                            Margin="0,0,8,0">
-                        <md:PackIcon Kind="CalendarRefresh" Width="18" Height="18"/>
-                    </Button>
-                    <!-- 自動排班 -->
+                    <!-- 新增 / 重建班表（重疊在同一格子，互斥顯示，避免兩個 slot 都佔位） -->
+                    <Grid Margin="0,0,8,0">
+                        <Button Style="{StaticResource MaterialDesignRaisedButton}"
+                                Command="{Binding StartCreateScheduleCommand}"
+                                Visibility="{Binding HasSchedule, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse|Hidden}">
+                            <StackPanel Orientation="Horizontal">
+                                <md:PackIcon Kind="CalendarPlus" Width="18" Height="18" Margin="0,0,8,0"/>
+                                <TextBlock Text="新增班表"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                                Command="{Binding StartCreateScheduleCommand}"
+                                Visibility="{Binding HasSchedule, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Hidden}"
+                                ToolTip="重新建立本月班表"
+                                HorizontalAlignment="Right">
+                            <md:PackIcon Kind="CalendarRefresh" Width="18" Height="18"/>
+                        </Button>
+                    </Grid>
+
+                    <!-- 自動排班（Hidden 保留版面） -->
                     <Button Style="{StaticResource MaterialDesignRaisedButton}"
                             Command="{Binding StartAutoAssignCommand}"
-                            Visibility="{Binding ShowAutoAssignButton, Converter={StaticResource BoolToVisibilityConverter}}">
+                            Visibility="{Binding ShowAutoAssignButton, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Hidden}">
                         <StackPanel Orientation="Horizontal">
                             <md:PackIcon Kind="AutoFix" Width="18" Height="18" Margin="0,0,8,0"/>
                             <TextBlock Text="自動排班"/>
                         </StackPanel>
                     </Button>
 
-                    <!-- 轉存班表 -->
+                    <!-- 轉存班表（Hidden 保留版面） -->
                     <Button Style="{StaticResource MaterialDesignOutlinedButton}"
                             Click="ExportSchedule_Click"
-                            Visibility="{Binding HasSchedule, Converter={StaticResource BoolToVisibilityConverter}}"
+                            Visibility="{Binding HasSchedule, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Hidden}"
                             Margin="8,0,0,0" ToolTip="將本月班表匯出為 PNG 圖片">
                         <StackPanel Orientation="Horizontal">
                             <md:PackIcon Kind="FileExportOutline" Width="18" Height="18" Margin="0,0,6,0"/>

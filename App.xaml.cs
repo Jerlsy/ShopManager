@@ -77,7 +77,7 @@ public partial class App : Application
         var factor  = Math.Clamp(screenW / 1366.0, 1.0, 1.4);
 
         var navW    = Math.Round(200 * factor);
-        var sideW   = Math.Round(220 * factor);
+        var sideW   = Math.Round(280 * factor);
         var cardW   = Math.Round(240 * factor);
         var hMargin = Math.Round(16  * factor);
         var vMargin = Math.Round(14  * factor);

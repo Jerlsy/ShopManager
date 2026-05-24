@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Win32;
 using ShopManager.Models;
+using ShopManager.Services;
 using ShopManager.ViewModels;
 using ShopManager.Views.Line;
 using System.IO;
@@ -24,7 +25,11 @@ public partial class ShopSettingPage : UserControl
         Loaded += async (_, _) =>
         {
             await viewModel.LoadAsync();
-            await InitNotesPreviewAsync();
+            // WebView2 冷啟動約 3-5 秒，延後到 ApplicationIdle 優先級執行，
+            // 讓主視窗先 render；備註區暫時顯示佔位文字，啟動後再渲染
+            await Dispatcher.BeginInvoke(
+                new Func<Task>(InitNotesPreviewAsync),
+                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         };
         viewModel.LineTestSucceeded += OnLineTestSucceeded;
     }
@@ -149,12 +154,17 @@ public partial class ShopSettingPage : UserControl
         win.ViewModel.IsSelectMode = true;
         win.Owner = Window.GetWindow(this);
         win.ViewModel.FollowerSelected += (_, item) =>
-            _viewModel.AddOwnerBinding(new OwnerLineBinding
+        {
+            var added = _viewModel.AddOwnerBinding(new OwnerLineBinding
             {
                 UserId = item.UserId,
                 DisplayName = item.DisplayName,
                 PictureUrl = item.PictureUrl
             });
+            if (!added)
+                App.Services.GetRequiredService<IAppSnackbarService>()
+                    .ShowWarning($"「{item.DisplayName}」已經綁定過了");
+        };
         win.Loaded += async (_, _) => await win.ViewModel.InitAsync(
             _viewModel.LineChannelAccessToken,
             _viewModel.LineWorkerUrl,
