@@ -143,7 +143,7 @@ public partial class ShopSettingPage : UserControl
         }
     }
 
-    private async void AddOwnerBinding_Click(object sender, RoutedEventArgs e)
+    private void AddOwnerBinding_Click(object sender, RoutedEventArgs e)
     {
         var win = App.Services.GetRequiredService<LineFollowerWindow>();
         win.ViewModel.IsSelectMode = true;
@@ -155,19 +155,20 @@ public partial class ShopSettingPage : UserControl
                 DisplayName = item.DisplayName,
                 PictureUrl = item.PictureUrl
             });
-        win.Show();
-        await win.ViewModel.InitAsync(
+        win.Loaded += async (_, _) => await win.ViewModel.InitAsync(
             _viewModel.LineChannelAccessToken,
             _viewModel.LineWorkerUrl,
             _viewModel.LineWorkerApiKey);
+        win.ShowDialog();
     }
 
-    private async void OnLineTestSucceeded(object? sender, string token)
+    private void OnLineTestSucceeded(object? sender, string token)
     {
         var win = App.Services.GetRequiredService<LineFollowerWindow>();
         win.Owner = Window.GetWindow(this);
-        win.Show();
-        await win.ViewModel.InitAsync(token, _viewModel.LineWorkerUrl, _viewModel.LineWorkerApiKey);
+        win.Loaded += async (_, _) => await win.ViewModel.InitAsync(
+            token, _viewModel.LineWorkerUrl, _viewModel.LineWorkerApiKey);
+        win.ShowDialog();
     }
 
     private void TokenHelp_Click(object sender, RoutedEventArgs e)
@@ -182,15 +183,15 @@ public partial class ShopSettingPage : UserControl
         win.ShowDialog();
     }
 
-    private async void ViewFollowers_Click(object sender, RoutedEventArgs e)
+    private void ViewFollowers_Click(object sender, RoutedEventArgs e)
     {
         var win = App.Services.GetRequiredService<LineFollowerWindow>();
         win.Owner = Window.GetWindow(this);
-        win.Show();
-        await win.ViewModel.InitAsync(
+        win.Loaded += async (_, _) => await win.ViewModel.InitAsync(
             _viewModel.LineChannelAccessToken,
             _viewModel.LineWorkerUrl,
             _viewModel.LineWorkerApiKey);
+        win.ShowDialog();
     }
 
     // 問題根源：備註預覽使用 WebView2（HwndHost），其 HWND 會吞掉 WM_MOUSEWHEEL，

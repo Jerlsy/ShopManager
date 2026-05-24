@@ -133,10 +133,10 @@ public partial class ExportScheduleWindow : Window
         if (ok == targets.Count)
             snackbar.ShowSuccess($"已成功推播給 {ok} 位收件人");
         else
-        {
             snackbar.ShowWarning($"推播完成：{ok}/{targets.Count} 位成功，可再次推播");
-            pushBtn.IsEnabled = true;
-        }
+
+        // 不論成功與否都解鎖按鈕，避免使用者要再次推播時無法點擊
+        pushBtn.IsEnabled = true;
     }
 
     private object BuildPersonalScheduleFlex(ExportScheduleData.PushRecipient recipient)

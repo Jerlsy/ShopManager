@@ -297,9 +297,13 @@ public class UrlToImageConverter : IValueConverter
         {
             var bi = new System.Windows.Media.Imaging.BitmapImage();
             bi.BeginInit();
-            bi.UriSource = new Uri(url);
-            bi.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnDemand;
+            // OnLoad 強制 EndInit 時立即下載 + 釋放 stream；避免 OnDemand lazy-load 對
+            // HTTPS LINE CDN 圖片常見失敗
+            bi.CacheOption   = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+            bi.CreateOptions = System.Windows.Media.Imaging.BitmapCreateOptions.IgnoreImageCache;
+            bi.UriSource     = new Uri(url, UriKind.Absolute);
             bi.EndInit();
+            bi.Freeze();
             return bi;
         }
         catch { return null; }

@@ -434,7 +434,7 @@ public partial class SchedulePage : UserControl
         var data = await vm.BuildExportDataAsync();
         if (data is null) return;
         var win = new ExportScheduleWindow(data) { Owner = Window.GetWindow(this) };
-        win.Show();
+        win.ShowDialog();
     }
 
 

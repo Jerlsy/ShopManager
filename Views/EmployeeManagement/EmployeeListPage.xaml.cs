@@ -53,8 +53,8 @@ public partial class EmployeeListPage : UserControl
         win.ViewModel.FollowerSelected += (_, item) =>
             _viewModel.ApplyLineBinding(item.UserId, item.DisplayName, item.PictureUrl);
 
-        win.Show();
-        await win.ViewModel.InitAsync(token, workerUrl, apiKey);
+        win.Loaded += async (_, _) => await win.ViewModel.InitAsync(token, workerUrl, apiKey);
+        win.ShowDialog();
     }
 
     private async void EmployeeListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
