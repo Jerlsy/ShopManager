@@ -44,21 +44,30 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- 頁面標題列 -->
+        <!-- 頁面標題列：標題 cell + 分隔線 + 工具列 cell -->
         <Border Grid.Row="0" Style="{StaticResource PageHeaderStyle}">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+
+                <!-- 左 cell：店鋪 logo + 頁面標題（Auto 寬度，不會被擠壓） -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                     <Border Width="48" Height="48" CornerRadius="8" ClipToBounds="True" Margin="0,0,16,0"
                             Visibility="{Binding DataContext.ShopLogoData, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NullToVisibilityConverter}}">
                         <Image Source="{Binding DataContext.ShopLogoData, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BytesToImageConverter}}" Stretch="UniformToFill"/>
                     </Border>
                     <TextBlock Text="排班管理" Style="{StaticResource PageTitleStyle}" VerticalAlignment="Center"/>
                 </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+
+                <!-- 垂直分隔線 -->
+                <Border Grid.Column="1" Width="1" Margin="16,4"
+                        Background="{DynamicResource AppBorderBrush}"/>
+
+                <!-- 右 cell：操作工具列（HorizontalAlignment Right，所有條件按鈕用 Hidden 保留版面）-->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
                     <!-- 月份導覽 -->
                     <Button Style="{StaticResource MaterialDesignOutlinedButton}" Margin="0,0,6,0" Command="{Binding PreviousMonthCommand}">
                         <md:PackIcon Kind="ChevronLeft"/>
@@ -88,10 +97,10 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- 衝突徽章（Hidden 保留版面） -->
+                    <!-- 衝突徽章（Collapsed：狀態指示，有才出現） -->
                     <Button Style="{StaticResource MaterialDesignOutlinedButton}"
                             Command="{Binding CheckConflictsCommand}"
-                            Visibility="{Binding HasConflicts, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Hidden}"
+                            Visibility="{Binding HasConflicts, Converter={StaticResource BoolToVisibilityConverter}}"
                             Margin="0,0,8,0" Padding="8,0"
                             Foreground="#E53935" BorderBrush="#E53935">
                         <StackPanel Orientation="Horizontal">
@@ -103,10 +112,10 @@
                         </StackPanel>
                     </Button>
 
-                    <!-- 空班別徽章（Hidden 保留版面） -->
+                    <!-- 空班別徽章（Collapsed：狀態指示，有才出現） -->
                     <Button Style="{StaticResource MaterialDesignOutlinedButton}"
                             Command="{Binding CheckConflictsCommand}"
-                            Visibility="{Binding HasEmptyShifts, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Hidden}"
+                            Visibility="{Binding HasEmptyShifts, Converter={StaticResource BoolToVisibilityConverter}}"
                             Margin="0,0,8,0" Padding="8,0"
                             ToolTip="班別尚未排入任何員工"
                             Foreground="#F57C00" BorderBrush="#F57C00">
