@@ -7,68 +7,7 @@ namespace ShopManager.ViewModels;
 public partial class ScheduleViewModel
 {
     // ══════════════════════════════════════════
-    // 功能一：快速新增（點擊格子）
-    // ══════════════════════════════════════════
-    [ObservableProperty] private bool _isQuickAdding;
-    [ObservableProperty] private DateOnly _quickAddDate;
-    [ObservableProperty] private Employee? _quickAddEmployee;
-    [ObservableProperty] private ShiftSetting? _quickAddShift;
-
-    [RelayCommand]
-    public void OpenQuickAdd(CalendarDay day)
-    {
-        if (day.IsPlaceholder || day.IsClosed) return;
-        if (CurrentSchedule is null) return;
-
-        QuickAddDate     = day.Date;
-        QuickAddEmployee = ActiveEmployees.FirstOrDefault();
-        QuickAddShift    = EnabledShifts.FirstOrDefault();
-        IsCreating       = false;
-        IsBatchMode      = false;
-        IsQuickAdding    = true;
-    }
-
-    [RelayCommand]
-    public void CancelQuickAdd() => IsQuickAdding = false;
-
-    [RelayCommand]
-    public async Task ConfirmQuickAddAsync()
-    {
-        if (CurrentSchedule is null || QuickAddEmployee is null || QuickAddShift is null) return;
-
-        var existing = CurrentSchedule.Entries.Any(e =>
-            e.EmployeeId    == QuickAddEmployee.Id &&
-            e.Date          == QuickAddDate &&
-            e.ShiftSettingId == QuickAddShift.Id);
-
-        if (existing)
-        {
-            _snackbarService.ShowError("該日期已有相同排班");
-            return;
-        }
-
-        var employee = QuickAddEmployee;
-        var date     = QuickAddDate;
-        var shift    = QuickAddShift;
-
-        var added = await _entryService.AddEntryAsync(new ScheduleEntry
-        {
-            MonthlyScheduleId = CurrentSchedule.Id,
-            EmployeeId        = employee.Id,
-            Date              = date,
-            ShiftSettingId    = shift.Id,
-        });
-
-        IsQuickAdding = false;
-        ApplyEntryAddLocally(added);
-        PushUndoAndNotify(
-            $"新增 {employee.Name} {date:MM/dd} {shift.Alias}",
-            () => _entryService.RemoveEntryAsync(added.Id),
-            $"已新增 {employee.Name} {date:MM/dd} {shift.Alias}");
-    }
-
-    // ══════════════════════════════════════════
-    // 功能二：右鍵選單操作
+    // 右鍵選單操作
     // ══════════════════════════════════════════
     [RelayCommand]
     public async Task DeleteEntryAsync(int entryId)
@@ -163,7 +102,6 @@ public partial class ScheduleViewModel
                          ?? EnabledShifts.FirstOrDefault();
         EditEntryNote  = entry.Note ?? string.Empty;
         IsEditEntryOpen = true;
-        IsQuickAdding   = false;
         IsBatchMode     = false;
         IsCreating      = false;
     }

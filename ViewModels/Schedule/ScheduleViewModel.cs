@@ -27,9 +27,6 @@ public partial class ScheduleViewModel : ObservableObject
     private LaborLawSetting? _laborLaw;
     private int _weekStartDay = 1;
 
-    // 週視圖跨月時，鄰月 schedule 的快取（key=(year, month)；null 表示該月無班表）
-    private readonly Dictionary<(int Year, int Month), MonthlySchedule?> _adjacentScheduleCache = new();
-
     public ScheduleViewModel(
         MonthlyScheduleService scheduleService,
         ScheduleService        entryService,
@@ -219,7 +216,6 @@ public partial class ScheduleViewModel : ObservableObject
     [ObservableProperty] private MonthlySchedule? _currentSchedule;
     [ObservableProperty] private int _selectedYear  = DateTime.Today.Year;
     [ObservableProperty] private int _selectedMonth = DateTime.Today.Month;
-    [ObservableProperty] private CalendarViewMode _viewMode = CalendarViewMode.Month;
     [ObservableProperty] private DateOnly _selectedDate = DateOnly.FromDateTime(DateTime.Today);
 
     [ObservableProperty]
@@ -246,8 +242,6 @@ public partial class ScheduleViewModel : ObservableObject
     // ── DayDetail / EntryCard 跨方法共用狀態 ─────────────────────────────
     [ObservableProperty] private bool _isDayDetailOpen;
     [ObservableProperty] private string _dayDetailTitle = string.Empty;
-    [ObservableProperty] private double _timeGridHeight  = 480;
-    [ObservableProperty] private CalendarDay? _dayViewDay;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(DayDetailIsClosed))]
@@ -322,36 +316,14 @@ public partial class ScheduleViewModel : ObservableObject
     public ObservableCollection<Employee>        ActiveEmployees { get; } = new();
     public ObservableCollection<CalendarDay>     CalendarDays   { get; } = new();
     public ObservableCollection<CalendarWeekRow> CalendarWeeks  { get; } = new();
-    public ObservableCollection<CalendarTimeSlot> TimeSlots     { get; } = new();
     public ObservableCollection<EmployeeWorkloadItem> EmployeeWorkloads { get; } = new();
     public List<string> DayHeaders { get; private set; } = new();
     private Dictionary<int, string> _monthHolidays = new();
 
-    public static List<ViewModeOption> ViewModeOptions { get; } = new()
-    {
-        new(CalendarViewMode.Month, "月"),
-        new(CalendarViewMode.Week,  "周"),
-        new(CalendarViewMode.Day,   "日"),
-    };
-
     public static List<int> AvailableYears  { get; } = Enumerable.Range(DateTime.Today.Year - 1, 5).ToList();
     public static List<int> AvailableMonths { get; } = Enumerable.Range(1, 12).ToList();
 
-    public string CalendarTitle => ViewMode switch
-    {
-        CalendarViewMode.Day  => $"{SelectedDate:yyyy年M月d日}（{GetDayOfWeekText(SelectedDate.DayOfWeek)}）",
-        CalendarViewMode.Week => GetWeekRangeTitle(),
-        _                     => $"{SelectedYear} 年 {SelectedMonth} 月",
-    };
-
-    private string GetWeekRangeTitle()
-    {
-        var s = GetCurrentWeekStart();
-        var e = s.AddDays(6);
-        return s.Month == e.Month
-            ? $"{s:yyyy年M月d日} – {e.Day}日"
-            : $"{s:yyyy年M月d日} – {e:M月d日}";
-    }
+    public string CalendarTitle => $"{SelectedYear} 年 {SelectedMonth} 月";
 
     // ══════════════════════════════════════════
     // 初始載入
@@ -382,19 +354,14 @@ public partial class ScheduleViewModel : ObservableObject
 
         // 假日資料延後到背景抓，不阻塞首屏顯示
         _ = LoadMonthHolidaysAndRefreshAsync();
-        // 週視圖時，鄰月 schedule 也在背景補抓
-        _ = RefreshWeekViewAdjacentAsync();
     }
 
     // 月份切換（PreviousMonth / NextMonth 等命令呼叫）
     private async Task LoadForMonthChangeAsync()
     {
-        // 跨月時清掉鄰月快取，避免舊資料殘留
-        _adjacentScheduleCache.Clear();
         await LoadScheduleAsync();
         // 跨月時清掉舊月份假日快取，再背景抓新月份
         _ = LoadMonthHolidaysAndRefreshAsync();
-        _ = RefreshWeekViewAdjacentAsync();
     }
 
     // 背景抓假日資料；完成後重建 CalendarDay.HolidayName，但不重建整個視圖
@@ -494,12 +461,7 @@ public partial class ScheduleViewModel : ObservableObject
         _shiftLookupCache = EnabledShifts.ToDictionary(s => s.Id);
         _evalDropCache.Clear();
         _evalCopyCache.Clear();
-        switch (ViewMode)
-        {
-            case CalendarViewMode.Month: BuildMonthView(); break;
-            case CalendarViewMode.Week:  BuildWeekView();  break;
-            case CalendarViewMode.Day:   BuildDayView();   break;
-        }
+        BuildMonthView();
         RecomputeEmptyShiftTotals();
     }
 
@@ -600,135 +562,6 @@ public partial class ScheduleViewModel : ObservableObject
             foreach (var d in weekDays) row.Days.Add(d);
             CalendarWeeks.Add(row);
         }
-    }
-
-    private void BuildWeekView()
-    {
-        CalendarDays.Clear();
-        TimeSlots.Clear();
-
-        const double hourHeight  = 60.0;
-        var weekStartDate        = GetCurrentWeekStart();
-        var (hourMin, hourMax)   = GetShiftHourRange();
-        TimeGridHeight           = (hourMax - hourMin) * hourHeight;
-
-        for (int h = hourMin; h < hourMax; h++)
-            TimeSlots.Add(new CalendarTimeSlot { Hour = h, Label = $"{h:D2}:00" });
-
-        for (int d = 0; d < 7; d++)
-        {
-            var date             = weekStartDate.AddDays(d);
-            var isInCurrentMonth = date.Year == SelectedYear && date.Month == SelectedMonth;
-            var daySchedule      = GetScheduleForDate(date);
-            var hasSchedule      = daySchedule is not null;
-            var isClosed         = hasSchedule && daySchedule!.ClosedDays.Contains(date.Day);
-
-            var calDay = new CalendarDay
-            {
-                Date          = date,
-                Day           = date.Day,
-                DayOfWeekText = GetDayOfWeekText(date.DayOfWeek),
-                IsToday       = date == DateOnly.FromDateTime(DateTime.Today),
-                IsSelected    = date == SelectedDate,
-                IsClosed      = isClosed,
-                // 跨月不可拖放（規則驗證仍綁 CurrentSchedule）
-                IsOutOfScope  = !isInCurrentMonth,
-                HasStaffingGap = !isClosed && hasSchedule
-                    && daySchedule!.StaffingGapDays.Contains(date.Day),
-            };
-
-            if (!isClosed && hasSchedule)
-            {
-                foreach (var shift in GetShiftsForDay(date, daySchedule!))
-                {
-                    var startMin = shift.StartTime.Hour * 60 + shift.StartTime.Minute;
-                    var endMin   = shift.EndTime.Hour   * 60 + shift.EndTime.Minute;
-                    var top      = (startMin - hourMin * 60) * (hourHeight / 60.0);
-                    var height   = Math.Max(20, (endMin - startMin) * (hourHeight / 60.0));
-                    var entries  = daySchedule!.Entries
-                        .Where(e => e.Date == date && e.ShiftSettingId == shift.Id).ToList();
-
-                    var v     = EvaluateShiftForDrop(date, shift);
-                    var vCopy = EvaluateShiftForDropCopy(date, shift);
-                    calDay.ShiftBlocks.Add(new ShiftBlock
-                    {
-                        ShiftSetting          = shift,
-                        Date                  = date,
-                        EntryItems            = new ObservableCollection<EntryItem>(
-                            entries.Where(e => e.Employee is not null)
-                                   .Select(e => new EntryItem { EntryId = e.Id, Employee = e.Employee!, Date = date, ShiftSetting = shift })),
-                        IsDisabled            = v.IsBlocked,
-                        DisabledReason        = v.Reason,
-                        IsDisabledForCopy     = vCopy.IsBlocked,
-                        DisabledReasonForCopy = vCopy.Reason,
-                        BlockTop              = top,
-                        BlockHeight           = height,
-                    });
-                }
-            }
-
-            CalendarDays.Add(calDay);
-        }
-    }
-
-    private void BuildDayView()
-    {
-        CalendarDays.Clear();
-        TimeSlots.Clear();
-        if (CurrentSchedule is null) return;
-
-        const double hourHeight  = 60.0;
-        var isClosed             = CurrentSchedule.ClosedDays.Contains(SelectedDate.Day)
-            && SelectedDate.Month == SelectedMonth && SelectedDate.Year == SelectedYear;
-
-        var (hourMin, hourMax)   = GetShiftHourRange();
-        TimeGridHeight           = (hourMax - hourMin) * hourHeight;
-
-        for (int h = hourMin; h < hourMax; h++)
-            TimeSlots.Add(new CalendarTimeSlot { Hour = h, Label = $"{h:D2}:00" });
-
-        var calDay = new CalendarDay
-        {
-            Date          = SelectedDate,
-            Day           = SelectedDate.Day,
-            DayOfWeekText = GetDayOfWeekText(SelectedDate.DayOfWeek),
-            IsToday       = SelectedDate == DateOnly.FromDateTime(DateTime.Today),
-            IsSelected    = true,
-            IsClosed      = isClosed,
-        };
-
-        if (!isClosed)
-        {
-            foreach (var shift in GetShiftsForDay(SelectedDate, CurrentSchedule))
-            {
-                var startMin = shift.StartTime.Hour * 60 + shift.StartTime.Minute;
-                var endMin   = shift.EndTime.Hour   * 60 + shift.EndTime.Minute;
-                var top      = (startMin - hourMin * 60) * (hourHeight / 60.0);
-                var height   = Math.Max(20, (endMin - startMin) * (hourHeight / 60.0));
-                var entries  = CurrentSchedule.Entries
-                    .Where(e => e.Date == SelectedDate && e.ShiftSettingId == shift.Id).ToList();
-
-                var v     = EvaluateShiftForDrop(SelectedDate, shift);
-                var vCopy = EvaluateShiftForDropCopy(SelectedDate, shift);
-                calDay.ShiftBlocks.Add(new ShiftBlock
-                {
-                    ShiftSetting          = shift,
-                    Date                  = SelectedDate,
-                    EntryItems            = new ObservableCollection<EntryItem>(
-                        entries.Where(e => e.Employee is not null)
-                               .Select(e => new EntryItem { EntryId = e.Id, Employee = e.Employee!, Date = SelectedDate, ShiftSetting = shift })),
-                    IsDisabled            = v.IsBlocked,
-                    DisabledReason        = v.Reason,
-                    IsDisabledForCopy     = vCopy.IsBlocked,
-                    DisabledReasonForCopy = vCopy.Reason,
-                    BlockTop              = top,
-                    BlockHeight           = height,
-                });
-            }
-        }
-
-        CalendarDays.Add(calDay);
-        DayViewDay = calDay;
     }
 
     // ══════════════════════════════════════════
@@ -889,27 +722,6 @@ public partial class ScheduleViewModel : ObservableObject
             .ToList();
     }
 
-    private (int Min, int Max) GetShiftHourRange()
-    {
-        if (!EnabledShifts.Any()) return (0, 24);
-
-        int min = 23, max = 1;
-        foreach (var s in EnabledShifts)
-        {
-            if (s.StartTime.Hour < min) min = s.StartTime.Hour;
-            if (s.EndTime > s.StartTime)
-            {
-                int endHour = s.EndTime.Hour + (s.EndTime.Minute > 0 ? 1 : 0);
-                if (endHour > max) max = endHour;
-            }
-            else
-            {
-                max = 24; // 跨午夜班別，顯示到底
-            }
-        }
-        return (min, Math.Min(max, 24));
-    }
-
     private DateOnly GetCurrentWeekStart()
     {
         var weekStart   = _weekStartDay;
@@ -917,53 +729,6 @@ public partial class ScheduleViewModel : ObservableObject
         var offset      = (selectedDow - weekStart + 7) % 7;
         return SelectedDate.AddDays(-offset);
     }
-
-    // 跨月週視圖：依日期所屬月份回傳對應 schedule（當月用 CurrentSchedule，鄰月用快取）
-    private MonthlySchedule? GetScheduleForDate(DateOnly date)
-    {
-        if (date.Year == SelectedYear && date.Month == SelectedMonth)
-            return CurrentSchedule;
-        return _adjacentScheduleCache.GetValueOrDefault((date.Year, date.Month));
-    }
-
-    // 確保當前週所跨到的鄰月 schedule 已載入。Week view 必呼。
-    private async Task EnsureAdjacentSchedulesForWeekAsync()
-    {
-        var weekStart = GetCurrentWeekStart();
-        var months    = new HashSet<(int, int)>();
-        for (int d = 0; d < 7; d++)
-        {
-            var dt = weekStart.AddDays(d);
-            months.Add((dt.Year, dt.Month));
-        }
-        foreach (var (y, m) in months)
-        {
-            if (y == SelectedYear && m == SelectedMonth) continue;
-            if (_adjacentScheduleCache.ContainsKey((y, m))) continue;
-            _adjacentScheduleCache[(y, m)] = await _scheduleService.GetAsync(y, m);
-        }
-    }
-
-    // 週視圖時，背景補抓鄰月 schedule 後重建視圖
-    private async Task RefreshWeekViewAdjacentAsync()
-    {
-        if (ViewMode != CalendarViewMode.Week) return;
-        await EnsureAdjacentSchedulesForWeekAsync();
-        if (ViewMode == CalendarViewMode.Week) BuildCalendarView();
-    }
-
-    private static bool IsShiftInHour(ShiftSetting shift, int hour)
-    {
-        var startHour = shift.StartTime.Hour;
-        var endHour   = shift.EndTime.Hour;
-        if (shift.EndTime > shift.StartTime)
-            return hour >= startHour && hour < endHour;
-        else
-            return hour >= startHour || hour < endHour;
-    }
-
-    private static bool IsShiftPartialInHour(ShiftSetting shift, int hour) =>
-        shift.EndTime.Minute > 0 && shift.EndTime.Hour == hour;
 
     private static string GetDayOfWeekText(DayOfWeek dow) => ShiftRuleEngine.DayText(dow);
 }

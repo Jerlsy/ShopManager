@@ -101,33 +101,6 @@ public class ZeroToVisibilityConverter : IValueConverter
         throw new NotImplementedException();
 }
 
-/// <summary>
-/// CalendarViewMode → Visibility
-/// ConverterParameter: "Month", "Week", "Day", "WeekOrDay"
-/// </summary>
-[ValueConversion(typeof(ViewModels.CalendarViewMode), typeof(Visibility))]
-public class ViewModeVisibilityConverter : IValueConverter
-{
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-    {
-        if (value is not ViewModels.CalendarViewMode mode || parameter is not string target)
-            return Visibility.Collapsed;
-
-        var visible = target switch
-        {
-            "Month" => mode == ViewModels.CalendarViewMode.Month,
-            "Week" => mode == ViewModels.CalendarViewMode.Week,
-            "Day" => mode == ViewModels.CalendarViewMode.Day,
-            "WeekOrDay" => mode is ViewModels.CalendarViewMode.Week or ViewModels.CalendarViewMode.Day,
-            _ => false
-        };
-        return visible ? Visibility.Visible : Visibility.Collapsed;
-    }
-
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
-        throw new NotImplementedException();
-}
-
 /// <summary>比較兩個色碼字串是否相同（供調色盤選中高亮）</summary>
 public class ColorMatchConverter : IMultiValueConverter
 {

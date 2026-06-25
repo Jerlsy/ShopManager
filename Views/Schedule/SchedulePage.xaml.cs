@@ -329,7 +329,7 @@ public partial class SchedulePage : UserControl
         e.Handled = true;
     }
 
-    // ── 日期格子點擊 → 月視圖開啟詳情，周/日視圖開啟快速新增 ───────
+    // ── 日期格子點擊 → 開啟當日詳情 ───────
     private void CalendarDay_Click(object sender, MouseButtonEventArgs e)
     {
         if (e.OriginalSource is FrameworkElement src &&
@@ -341,28 +341,8 @@ public partial class SchedulePage : UserControl
             && !day.IsPlaceholder
             && DataContext is ScheduleViewModel vm)
         {
-            if (vm.IsMonthView)
-            {
-                vm.OpenDayDetailCommand.Execute(day);
-                e.Handled = true;
-            }
-            else if (!day.IsClosed)
-            {
-                vm.OpenQuickAddCommand.Execute(day);
-                e.Handled = true;
-            }
-        }
-    }
-
-    // ── 周視圖日期標題點擊 → 開啟日期詳情（跨月無班表不處理）──
-    private void WeekDayHeader_Click(object sender, MouseButtonEventArgs e)
-    {
-        if (sender is FrameworkElement fe
-            && fe.DataContext is CalendarDay day
-            && !day.IsOutOfScope
-            && DataContext is ScheduleViewModel vm)
-        {
             vm.OpenDayDetailCommand.Execute(day);
+            e.Handled = true;
         }
     }
 

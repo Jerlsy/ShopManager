@@ -9,10 +9,6 @@ namespace ShopManager.ViewModels;
 // 視圖模型輔助類別
 // ══════════════════════════════════════════════
 
-public enum CalendarViewMode { Month, Week, Day }
-
-public record ViewModeOption(CalendarViewMode Value, string Label);
-
 /// <summary>排班記錄顯示單位（含 EntryId 供右鍵操作使用）</summary>
 public partial class EntryItem : ObservableObject
 {
@@ -83,30 +79,11 @@ public partial class ShiftBlock : ObservableObject
     [ObservableProperty] private string _disabledReasonForCopy = string.Empty;
     // 空班別狀態：EntryItems 為空時為 true（由 EntryItems CollectionChanged 驅動更新）
     [ObservableProperty] private bool _isEmpty = true;
-    // 時間軸定位（周/日視圖）
-    public double BlockTop { get; set; }
-    public double BlockHeight { get; set; }
-    public System.Windows.Thickness BlockMargin => new(2, BlockTop, 2, 0);
 
     public ShiftBlock()
     {
         _entryItems.CollectionChanged += OnEntryItemsChanged;
     }
-}
-
-public class CalendarTimeSlot
-{
-    public int Hour { get; set; }
-    public string Label { get; set; } = string.Empty;
-    public ObservableCollection<DayTimeSlot> Days { get; } = new();
-}
-
-public class DayTimeSlot
-{
-    public DateOnly Date { get; set; }
-    public int Hour { get; set; }
-    public bool IsClosed { get; set; }
-    public ObservableCollection<ShiftBlock> ShiftBlocks { get; } = new();
 }
 
 public partial class ShiftDayCell : ObservableObject

@@ -36,7 +36,6 @@ public partial class ScheduleViewModel
         BatchEndDate   = new DateTime(SelectedYear, SelectedMonth,
             DateTime.DaysInMonth(SelectedYear, SelectedMonth));
         IsCreating    = false;
-        IsQuickAdding = false;
         IsBatchMode   = true;
     }
 

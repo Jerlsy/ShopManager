@@ -134,42 +134,6 @@ public partial class ScheduleViewModel
         _snackbarService.ShowSuccess($"{date:MM/dd} 已設為上班日");
     }
 
-    // ── 日視圖：標題列中的店休切換 ─────────────────────────────────────
-    [RelayCommand]
-    private async Task SetDayViewDayClosedAsync()
-    {
-        if (CurrentSchedule is null || DayViewDay is null) return;
-        var date = DayViewDay.Date;
-
-        var entryIds = CurrentSchedule.Entries.Where(e => e.Date == date).Select(e => e.Id).ToList();
-        if (entryIds.Count > 0)
-            await _entryService.RemoveEntriesAsync(entryIds);
-
-        var newClosedDays = CurrentSchedule.ClosedDays.ToList();
-        if (!newClosedDays.Contains(date.Day))
-        {
-            newClosedDays.Add(date.Day);
-            newClosedDays.Sort();
-        }
-        await _scheduleService.UpdateClosedDaysAsync(CurrentSchedule.Id, newClosedDays);
-
-        await LoadScheduleAsync();
-        _snackbarService.ShowSuccess($"{date:MM/dd} 已設為店休日");
-    }
-
-    [RelayCommand]
-    private async Task SetDayViewDayOpenAsync()
-    {
-        if (CurrentSchedule is null || DayViewDay is null) return;
-        var date = DayViewDay.Date;
-
-        var newClosedDays = CurrentSchedule.ClosedDays.Where(d => d != date.Day).ToList();
-        await _scheduleService.UpdateClosedDaysAsync(CurrentSchedule.Id, newClosedDays);
-
-        await LoadScheduleAsync();
-        _snackbarService.ShowSuccess($"{date:MM/dd} 已設為上班日");
-    }
-
     // ══════════════════════════════════════════
     // 單日班別覆寫
     // ══════════════════════════════════════════
@@ -178,15 +142,6 @@ public partial class ScheduleViewModel
     {
         if (DayDetailDay is null || CurrentSchedule is null) return;
         PopulateShiftOverrideCells(DayDetailDay.Date);
-        IsShiftOverrideEditing = true;
-    }
-
-    [RelayCommand]
-    private void OpenShiftOverrideForDayView()
-    {
-        if (DayViewDay is null || CurrentSchedule is null) return;
-        OpenDayDetail(DayViewDay);
-        PopulateShiftOverrideCells(DayViewDay.Date);
         IsShiftOverrideEditing = true;
     }
 

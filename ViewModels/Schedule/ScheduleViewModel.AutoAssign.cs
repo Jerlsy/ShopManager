@@ -85,7 +85,6 @@ public partial class ScheduleViewModel
             if (item.PriorityShifts.Count > 0) EmployeeConstraints.Add(item);
         }
 
-        IsQuickAdding          = false;
         IsBatchMode            = false;
         OverwriteFromMonthStart = false;
         IsAutoAssigning        = true;

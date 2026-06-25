@@ -131,7 +131,6 @@ public partial class ScheduleViewModel
             }
         }
 
-        IsQuickAdding = false;
         IsBatchMode   = false;
         IsCreating    = true;
     }
