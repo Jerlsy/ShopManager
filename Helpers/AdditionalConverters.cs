@@ -142,18 +142,32 @@ public class ColorMatchConverter : IMultiValueConverter
         throw new NotImplementedException();
 }
 
-/// <summary>byte[]? → BitmapImage（供大頭貼圖片顯示）</summary>
+/// <summary>byte[]? → BitmapImage（供大頭貼／Logo 圖片顯示）</summary>
 [ValueConversion(typeof(byte[]), typeof(System.Windows.Media.ImageSource))]
 public class BytesToImageConverter : IValueConverter
 {
+    // 大頭貼／Logo 都顯示在小尺寸（≤56px，hi-DPI 下約 ≤96px）。
+    // 解碼上限設 256px：足夠清晰，又能避免把數百萬像素的原圖以原解析度解碼。
+    private const int DecodeWidth = 256;
+
+    // 以 byte[] 實例為 key 的快取：同一員工的圖只解碼一次，排班頁重複綁定可直接命中。
+    // ConditionalWeakTable 採弱引用 key，byte[] 被 GC 時自動釋放，且本身執行緒安全。
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<byte[], System.Windows.Media.Imaging.BitmapImage> _cache = new();
+
     public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
         if (value is not byte[] data || data.Length == 0) return null;
+        if (_cache.TryGetValue(data, out var cached)) return cached;
+
         var bi = new System.Windows.Media.Imaging.BitmapImage();
         bi.BeginInit();
         bi.StreamSource = new System.IO.MemoryStream(data);
         bi.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+        bi.DecodePixelWidth = DecodeWidth;
         bi.EndInit();
+        bi.Freeze(); // 凍結後可跨執行緒共用、不再被重建，並能安全快取。
+
+        _cache.AddOrUpdate(data, bi);
         return bi;
     }
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
@@ -164,21 +178,37 @@ public class BytesToImageConverter : IValueConverter
 [ValueConversion(typeof(string), typeof(System.Windows.Media.SolidColorBrush))]
 public class HexToBrushConverter : IValueConverter
 {
+    // 色碼種類有限（員工色盤 + 班別色），依 hex 字串快取凍結後的 brush，
+    // 避免排班頁大量色塊各自 new 出未凍結的 brush。
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, System.Windows.Media.SolidColorBrush> _cache = new();
+    private static readonly System.Windows.Media.SolidColorBrush _fallback = CreateFrozen(System.Windows.Media.Colors.Gray);
+
+    private static System.Windows.Media.SolidColorBrush CreateFrozen(System.Windows.Media.Color color)
+    {
+        var brush = new System.Windows.Media.SolidColorBrush(color);
+        brush.Freeze();
+        return brush;
+    }
+
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
         if (value is string hex && !string.IsNullOrEmpty(hex))
         {
-            try
+            return _cache.GetOrAdd(hex, static key =>
             {
-                var color = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hex);
-                return new System.Windows.Media.SolidColorBrush(color);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[HexToBrushConverter] 無效色碼 '{hex}': {ex.Message}");
-            }
+                try
+                {
+                    var color = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(key);
+                    return CreateFrozen(color);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[HexToBrushConverter] 無效色碼 '{key}': {ex.Message}");
+                    return _fallback;
+                }
+            });
         }
-        return new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Gray);
+        return _fallback;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
@@ -282,32 +312,6 @@ public class BonusTypeToCustomLabelVisibilityConverter : IValueConverter
         value is Models.BonusPresetType t && t == Models.BonusPresetType.Custom
             ? Visibility.Visible : Visibility.Collapsed;
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
-        throw new NotImplementedException();
-}
-
-/// <summary>URL 字串 → BitmapImage（供 LINE 頭像等網路圖片顯示）</summary>
-[ValueConversion(typeof(string), typeof(System.Windows.Media.ImageSource))]
-public class UrlToImageConverter : IValueConverter
-{
-    public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
-    {
-        if (value is not string url || string.IsNullOrEmpty(url)) return null;
-        try
-        {
-            var bi = new System.Windows.Media.Imaging.BitmapImage();
-            bi.BeginInit();
-            // OnLoad 強制 EndInit 時立即下載 + 釋放 stream；避免 OnDemand lazy-load 對
-            // HTTPS LINE CDN 圖片常見失敗
-            bi.CacheOption   = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
-            bi.CreateOptions = System.Windows.Media.Imaging.BitmapCreateOptions.IgnoreImageCache;
-            bi.UriSource     = new Uri(url, UriKind.Absolute);
-            bi.EndInit();
-            bi.Freeze();
-            return bi;
-        }
-        catch { return null; }
-    }
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
         throw new NotImplementedException();
 }

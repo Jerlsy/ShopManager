@@ -7,6 +7,7 @@
         Icon="/Resources/app.ico"
         WindowStyle="None"
         AllowsTransparency="True"
+        ResizeMode="NoResize"
         Background="Transparent"
         WindowState="Maximized"
         WindowStartupLocation="CenterScreen">
@@ -32,87 +33,82 @@
                     </Grid.RowDefinitions>
 
                     <!-- 頂部自定義標題列 -->
-                    <Grid Grid.Row="0" Background="Transparent" Height="36">
+                    <Grid Grid.Row="0" Background="Transparent" Height="28">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        
-                        <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="24,0,0,0" VerticalAlignment="Center">
-                            <Image Source="/Resources/logo.png" Width="22" Height="22" RenderOptions.BitmapScalingMode="HighQuality"/>
-                            <TextBlock Text="ShopManager" Margin="10,0,0,0" FontWeight="Bold" Opacity="0.7"/>
-                            <TextBlock Text=" · " Margin="4,0" Opacity="0.3"/>
-                            <TextBlock Text="{Binding ShopContext.CurrentShop.Name}" Opacity="0.5"/>
+
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="14,0,0,0" VerticalAlignment="Center">
+                            <Image Source="/Resources/logo.png" Width="16" Height="16" RenderOptions.BitmapScalingMode="HighQuality"/>
+                            <TextBlock Text="ShopManager" Margin="8,0,0,0" FontWeight="Bold" Opacity="0.7" FontSize="{DynamicResource FontSizeSmall}"/>
+                            <TextBlock Text=" · " Margin="4,0" Opacity="0.3" FontSize="{DynamicResource FontSizeSmall}"/>
+                            <TextBlock Text="{Binding ShopContext.CurrentShop.Name}" Opacity="0.5" FontSize="{DynamicResource FontSizeSmall}"/>
                         </StackPanel>
 
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,12,0">
-                            <Button Style="{StaticResource MaterialDesignIconButton}" Width="36" Height="36" Click="MinimizeWindow_Click">
-                                <md:PackIcon Kind="WindowMinimize" Width="18" Height="18"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,6,0">
+                            <Button Style="{StaticResource MaterialDesignIconButton}" Width="28" Height="28" Click="MinimizeWindow_Click">
+                                <md:PackIcon Kind="WindowMinimize" Width="14" Height="14"/>
                             </Button>
-                            <Button Style="{StaticResource MaterialDesignIconButton}" Width="36" Height="36" Foreground="{DynamicResource MaterialDesign.Brush.ValidationError}" Click="CloseWindow_Click">
-                                <md:PackIcon Kind="Close" Width="18" Height="18"/>
+                            <Button Style="{StaticResource MaterialDesignIconButton}" Width="28" Height="28" Foreground="{DynamicResource MaterialDesign.Brush.ValidationError}" Click="CloseWindow_Click">
+                                <md:PackIcon Kind="Close" Width="14" Height="14"/>
                             </Button>
                         </StackPanel>
                     </Grid>
 
                     <!-- 主內容區 -->
-                    <Grid Grid.Row="1" Margin="8">
+                    <Grid Grid.Row="1" Margin="6">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <!-- 導航欄：依螢幕寬度縮放（NavColumnWidth） -->
                                 <ColumnDefinition Width="{Binding NavColumnWidth}"/>
                                 <!-- 間距 -->
-                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="6"/>
                                 <!-- 內容區 -->
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
 
                             <!-- 左側導航（展開狀態）-->
                             <Border Grid.Column="0"
-                                    Padding="12"
-                                    CornerRadius="16"
+                                    Padding="8"
+                                    CornerRadius="14"
                                     Background="{DynamicResource AppPanelBrush}"
                                     BorderBrush="{DynamicResource AppBorderBrush}"
                                     BorderThickness="1"
                                     Visibility="{Binding IsNavExpanded, Converter={StaticResource BoolToVisibilityConverter}}">
                                 <DockPanel LastChildFill="True">
                                     <!-- 頂部：標題 + 收折按鈕 -->
-                                    <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+                                    <Grid DockPanel.Dock="Top" Margin="0,0,0,6">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                             <TextBlock Text="導航菜單"
-                                                       FontSize="{DynamicResource FontSizeSmall}"
+                                                       FontSize="{DynamicResource FontSizeCaption}"
                                                        FontWeight="SemiBold"
                                                        Foreground="{DynamicResource PrimaryHueMidBrush}"
                                                        Opacity="0.88"/>
-                                            <TextBlock Text="切換功能頁面以管理店鋪資訊、員工及排班。"
-                                                       Margin="0,4,0,0"
-                                                       FontSize="{DynamicResource FontSizeSmallBody}"
-                                                       TextWrapping="Wrap"
-                                                       Foreground="{DynamicResource AppSubtleForegroundBrush}"/>
                                         </StackPanel>
                                         <Button Grid.Column="1"
                                                 Style="{StaticResource MaterialDesignIconButton}"
-                                                Width="32" Height="32"
+                                                Width="26" Height="26"
                                                 VerticalAlignment="Top"
                                                 Command="{Binding ToggleNavCommand}"
                                                 ToolTip="收起導航">
-                                            <md:PackIcon Kind="MenuOpen" Width="18" Height="18"/>
+                                            <md:PackIcon Kind="MenuOpen" Width="15" Height="15"/>
                                         </Button>
                                     </Grid>
 
                                     <md:PopupBox DockPanel.Dock="Bottom"
-                                                 Margin="0,8,0,0"
+                                                 Margin="0,6,0,0"
                                                  Foreground="{DynamicResource MaterialDesign.Brush.ValidationError}"
                                                  PopupMode="Click"
                                                  PlacementMode="TopAndAlignLeftEdges">
                                         <md:PopupBox.ToggleContent>
                                             <StackPanel Orientation="Horizontal">
-                                                <md:PackIcon Kind="LogoutVariant" Width="18" Height="18" Margin="0,0,8,0"/>
-                                                <TextBlock Text="離開店鋪"/>
+                                                <md:PackIcon Kind="LogoutVariant" Width="16" Height="16" Margin="0,0,6,0"/>
+                                                <TextBlock Text="離開店鋪" FontSize="{DynamicResource FontSizeSmall}"/>
                                             </StackPanel>
                                         </md:PopupBox.ToggleContent>
                                         <StackPanel Width="160">
@@ -128,15 +124,15 @@
                                              ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                                         <ListBox.ItemContainerStyle>
                                             <Style TargetType="ListBoxItem">
-                                                <Setter Property="Padding" Value="10,8"/>
-                                                <Setter Property="Margin" Value="0,0,0,4"/>
+                                                <Setter Property="Padding" Value="8,6"/>
+                                                <Setter Property="Margin" Value="0,0,0,2"/>
                                                 <Setter Property="Cursor" Value="Hand"/>
                                                 <Setter Property="Template">
                                                     <Setter.Value>
                                                         <ControlTemplate TargetType="ListBoxItem">
                                                             <Border x:Name="ItemBorder"
                                                                     Background="Transparent"
-                                                                    CornerRadius="20"
+                                                                    CornerRadius="16"
                                                                     Padding="{TemplateBinding Padding}">
                                                                 <ContentPresenter VerticalAlignment="Center"/>
                                                             </Border>
@@ -156,10 +152,10 @@
                                         <ListBox.ItemTemplate>
                                             <DataTemplate DataType="{x:Type vm:NavItem}">
                                                 <DockPanel LastChildFill="True">
-                                                    <Border Width="28" Height="28" CornerRadius="14" Background="{DynamicResource AppSurfaceBrush}" Margin="0,0,10,0">
-                                                        <md:PackIcon Kind="{Binding Icon}" Width="15" Height="15" Foreground="{DynamicResource PrimaryHueMidBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    <Border Width="22" Height="22" CornerRadius="11" Background="{DynamicResource AppSurfaceBrush}" Margin="0,0,8,0">
+                                                        <md:PackIcon Kind="{Binding Icon}" Width="13" Height="13" Foreground="{DynamicResource PrimaryHueMidBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                     </Border>
-                                                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center" FontSize="{DynamicResource FontSizeSmallBody}" FontWeight="Medium"/>
+                                                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center" FontSize="{DynamicResource FontSizeSmall}" FontWeight="Medium"/>
                                                 </DockPanel>
                                             </DataTemplate>
                                         </ListBox.ItemTemplate>
@@ -169,7 +165,7 @@
 
                             <!-- 左側導航（收折狀態）-->
                             <Border Grid.Column="0"
-                                    CornerRadius="16"
+                                    CornerRadius="14"
                                     Background="{DynamicResource AppPanelBrush}"
                                     BorderBrush="{DynamicResource AppBorderBrush}"
                                     BorderThickness="1"
@@ -178,21 +174,21 @@
                                     <!-- 展開按鈕靠上 -->
                                     <Button DockPanel.Dock="Top"
                                             Style="{StaticResource MaterialDesignIconButton}"
-                                            Width="44" Height="44"
+                                            Width="38" Height="38"
                                             ToolTip="展開導航"
                                             Command="{Binding ToggleNavCommand}">
-                                        <md:PackIcon Kind="Menu" Width="18" Height="18"/>
+                                        <md:PackIcon Kind="Menu" Width="16" Height="16"/>
                                     </Button>
                                     <!-- 功能圖示靠上 -->
                                     <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding VisibleNavItems}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate DataType="{x:Type vm:NavItem}">
                                                 <Button Style="{StaticResource MaterialDesignIconButton}"
-                                                        Width="44" Height="44"
+                                                        Width="38" Height="38"
                                                         ToolTip="{Binding Label}"
                                                         Command="{Binding DataContext.SelectNavItemCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                         CommandParameter="{Binding}">
-                                                    <md:PackIcon Kind="{Binding Icon}" Width="18" Height="18" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                                                    <md:PackIcon Kind="{Binding Icon}" Width="16" Height="16" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
                                                 </Button>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
@@ -203,7 +199,7 @@
                                                  PopupMode="Click"
                                                  PlacementMode="RightAndAlignTopEdges">
                                         <md:PopupBox.ToggleContent>
-                                            <md:PackIcon Kind="LogoutVariant" Width="18" Height="18"/>
+                                            <md:PackIcon Kind="LogoutVariant" Width="16" Height="16"/>
                                         </md:PopupBox.ToggleContent>
                                         <StackPanel Width="140">
                                             <Button Content="切換店鋪" Command="{Binding LeaveShopCommand}" Style="{StaticResource MaterialDesignFlatButton}"/>

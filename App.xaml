@@ -44,6 +44,7 @@
             <Style TargetType="{x:Type TextBox}" BasedOn="{StaticResource MaterialDesignOutlinedTextBox}">
                 <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
                 <Setter Property="FontSize"   Value="{DynamicResource FontSizeBody}"/>
+                <Setter Property="Padding"    Value="10,8"/>
                 <Setter Property="md:TextFieldAssist.TextFieldCornerRadius" Value="5"/>
                 <Setter Property="md:TextFieldAssist.HasOutlinedTextField" Value="True"/>
             </Style>
@@ -52,6 +53,7 @@
                 <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
                 <Setter Property="FontSize"   Value="{DynamicResource FontSizeBody}"/>
                 <Setter Property="TextElement.FontSize" Value="{DynamicResource FontSizeBody}"/>
+                <Setter Property="Padding"    Value="10,8"/>
                 <Setter Property="md:TextFieldAssist.TextFieldCornerRadius" Value="5"/>
                 <Setter Property="md:TextFieldAssist.HasOutlinedTextField" Value="True"/>
             </Style>
@@ -86,6 +88,7 @@
             <Style TargetType="{x:Type PasswordBox}" BasedOn="{StaticResource MaterialDesignOutlinedPasswordBox}">
                 <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}"/>
                 <Setter Property="FontSize"   Value="{DynamicResource FontSizeBody}"/>
+                <Setter Property="Padding"    Value="10,8"/>
                 <Setter Property="md:TextFieldAssist.TextFieldCornerRadius" Value="5"/>
                 <Setter Property="md:TextFieldAssist.HasOutlinedTextField" Value="True"/>
             </Style>
@@ -130,7 +133,6 @@
             <helpers:NonZeroToVisibilityConverter x:Key="NonZeroToVisibilityConverter"/>
             <helpers:BonusTypeToCustomLabelVisibilityConverter x:Key="BonusTypeToCustomLabelVisibilityConverter"/>
             <helpers:BonusTypeToPresetLabelVisibilityConverter x:Key="BonusTypeToPresetLabelVisibilityConverter"/>
-            <helpers:UrlToImageConverter x:Key="UrlToImageConverter"/>
 
             <!-- ── 響應式佈局尺寸（由 App.xaml.cs ApplyLayoutScale 依螢幕寬度覆寫） ── -->
             <sys:Double x:Key="LayoutNavExpandedWidth">200</sys:Double>
@@ -149,7 +151,7 @@
             <Style x:Key="SectionTitleStyle" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
                 <Setter Property="FontSize"   Value="{DynamicResource FontSizeHeading}"/>
                 <Setter Property="FontWeight" Value="SemiBold"/>
-                <Setter Property="Margin"     Value="0,0,0,10"/>
+                <Setter Property="Margin"     Value="0,0,0,6"/>
             </Style>
 
             <Style x:Key="ItemTitleStyle" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
@@ -205,12 +207,12 @@
             </Style>
 
             <Style x:Key="PageHeaderStyle" TargetType="Border">
-                <Setter Property="CornerRadius"    Value="16"/>
+                <Setter Property="CornerRadius"    Value="14"/>
                 <Setter Property="Background"      Value="{DynamicResource AppSurfaceAltBrush}"/>
                 <Setter Property="BorderBrush"     Value="{DynamicResource AppBorderBrush}"/>
                 <Setter Property="BorderThickness" Value="1"/>
-                <Setter Property="Padding"         Value="16,12"/>
-                <Setter Property="Margin"          Value="0,0,0,10"/>
+                <Setter Property="Padding"         Value="9,6"/>
+                <Setter Property="Margin"          Value="0,0,0,6"/>
                 <Setter Property="Effect">
                     <Setter.Value>
                         <DropShadowEffect ShadowDepth="2" BlurRadius="12" Opacity="0.14" Color="#000000" Direction="270"/>
@@ -219,11 +221,11 @@
             </Style>
 
             <Style x:Key="SectionCardStyle" TargetType="Border">
-                <Setter Property="CornerRadius"    Value="16"/>
+                <Setter Property="CornerRadius"    Value="14"/>
                 <Setter Property="Background"      Value="{DynamicResource AppSurfaceBrush}"/>
                 <Setter Property="BorderBrush"     Value="{DynamicResource AppBorderBrush}"/>
                 <Setter Property="BorderThickness" Value="1"/>
-                <Setter Property="Padding"         Value="14"/>
+                <Setter Property="Padding"         Value="10"/>
                 <Setter Property="Effect">
                     <Setter.Value>
                         <DropShadowEffect ShadowDepth="2" BlurRadius="16" Opacity="0.18" Color="#000000" Direction="270"/>

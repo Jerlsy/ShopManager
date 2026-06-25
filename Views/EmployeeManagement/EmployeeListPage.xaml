@@ -18,18 +18,15 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Width="48" Height="48" CornerRadius="8" ClipToBounds="True" Margin="0,0,16,0"
+                    <Border Width="27" Height="27" CornerRadius="6" ClipToBounds="True" Margin="0,0,10,0"
                             Visibility="{Binding DataContext.ShopLogoData, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NullToVisibilityConverter}}">
                         <Image Source="{Binding DataContext.ShopLogoData, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BytesToImageConverter}}" Stretch="UniformToFill"/>
                     </Border>
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="員工資料管理" Style="{StaticResource PageTitleStyle}"/>
-                        <TextBlock Text="管理員工基本資料、聯絡方式、預設班別與排班規則"
-                                   Style="{StaticResource SubtleTextStyle}" Margin="0,8,0,0"/>
-                    </StackPanel>
+                    <TextBlock Text="員工資料管理" Style="{StaticResource PageTitleStyle}" VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Height="32"
                             Margin="0,0,12,0"
                             Command="{Binding UpdateBankCodesCommand}"
                             IsEnabled="{Binding IsBankUpdating, Converter={StaticResource BoolInverseConverter}}">
@@ -42,6 +39,7 @@
                         </StackPanel>
                     </Button>
                     <Button Style="{StaticResource MaterialDesignRaisedButton}"
+                            Height="32"
                             Command="{Binding StartNewCommand}">
                         <StackPanel Orientation="Horizontal">
                             <md:PackIcon Kind="AccountPlus" Width="18" Height="18" Margin="0,0,8,0"/>
@@ -285,9 +283,10 @@
                     </DockPanel>
                 </Border>
 
-                <!-- 編輯表單 -->
+                <!-- 編輯表單：填滿整個欄位高度，內容過長時可滾動 -->
                 <Border Grid.Column="2" Style="{StaticResource EditFormCardStyle}" HorizontalAlignment="Stretch"
-                        VerticalAlignment="Top">
+                        VerticalAlignment="Stretch" Padding="0">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
                         <StackPanel>
 
                             <!-- 標題 -->
@@ -648,6 +647,7 @@
                             </StackPanel>
 
                         </StackPanel>
+                </ScrollViewer>
                     </Border>
             </Grid>
 

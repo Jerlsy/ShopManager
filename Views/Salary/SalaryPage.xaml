@@ -19,29 +19,34 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="薪資計算" Style="{StaticResource PageTitleStyle}"/>
-                    <TextBlock Text="依班表計算員工薪資，支援時薪與月薪兩種制度"
-                               Style="{StaticResource SubtleTextStyle}" Margin="0,8,0,0"/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="27" Height="27" CornerRadius="6" ClipToBounds="True" Margin="0,0,10,0"
+                            Visibility="{Binding DataContext.ShopLogoData, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NullToVisibilityConverter}}">
+                        <Image Source="{Binding DataContext.ShopLogoData, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BytesToImageConverter}}" Stretch="UniformToFill"/>
+                    </Border>
+                    <TextBlock Text="薪資計算" Style="{StaticResource PageTitleStyle}" VerticalAlignment="Center"/>
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <ComboBox Width="160"
+                    <ComboBox Width="160" Height="32"
                               ItemsSource="{Binding AvailableSchedules}"
                               SelectedItem="{Binding SelectedScheduleItem}"
                               DisplayMemberPath="Label"
                               md:HintAssist.Hint="選擇班表月份"
                               IsEnabled="{Binding IsLoading, Converter={StaticResource BoolInverseConverter}}"
+                              VerticalContentAlignment="Center"
                               Margin="0,0,12,0"/>
 
                     <Button Content="計算薪資"
                             Command="{Binding CalculateCommand}"
                             Style="{StaticResource MaterialDesignRaisedButton}"
+                            Height="32"
                             Margin="0,0,8,0"/>
 
                     <Button Style="{StaticResource MaterialDesignOutlinedButton}"
                             Command="{Binding OpenPayrollRecordCommand}"
                             IsEnabled="{Binding HasResult}"
+                            Height="32"
                             Visibility="{Binding HasResult, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel Orientation="Horizontal">
                             <md:PackIcon Kind="CashCheck" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"/>

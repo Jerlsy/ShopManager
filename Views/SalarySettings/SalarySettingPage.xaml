@@ -17,18 +17,15 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Width="48" Height="48" CornerRadius="8" ClipToBounds="True" Margin="0,0,16,0"
+                    <Border Width="27" Height="27" CornerRadius="6" ClipToBounds="True" Margin="0,0,10,0"
                             Visibility="{Binding DataContext.ShopLogoData, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NullToVisibilityConverter}}">
                         <Image Source="{Binding DataContext.ShopLogoData, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BytesToImageConverter}}" Stretch="UniformToFill"/>
                     </Border>
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="薪資設定" Style="{StaticResource PageTitleStyle}"/>
-                        <TextBlock Text="設定薪資方案、加班倍率，並管理全店通用的勞基法基礎參數"
-                                   Style="{StaticResource SubtleTextStyle}" Margin="0,8,0,0"/>
-                    </StackPanel>
+                    <TextBlock Text="薪資設定" Style="{StaticResource PageTitleStyle}" VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Style="{StaticResource MaterialDesignOutlinedButton}"
+                            Height="32"
                             Margin="0,0,12,0"
                             Command="{Binding OpenLaborLawCommand}">
                         <StackPanel Orientation="Horizontal">
@@ -37,6 +34,7 @@
                         </StackPanel>
                     </Button>
                     <Button Style="{StaticResource MaterialDesignRaisedButton}"
+                            Height="32"
                             Command="{Binding StartNewCommand}"
                             Visibility="{Binding ShowLaborLaw, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
                         <StackPanel Orientation="Horizontal">
@@ -48,19 +46,78 @@
             </Grid>
         </Border>
 
-        <Grid Grid.Row="1"
-              Visibility="{Binding ShowLaborLaw, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="{DynamicResource LayoutSideListGridWidth}"/>
-                <ColumnDefinition Width="8"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+        <Grid Grid.Row="1">
 
-            <!-- 薪資列表 -->
-            <Border Grid.Column="0" Style="{StaticResource SectionCardStyle}">
-                <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="方案清單" Style="{StaticResource SectionTitleStyle}"/>
-                    <ListBox ItemsSource="{Binding Salaries}"
+            <!-- ── 卡片模式（未展開編輯）：仿員工資料管理，全區展開 ── -->
+            <Border Style="{StaticResource SectionCardStyle}"
+                    Visibility="{Binding ShowListCards, Converter={StaticResource BoolToVisibilityConverter}}">
+                <Grid>
+                    <!-- 無資料提示 -->
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                                Visibility="{Binding ShowEmptyHint, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <md:PackIcon Kind="CurrencyUsd" Width="60" Height="60" Opacity="0.12" HorizontalAlignment="Center"/>
+                        <TextBlock Text="尚未新增任何薪資方案，點選右上角「新增薪資方案」開始"
+                                   Margin="0,14,0,0" Opacity="0.45"
+                                   Style="{StaticResource ItemTitleStyle}" HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                    <!-- 薪資方案卡片清單 -->
+                    <ItemsControl ItemsSource="{Binding Salaries}" Margin="0,0,0,8"
+                                  Visibility="{Binding ShowEmptyHint, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Width="{DynamicResource LayoutEmployeeCardWidth}" Margin="0,0,12,12"
+                                        Style="{StaticResource ItemCardStyle}" Padding="16,14" Cursor="Hand">
+                                    <Border.InputBindings>
+                                        <MouseBinding MouseAction="LeftClick"
+                                                      Command="{Binding DataContext.StartEditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                      CommandParameter="{Binding}"/>
+                                    </Border.InputBindings>
+                                    <Grid>
+                                        <!-- 刪除按鈕（右上角） -->
+                                        <Button Style="{StaticResource MaterialDesignIconButton}"
+                                                Width="30" Height="30"
+                                                HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                Margin="0,-6,-8,0"
+                                                Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}" ToolTip="刪除薪資方案">
+                                            <md:PackIcon Kind="DeleteOutline" Width="15" Height="15" Opacity="0.45"/>
+                                        </Button>
+
+                                        <StackPanel Margin="0,0,30,0">
+                                            <TextBlock Text="{Binding Alias}" Style="{StaticResource ItemTitleStyle}"/>
+                                            <TextBlock Text="{Binding Type, Converter={StaticResource SalaryTypeDisplayConverter}}"
+                                                       Style="{StaticResource FieldLabelStyle}" Margin="0,4,0,0"/>
+                                            <TextBlock Text="{Binding Description}"
+                                                       Style="{StaticResource CaptionTextStyle}" Margin="0,4,0,0"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
+            </Border>
+
+            <!-- ── 清單 + 編輯模式（展開編輯 / 勞基法設定，共用同一區塊） ── -->
+            <Grid Visibility="{Binding ShowDetailPane, Converter={StaticResource BoolToVisibilityConverter}}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="{DynamicResource LayoutSideListGridWidth}"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- 窄版薪資列表 -->
+                <Border Grid.Column="0" Style="{StaticResource SectionCardStyle}">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="方案清單" Style="{StaticResource SectionTitleStyle}"/>
+                        <ListBox ItemsSource="{Binding Salaries}"
                              SelectedItem="{Binding SelectedSalary}"
                              Style="{StaticResource MaterialDesignListBox}">
                         <ListBox.ItemContainerStyle>
@@ -87,36 +144,42 @@
                         </ListBox.ItemContainerStyle>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border Style="{StaticResource ItemCardStyle}" Padding="16,14">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Column="0">
-                                            <TextBlock Text="{Binding Alias}" Style="{StaticResource ItemTitleStyle}"/>
-                                            <TextBlock Text="{Binding Type, Converter={StaticResource SalaryTypeDisplayConverter}}"
-                                                       Style="{StaticResource FieldLabelStyle}" Margin="0,4,0,0"/>
-                                            <TextBlock Text="{Binding Description}"
-                                                       Style="{StaticResource CaptionTextStyle}" Margin="0,4,0,0"
+                                <Border Style="{StaticResource ItemCardStyle}" Padding="12,10">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Alias}" Style="{StaticResource ItemTitleStyle}"
+                                                   FontSize="{DynamicResource FontSizeSmallBody}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Type, Converter={StaticResource SalaryTypeDisplayConverter}}"
+                                                   Style="{StaticResource FieldLabelStyle}" Margin="0,4,0,0"/>
+
+                                        <!-- 備註 + 編輯/刪除按鈕（右下） -->
+                                        <Grid Margin="0,6,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding Description}"
+                                                       VerticalAlignment="Bottom"
+                                                       Style="{StaticResource CaptionTextStyle}"
                                                        TextTrimming="CharacterEllipsis"/>
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Button Style="{StaticResource MaterialDesignIconButton}"
-                                                    Width="34" Height="34"
-                                                    Command="{Binding DataContext.StartEditCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                                    CommandParameter="{Binding}">
-                                                <md:PackIcon Kind="Pencil" Width="18" Height="18"/>
-                                            </Button>
-                                            <Button Style="{StaticResource MaterialDesignIconButton}"
-                                                    Width="34" Height="34"
-                                                    Foreground="{DynamicResource MaterialDesign.Brush.ValidationError}"
-                                                    Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                                    CommandParameter="{Binding}">
-                                                <md:PackIcon Kind="Delete" Width="18" Height="18"/>
-                                            </Button>
-                                        </StackPanel>
-                                    </Grid>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                                        HorizontalAlignment="Right" VerticalAlignment="Bottom">
+                                                <Button Style="{StaticResource MaterialDesignIconButton}"
+                                                        Width="26" Height="26" Padding="0" Margin="0,0,2,0"
+                                                        Command="{Binding DataContext.StartEditCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                        CommandParameter="{Binding}">
+                                                    <md:PackIcon Kind="Pencil" Width="14" Height="14"/>
+                                                </Button>
+                                                <Button Style="{StaticResource MaterialDesignIconButton}"
+                                                        Width="26" Height="26" Padding="0"
+                                                        Foreground="{DynamicResource MaterialDesign.Brush.ValidationError}"
+                                                        Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                        CommandParameter="{Binding}">
+                                                    <md:PackIcon Kind="Delete" Width="14" Height="14"/>
+                                                </Button>
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
                                 </Border>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
@@ -124,25 +187,14 @@
                 </DockPanel>
             </Border>
 
-            <!-- 薪資編輯欄 -->
+            <!-- 右側詳細面板：薪資編輯表單 / 勞基法設定，二者互斥顯示，填滿整個欄位高度，內容過長時可滾動 -->
             <Grid Grid.Column="2">
-                <StackPanel HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            Visibility="{Binding ShowEmptyHint, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <md:PackIcon Kind="CurrencyUsd"
-                                 Width="60" Height="60"
-                                 Opacity="0.12"
-                                 HorizontalAlignment="Center"/>
-                    <TextBlock Text="請點選左側方案，或點選「新增薪資」開始編輯"
-                               Margin="0,14,0,0"
-                               Opacity="0.45"
-                               Style="{StaticResource ItemTitleStyle}"
-                               HorizontalAlignment="Center"/>
-                </StackPanel>
 
+                <!-- 薪資編輯表單 -->
                 <Border Style="{StaticResource EditFormCardStyle}" HorizontalAlignment="Stretch"
-                        Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}}"
-                        VerticalAlignment="Top">
+                        VerticalAlignment="Stretch" Padding="0"
+                        Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
                         <StackPanel>
                             <TextBlock Text="{Binding SelectedSalary, Converter={StaticResource NullToStringConverter}, ConverterParameter='新增薪資方案|編輯薪資方案'}"
                                        FontSize="{DynamicResource FontSizeListTitle}" FontWeight="SemiBold"
@@ -242,13 +294,15 @@
                                         Command="{Binding CancelCommand}"/>
                             </StackPanel>
                         </StackPanel>
+                </ScrollViewer>
                     </Border>
-            </Grid>
-        </Grid>
 
-        <!-- 勞基法設定區 -->
-        <StackPanel Grid.Row="1" MaxWidth="800" HorizontalAlignment="Left"
-                    Visibility="{Binding ShowLaborLaw, Converter={StaticResource BoolToVisibilityConverter}}">
+                <!-- 勞基法設定：與薪資編輯表單共用同一右側面板區塊，內容維持易讀寬度並可滾動 -->
+                <Border Style="{StaticResource EditFormCardStyle}" HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch" Padding="0"
+                        Visibility="{Binding ShowLaborLaw, Converter={StaticResource BoolToVisibilityConverter}}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+                <StackPanel MaxWidth="800" HorizontalAlignment="Left">
                 <Border Style="{StaticResource InfoBoxStyle}" Margin="0,0,0,24">
                     <StackPanel Orientation="Horizontal">
                         <md:PackIcon Kind="InformationOutline" Width="24" Height="24" Foreground="{DynamicResource AppInfoForegroundBrush}" VerticalAlignment="Top" Margin="0,2,14,0"/>
@@ -336,5 +390,10 @@
                     <Button Style="{StaticResource MaterialDesignOutlinedButton}" Content="返回薪資列表" Width="140" Command="{Binding CloseLaborLawCommand}"/>
                 </StackPanel>
         </StackPanel>
+        </ScrollViewer>
+        </Border>
+            </Grid>
+            </Grid>
+        </Grid>
     </Grid>
 </UserControl>

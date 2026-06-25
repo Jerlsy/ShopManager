@@ -25,8 +25,12 @@ public partial class ScheduleViewModel
         OnPropertyChanged(nameof(IsMonthView));
         OnPropertyChanged(nameof(IsWeekView));
         OnPropertyChanged(nameof(IsDayView));
+        OnPropertyChanged(nameof(ViewModeIndex));
         OnPropertyChanged(nameof(CalendarTitle));
         BuildCalendarView();
+        // 切到週視圖時，背景補抓跨月 schedule
+        if (value == CalendarViewMode.Week)
+            _ = RefreshWeekViewAdjacentAsync();
     }
 
     partial void OnDayViewDayChanged(CalendarDay? value)
@@ -44,6 +48,9 @@ public partial class ScheduleViewModel
     {
         OnPropertyChanged(nameof(CalendarTitle));
         BuildCalendarView();
+        // 週/日視圖切換日期時可能跨月，補抓鄰月 schedule
+        if (ViewMode == CalendarViewMode.Week)
+            _ = RefreshWeekViewAdjacentAsync();
     }
 
     partial void OnSelectedEmployeeChanged(Employee? value)
@@ -102,6 +109,23 @@ public partial class ScheduleViewModel
     public bool IsMonthView => ViewMode == CalendarViewMode.Month;
     public bool IsWeekView  => ViewMode == CalendarViewMode.Week;
     public bool IsDayView   => ViewMode == CalendarViewMode.Day;
+
+    // ComboBox 雙向繫結用：0=月 1=周 2=日
+    public int ViewModeIndex
+    {
+        get => ViewMode switch
+        {
+            CalendarViewMode.Week => 1,
+            CalendarViewMode.Day  => 2,
+            _                     => 0,
+        };
+        set => ViewMode = value switch
+        {
+            1 => CalendarViewMode.Week,
+            2 => CalendarViewMode.Day,
+            _ => CalendarViewMode.Month,
+        };
+    }
 
     [RelayCommand] public void SetMonthView() => ViewMode = CalendarViewMode.Month;
     [RelayCommand] public void SetWeekView()  => ViewMode = CalendarViewMode.Week;

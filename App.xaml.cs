@@ -69,23 +69,24 @@ public partial class App : Application
 
     /// <summary>
     /// 依主螢幕邏輯寬度（DIPs，已含 Windows 縮放比例）線性縮放佈局尺寸。
-    /// 基準 1366（11吋），上限 1920，夾在 [1.0, 1.4] 之間。
+    /// 基準 1366（12吋小型筆電），上限 1920，夾在 [1.0, 1.4] 之間。
+    /// 基準尺寸已縮小，讓小螢幕上導航/側欄留白更少、右側主功能區能放大。
     /// </summary>
     private static void ApplyLayoutScale()
     {
         var screenW = SystemParameters.PrimaryScreenWidth;
         var factor  = Math.Clamp(screenW / 1366.0, 1.0, 1.4);
 
-        var navW    = Math.Round(200 * factor);
-        var sideW   = Math.Round(280 * factor);
-        var cardW   = Math.Round(240 * factor);
-        var hMargin = Math.Round(16  * factor);
-        var vMargin = Math.Round(14  * factor);
+        var navW    = Math.Round(160 * factor);
+        var sideW   = Math.Round(220 * 0.75 * factor);
+        var cardW   = Math.Round(200 * factor);
+        var hMargin = Math.Round(10  * factor);
+        var vMargin = Math.Round(8   * factor);
 
         Current.Resources["LayoutNavExpandedWidth"]  = navW;
         Current.Resources["LayoutSideListGridWidth"] = new GridLength(sideW);
         Current.Resources["LayoutEmployeeCardWidth"] = cardW;
-        Current.Resources["PageMargin"] = new Thickness(hMargin, 6, hMargin, vMargin);
+        Current.Resources["PageMargin"] = new Thickness(hMargin, 4, hMargin, vMargin);
     }
 
     // 員工識別色色盤（深→淺排列，每色相深/中/淺各一，白色文字皆可讀）

@@ -16,18 +16,15 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Width="48" Height="48" CornerRadius="8" ClipToBounds="True" Margin="0,0,16,0"
+                    <Border Width="27" Height="27" CornerRadius="6" ClipToBounds="True" Margin="0,0,10,0"
                             Visibility="{Binding DataContext.ShopLogoData, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NullToVisibilityConverter}}">
                         <Image Source="{Binding DataContext.ShopLogoData, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BytesToImageConverter}}" Stretch="UniformToFill"/>
                     </Border>
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="班別設定" Style="{StaticResource PageTitleStyle}"/>
-                        <TextBlock Text="為各班別設定打卡時間與識別顏色，排班時可直接套用並快速新增排班"
-                                   Style="{StaticResource SubtleTextStyle}" Margin="0,8,0,0"/>
-                    </StackPanel>
+                    <TextBlock Text="班別設定" Style="{StaticResource PageTitleStyle}" VerticalAlignment="Center"/>
                 </StackPanel>
                 <Button Grid.Column="1"
                         Style="{StaticResource MaterialDesignRaisedButton}"
+                        Height="32"
                         Command="{Binding StartNewCommand}">
                     <StackPanel Orientation="Horizontal">
                         <md:PackIcon Kind="Plus" Width="18" Height="18" Margin="0,0,8,0"/>
@@ -38,17 +35,93 @@
         </Border>
 
         <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="{DynamicResource LayoutSideListGridWidth}"/>
-                <ColumnDefinition Width="8"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
 
-            <!-- 班別列表 -->
-            <Border Grid.Column="0" Style="{StaticResource SectionCardStyle}">
-                <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="班別列表" Style="{StaticResource SectionTitleStyle}"/>
-                    <ListBox ItemsSource="{Binding Shifts}"
+            <!-- ── 卡片模式（未展開編輯）：仿員工資料管理，全區展開 ── -->
+            <Border Style="{StaticResource SectionCardStyle}"
+                    Visibility="{Binding ShowListCards, Converter={StaticResource BoolToVisibilityConverter}}">
+                <Grid>
+                    <!-- 無資料提示 -->
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                                Visibility="{Binding ShowEmptyHint, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <md:PackIcon Kind="ClockOutline" Width="60" Height="60" Opacity="0.12" HorizontalAlignment="Center"/>
+                        <TextBlock Text="尚未新增任何班別，點選右上角「新增班別」開始"
+                                   Margin="0,14,0,0" Opacity="0.45"
+                                   Style="{StaticResource ItemTitleStyle}" HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                    <!-- 班別卡片清單 -->
+                    <ItemsControl ItemsSource="{Binding Shifts}" Margin="0,0,0,8"
+                                  Visibility="{Binding ShowEmptyHint, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Width="{DynamicResource LayoutEmployeeCardWidth}" Margin="0,0,12,12"
+                                        Style="{StaticResource ItemCardStyle}" Padding="16,14" Cursor="Hand">
+                                    <Border.InputBindings>
+                                        <MouseBinding MouseAction="LeftClick"
+                                                      Command="{Binding DataContext.StartEditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                      CommandParameter="{Binding}"/>
+                                    </Border.InputBindings>
+                                    <Grid>
+                                        <!-- 刪除按鈕（右上角） -->
+                                        <Button Style="{StaticResource MaterialDesignIconButton}"
+                                                Width="30" Height="30"
+                                                HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                Margin="0,-6,-8,0"
+                                                Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}" ToolTip="刪除班別">
+                                            <md:PackIcon Kind="DeleteOutline" Width="15" Height="15" Opacity="0.45"/>
+                                        </Button>
+
+                                        <StackPanel Margin="0,0,30,0">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border Width="12" Height="12" CornerRadius="6" Margin="0,0,10,0"
+                                                        Background="{Binding Color, Converter={StaticResource HexToBrushConverter}}"
+                                                        BorderBrush="White" BorderThickness="1.5"/>
+                                                <TextBlock Text="{Binding Alias}" Style="{StaticResource ItemTitleStyle}"/>
+                                                <Border Margin="10,0,0,0" Padding="8,2" CornerRadius="10"
+                                                        Background="{DynamicResource AppInfoBrush}"
+                                                        Visibility="{Binding IsEnabled, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
+                                                    <TextBlock Text="停用" FontSize="{DynamicResource FontSizeCaption}" FontWeight="Bold"
+                                                               Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                                                </Border>
+                                            </StackPanel>
+                                            <TextBlock Margin="0,4,0,0"
+                                                       FontSize="{DynamicResource FontSizeSmallBody}"
+                                                       Foreground="{DynamicResource AppSubtleForegroundStrongBrush}">
+                                                <Run Text="{Binding StartTime, StringFormat={}{0:HH\\:mm}}"/>
+                                                <Run Text=" - "/>
+                                                <Run Text="{Binding EndTime, StringFormat={}{0:HH\\:mm}}"/>
+                                                <Run Text=" · "/>
+                                                <Run Text="{Binding WorkHours, StringFormat={}{0:F1}, Mode=OneWay}"/>
+                                                <Run Text=" 小時"/>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
+            </Border>
+
+            <!-- ── 清單 + 編輯模式（展開編輯） ── -->
+            <Grid Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="{DynamicResource LayoutSideListGridWidth}"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- 窄版班別列表 -->
+                <Border Grid.Column="0" Style="{StaticResource SectionCardStyle}">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="班別列表" Style="{StaticResource SectionTitleStyle}"/>
+                        <ListBox ItemsSource="{Binding Shifts}"
                              SelectedItem="{Binding SelectedShift}"
                              Style="{StaticResource MaterialDesignListBox}">
                         <ListBox.ItemContainerStyle>
@@ -76,65 +149,59 @@
                         </ListBox.ItemContainerStyle>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border Style="{StaticResource ItemCardStyle}" Padding="16,14">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <StackPanel>
-                                            <StackPanel Orientation="Horizontal">
-                                                <Border Width="12"
-                                                        Height="12"
-                                                        CornerRadius="6"
-                                                        Margin="0,0,10,0"
-                                                        Background="{Binding Color, Converter={StaticResource HexToBrushConverter}}"
-                                                        BorderBrush="White"
-                                                        BorderThickness="1.5"/>
-                                                <TextBlock Text="{Binding Alias}" Style="{StaticResource ItemTitleStyle}"/>
-                                                <Border Margin="10,0,0,0"
-                                                        Padding="8,2"
-                                                        CornerRadius="10"
-                                                        Background="{DynamicResource AppInfoBrush}"
-                                                        Visibility="{Binding IsEnabled, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
-                                                    <TextBlock Text="停用"
-                                                               FontSize="{DynamicResource FontSizeCaption}"
-                                                               FontWeight="Bold"
-                                                               Foreground="{DynamicResource PrimaryHueMidBrush}"/>
-                                                </Border>
-                                            </StackPanel>
-                                            <TextBlock Margin="0,4,0,0"
+                                <Border Style="{StaticResource ItemCardStyle}" Padding="12,10">
+                                    <StackPanel>
+                                        <!-- 名稱列 -->
+                                        <StackPanel Orientation="Horizontal">
+                                            <Border Width="10" Height="10" CornerRadius="5" Margin="0,0,8,0"
+                                                    Background="{Binding Color, Converter={StaticResource HexToBrushConverter}}"
+                                                    BorderBrush="White" BorderThickness="1"/>
+                                            <TextBlock Text="{Binding Alias}" Style="{StaticResource ItemTitleStyle}"
                                                        FontSize="{DynamicResource FontSizeSmallBody}"
-                                                       Foreground="{DynamicResource AppSubtleForegroundStrongBrush}">
-                                                <Run Text="{Binding StartTime, StringFormat={}{0:HH\\:mm}}"/>
-                                                <Run Text=" - "/>
-                                                <Run Text="{Binding EndTime, StringFormat={}{0:HH\\:mm}}"/>
-                                                <Run Text=" · "/>
-                                                <Run Text="{Binding WorkHours, StringFormat={}{0:F1}, Mode=OneWay}"/>
-                                                <Run Text=" 小時"/>
-                                            </TextBlock>
+                                                       TextTrimming="CharacterEllipsis"/>
                                         </StackPanel>
+                                        <Border Margin="0,4,0,0" Padding="6,1" CornerRadius="8"
+                                                HorizontalAlignment="Left"
+                                                Background="{DynamicResource AppInfoBrush}"
+                                                Visibility="{Binding IsEnabled, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
+                                            <TextBlock Text="停用"
+                                                       FontSize="{DynamicResource FontSizeCaption}"
+                                                       FontWeight="Bold"
+                                                       Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                                        </Border>
 
-                                        <StackPanel Grid.Column="1"
-                                                    Orientation="Horizontal"
-                                                    VerticalAlignment="Center">
-                                            <Button Style="{StaticResource MaterialDesignIconButton}"
-                                                    Width="34" Height="34"
-                                                    Margin="0,0,4,0"
-                                                    Command="{Binding DataContext.StartEditCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                                    CommandParameter="{Binding}">
-                                                <md:PackIcon Kind="Pencil" Width="18" Height="18"/>
-                                            </Button>
-                                            <Button Style="{StaticResource MaterialDesignIconButton}"
-                                                    Width="34" Height="34"
-                                                    Foreground="{DynamicResource MaterialDesign.Brush.ValidationError}"
-                                                    Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                                    CommandParameter="{Binding}">
-                                                <md:PackIcon Kind="Delete" Width="18" Height="18"/>
-                                            </Button>
-                                        </StackPanel>
-                                    </Grid>
+                                        <!-- 時間 + 編輯/刪除按鈕（右下） -->
+                                        <Grid Margin="0,6,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" VerticalAlignment="Bottom"
+                                                       FontSize="{DynamicResource FontSizeCaption}"
+                                                       Foreground="{DynamicResource AppSubtleForegroundStrongBrush}"
+                                                       TextTrimming="CharacterEllipsis">
+                                                <Run Text="{Binding StartTime, StringFormat={}{0:HH\\:mm}}"/>
+                                                <Run Text="-"/>
+                                                <Run Text="{Binding EndTime, StringFormat={}{0:HH\\:mm}}"/>
+                                            </TextBlock>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                                        HorizontalAlignment="Right" VerticalAlignment="Bottom">
+                                                <Button Style="{StaticResource MaterialDesignIconButton}"
+                                                        Width="26" Height="26" Padding="0" Margin="0,0,2,0"
+                                                        Command="{Binding DataContext.StartEditCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                        CommandParameter="{Binding}">
+                                                    <md:PackIcon Kind="Pencil" Width="14" Height="14"/>
+                                                </Button>
+                                                <Button Style="{StaticResource MaterialDesignIconButton}"
+                                                        Width="26" Height="26" Padding="0"
+                                                        Foreground="{DynamicResource MaterialDesign.Brush.ValidationError}"
+                                                        Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                        CommandParameter="{Binding}">
+                                                    <md:PackIcon Kind="Delete" Width="14" Height="14"/>
+                                                </Button>
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
                                 </Border>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
@@ -143,25 +210,10 @@
             </Border>
 
             <Grid Grid.Column="2">
-                <!-- 空狀態提示 -->
-                <StackPanel HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            Visibility="{Binding ShowEmptyHint, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <md:PackIcon Kind="ClockOutline"
-                                 Width="60" Height="60"
-                                 Opacity="0.12"
-                                 HorizontalAlignment="Center"/>
-                    <TextBlock Text="請點選左側班別，或點選上方「新增班別」開始編輯"
-                               Margin="0,14,0,0"
-                               Opacity="0.45"
-                               Style="{StaticResource ItemTitleStyle}"
-                               HorizontalAlignment="Center"/>
-                </StackPanel>
-
-                <!-- 編輯表單 -->
+                <!-- 編輯表單：填滿整個欄位高度，內容過長時可滾動 -->
                 <Border Style="{StaticResource EditFormCardStyle}" HorizontalAlignment="Stretch"
-                        Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}}"
-                        VerticalAlignment="Top">
+                        VerticalAlignment="Stretch" Padding="0">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
                     <StackPanel>
                         <TextBlock Text="{Binding SelectedShift, Converter={StaticResource NullToStringConverter}, ConverterParameter='新增班別|編輯班別'}"
                                        FontSize="{DynamicResource FontSizeListTitle}"
@@ -324,8 +376,10 @@
                                         Command="{Binding CancelCommand}"/>
                         </StackPanel>
                     </StackPanel>
+                </ScrollViewer>
                 </Border>
             </Grid>
         </Grid>
+    </Grid>
     </Grid>
 </UserControl>

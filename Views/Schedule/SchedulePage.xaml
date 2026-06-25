@@ -45,6 +45,7 @@
         </Grid.RowDefinitions>
 
         <!-- 頁面標題列：標題 cell + 分隔線 + 工具列 cell -->
+        <!-- 工具列各元件統一 Height 以切齊框線 -->
         <Border Grid.Row="0" Style="{StaticResource PageHeaderStyle}">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -55,7 +56,7 @@
 
                 <!-- 左 cell：店鋪 logo + 頁面標題（Auto 寬度，不會被擠壓） -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Width="48" Height="48" CornerRadius="8" ClipToBounds="True" Margin="0,0,16,0"
+                    <Border Width="27" Height="27" CornerRadius="6" ClipToBounds="True" Margin="0,0,10,0"
                             Visibility="{Binding DataContext.ShopLogoData, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NullToVisibilityConverter}}">
                         <Image Source="{Binding DataContext.ShopLogoData, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BytesToImageConverter}}" Stretch="UniformToFill"/>
                     </Border>
@@ -63,45 +64,35 @@
                 </StackPanel>
 
                 <!-- 垂直分隔線 -->
-                <Border Grid.Column="1" Width="1" Margin="16,4"
+                <Border Grid.Column="1" Width="1" Margin="10,4"
                         Background="{DynamicResource AppBorderBrush}"/>
 
                 <!-- 右 cell：操作工具列（HorizontalAlignment Right，所有條件按鈕用 Hidden 保留版面）-->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
                     <!-- 月份導覽 -->
-                    <Button Style="{StaticResource MaterialDesignOutlinedButton}" Margin="0,0,6,0" Command="{Binding PreviousMonthCommand}">
+                    <Button Style="{StaticResource MaterialDesignOutlinedButton}" Height="32" Padding="0" Margin="0,0,6,0" Command="{Binding PreviousMonthCommand}">
                         <md:PackIcon Kind="ChevronLeft"/>
                     </Button>
                     <TextBlock Text="{Binding CalendarTitle}" VerticalAlignment="Center" FontSize="{DynamicResource FontSizeHeading}" FontWeight="Bold" Margin="0,0,6,0"
                                MinWidth="120" TextAlignment="Center"/>
-                    <Button Style="{StaticResource MaterialDesignOutlinedButton}" Margin="0,0,12,0" Command="{Binding NextMonthCommand}">
+                    <Button Style="{StaticResource MaterialDesignOutlinedButton}" Height="32" Padding="0" Margin="0,0,12,0" Command="{Binding NextMonthCommand}">
                         <md:PackIcon Kind="ChevronRight"/>
                     </Button>
 
                     <!-- 視圖模式切換 -->
-                    <Border CornerRadius="16" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
-                            Background="{DynamicResource AppPanelAltBrush}" Margin="0,0,10,0" Padding="3">
-                        <StackPanel Orientation="Horizontal">
-                            <RadioButton Content="月" GroupName="ViewMode" Margin="2,0"
-                                         IsChecked="{Binding IsMonthView, Mode=OneWay}"
-                                         Command="{Binding SetMonthViewCommand}"
-                                         Style="{StaticResource MaterialDesignTabRadioButton}"/>
-                            <RadioButton Content="周" GroupName="ViewMode" Margin="2,0"
-                                         IsChecked="{Binding IsWeekView, Mode=OneWay}"
-                                         Command="{Binding SetWeekViewCommand}"
-                                         Style="{StaticResource MaterialDesignTabRadioButton}"/>
-                            <RadioButton Content="日" GroupName="ViewMode" Margin="2,0"
-                                         IsChecked="{Binding IsDayView, Mode=OneWay}"
-                                         Command="{Binding SetDayViewCommand}"
-                                         Style="{StaticResource MaterialDesignTabRadioButton}"/>
-                        </StackPanel>
-                    </Border>
+                    <ComboBox x:Name="ViewModeCombo" Height="32" Margin="0,0,10,0" MinWidth="80"
+                              SelectedIndex="{Binding ViewModeIndex}"
+                              VerticalContentAlignment="Center">
+                        <ComboBoxItem Content="月檢視"/>
+                        <ComboBoxItem Content="周檢視"/>
+                        <ComboBoxItem Content="日檢視"/>
+                    </ComboBox>
 
                     <!-- 衝突徽章（Collapsed：狀態指示，有才出現） -->
                     <Button Style="{StaticResource MaterialDesignOutlinedButton}"
                             Command="{Binding CheckConflictsCommand}"
                             Visibility="{Binding HasConflicts, Converter={StaticResource BoolToVisibilityConverter}}"
-                            Margin="0,0,8,0" Padding="8,0"
+                            Height="32" Margin="0,0,8,0" Padding="8,0"
                             Foreground="#E53935" BorderBrush="#E53935">
                         <StackPanel Orientation="Horizontal">
                             <md:PackIcon Kind="AlertCircleOutline" Width="16" Height="16" Margin="0,0,5,0" VerticalAlignment="Center"/>
@@ -116,7 +107,7 @@
                     <Button Style="{StaticResource MaterialDesignOutlinedButton}"
                             Command="{Binding CheckConflictsCommand}"
                             Visibility="{Binding HasEmptyShifts, Converter={StaticResource BoolToVisibilityConverter}}"
-                            Margin="0,0,8,0" Padding="8,0"
+                            Height="32" Margin="0,0,8,0" Padding="8,0"
                             ToolTip="班別尚未排入任何員工"
                             Foreground="#F57C00" BorderBrush="#F57C00">
                         <StackPanel Orientation="Horizontal">
@@ -128,54 +119,55 @@
                         </StackPanel>
                     </Button>
 
-                    <!-- 還原 -->
+                    <!-- 動作選單（kebab）：還原 / 新增/重建 / 自動排班 / 轉存班表 -->
+                    <!-- 浮層 (新增排班/自動排班) 開啟時隱藏 kebab，避免疊開 -->
                     <Button Style="{StaticResource MaterialDesignOutlinedButton}"
-                            Command="{Binding UndoCommand}"
-                            IsEnabled="{Binding CanUndo}"
-                            ToolTip="{Binding UndoDescription}"
-                            Width="40" Height="36" Padding="0"
-                            Margin="0,0,8,0">
-                        <md:PackIcon Kind="UndoVariant" Width="18" Height="18"/>
-                    </Button>
-
-                    <!-- 新增 / 重建班表（重疊在同一格子，互斥顯示，避免兩個 slot 都佔位） -->
-                    <Grid Margin="0,0,8,0">
-                        <Button Style="{StaticResource MaterialDesignRaisedButton}"
-                                Command="{Binding StartCreateScheduleCommand}"
-                                Visibility="{Binding HasSchedule, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse|Hidden}">
-                            <StackPanel Orientation="Horizontal">
-                                <md:PackIcon Kind="CalendarPlus" Width="18" Height="18" Margin="0,0,8,0"/>
-                                <TextBlock Text="新增班表"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Style="{StaticResource MaterialDesignOutlinedButton}"
-                                Command="{Binding StartCreateScheduleCommand}"
-                                Visibility="{Binding HasSchedule, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Hidden}"
-                                ToolTip="重新建立本月班表"
-                                HorizontalAlignment="Right">
-                            <md:PackIcon Kind="CalendarRefresh" Width="18" Height="18"/>
-                        </Button>
-                    </Grid>
-
-                    <!-- 自動排班（Hidden 保留版面） -->
-                    <Button Style="{StaticResource MaterialDesignRaisedButton}"
-                            Command="{Binding StartAutoAssignCommand}"
-                            Visibility="{Binding ShowAutoAssignButton, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Hidden}">
-                        <StackPanel Orientation="Horizontal">
-                            <md:PackIcon Kind="AutoFix" Width="18" Height="18" Margin="0,0,8,0"/>
-                            <TextBlock Text="自動排班"/>
-                        </StackPanel>
-                    </Button>
-
-                    <!-- 轉存班表（Hidden 保留版面） -->
-                    <Button Style="{StaticResource MaterialDesignOutlinedButton}"
-                            Click="ExportSchedule_Click"
-                            Visibility="{Binding HasSchedule, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Hidden}"
-                            Margin="8,0,0,0" ToolTip="將本月班表匯出為 PNG 圖片">
-                        <StackPanel Orientation="Horizontal">
-                            <md:PackIcon Kind="FileExportOutline" Width="18" Height="18" Margin="0,0,6,0"/>
-                            <TextBlock Text="轉存班表"/>
-                        </StackPanel>
+                            Width="40" Height="32" Padding="0"
+                            ToolTip="更多動作"
+                            Click="ActionsMenu_Click"
+                            Visibility="{Binding IsViewingCalendar, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Hidden}">
+                        <Button.ContextMenu>
+                            <ContextMenu Placement="Bottom">
+                                <MenuItem Header="{Binding UndoDescription, FallbackValue=還原上一步}"
+                                          Command="{Binding UndoCommand}"
+                                          IsEnabled="{Binding CanUndo}">
+                                    <MenuItem.Icon>
+                                        <md:PackIcon Kind="UndoVariant"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <Separator/>
+                                <MenuItem Header="新增班表"
+                                          Command="{Binding StartCreateScheduleCommand}"
+                                          Visibility="{Binding HasSchedule, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
+                                    <MenuItem.Icon>
+                                        <md:PackIcon Kind="CalendarPlus"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="重建本月班表"
+                                          Command="{Binding StartCreateScheduleCommand}"
+                                          Visibility="{Binding HasSchedule, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <MenuItem.Icon>
+                                        <md:PackIcon Kind="CalendarRefresh"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="自動排班"
+                                          Command="{Binding StartAutoAssignCommand}"
+                                          Visibility="{Binding ShowAutoAssignButton, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <MenuItem.Icon>
+                                        <md:PackIcon Kind="AutoFix"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <Separator Visibility="{Binding HasSchedule, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                <MenuItem Header="轉存班表為圖片"
+                                          Click="ExportSchedule_Click"
+                                          Visibility="{Binding HasSchedule, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <MenuItem.Icon>
+                                        <md:PackIcon Kind="FileExportOutline"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                        <md:PackIcon Kind="DotsVertical" Width="20" Height="20"/>
                     </Button>
 
                 </StackPanel>
@@ -185,8 +177,8 @@
         <!-- 主排班區 -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="280"/>
-                <ColumnDefinition Width="20"/>
+                <ColumnDefinition Width="{DynamicResource LayoutSideListGridWidth}"/>
+                <ColumnDefinition Width="8"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
@@ -248,13 +240,13 @@
                         </ListBox.ItemContainerStyle>
                         <ListBox.ItemTemplate>
                             <DataTemplate DataType="{x:Type vm:EmployeeWorkloadItem}">
-                                <Border Style="{StaticResource ItemCardStyle}" CornerRadius="16" Margin="0,0,0,8" Padding="10,8"
+                                <Border Style="{StaticResource ItemCardStyle}" CornerRadius="14" Margin="0,0,0,6" Padding="8,6"
                                         PreviewMouseLeftButtonDown="Employee_PreviewMouseLeftButtonDown"
                                         MouseMove="Employee_MouseMove"
                                         MouseLeftButtonUp="Employee_MouseLeftButtonUp"
                                         Cursor="Hand">
                                     <StackPanel Orientation="Horizontal">
-                                        <Border Width="36" Height="36" CornerRadius="18" ClipToBounds="True" Margin="0,0,10,0"
+                                        <Border Width="30" Height="30" CornerRadius="15" ClipToBounds="True" Margin="0,0,8,0"
                                                 Background="{Binding Employee.ColorHex, Converter={StaticResource HexToBrushConverter}}">
                                             <Grid>
                                                 <Image Source="{Binding Employee.AvatarPhotoData, Converter={StaticResource BytesToImageConverter}}"
@@ -299,11 +291,11 @@
 
             <!-- 右側行事曆 -->
             <Border Grid.Column="2"
-                    CornerRadius="20"
+                    CornerRadius="16"
                     Background="{DynamicResource AppSurfaceBrush}"
                     BorderBrush="{DynamicResource AppBorderBrush}"
                     BorderThickness="1"
-                    Padding="8"
+                    Padding="6"
                     PreviewMouseWheel="Section_PreviewMouseWheel">
                 <Grid>
                     <!-- 行事曆（非建立/自動排班模式） -->

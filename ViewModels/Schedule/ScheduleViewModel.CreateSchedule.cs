@@ -142,10 +142,20 @@ public partial class ScheduleViewModel
     [RelayCommand]
     public async Task ConfirmCreateScheduleAsync()
     {
-        // 若班表已存在，先刪除舊班表再重建
+        // 若班表已存在，先刪除舊班表再重建——此操作會連同所有排班記錄一併刪除，需使用者明確確認
         var existing = await _scheduleService.GetAsync(CreateYear, CreateMonth);
         if (existing is not null)
+        {
+            var entryCount = existing.Entries.Count;
+            var message = entryCount > 0
+                ? $"{CreateYear} 年 {CreateMonth} 月已有班表，重建將清除其中所有排班記錄（{entryCount} 筆），此操作無法復原。\n\n確定要繼續嗎？"
+                : $"{CreateYear} 年 {CreateMonth} 月已有班表，重建將清除目前設定，此操作無法復原。\n\n確定要繼續嗎？";
+
+            var confirmed = await _dialogService.ShowConfirmAsync("確認重建班表", message, "重建", "取消");
+            if (!confirmed) return;
+
             await _scheduleService.DeleteAsync(existing.Id);
+        }
 
         var settings = await _shopSettingService.GetAsync() ?? new ShopSetting();
         settings.ClosedDaysOfWeek = CreateClosedDayOptions

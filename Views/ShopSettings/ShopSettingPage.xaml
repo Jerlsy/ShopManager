@@ -9,15 +9,11 @@
             <!-- 頁面標題 -->
             <Border Style="{StaticResource PageHeaderStyle}">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Width="48" Height="48" CornerRadius="8" ClipToBounds="True" Margin="0,0,16,0"
+                    <Border Width="27" Height="27" CornerRadius="6" ClipToBounds="True" Margin="0,0,10,0"
                             Visibility="{Binding DataContext.ShopLogoData, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NullToVisibilityConverter}}">
                         <Image Source="{Binding DataContext.ShopLogoData, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BytesToImageConverter}}" Stretch="UniformToFill"/>
                     </Border>
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="店鋪與環境設定" Style="{StaticResource PageTitleStyle}"/>
-                        <TextBlock Text="管理店鋪基本資訊、系統顯示風格、行事曆規則以及資料維護"
-                                   Style="{StaticResource SubtleTextStyle}" Margin="0,8,0,0"/>
-                    </StackPanel>
+                    <TextBlock Text="店鋪與環境設定" Style="{StaticResource PageTitleStyle}" VerticalAlignment="Center"/>
                 </StackPanel>
             </Border>
 

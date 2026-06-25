@@ -218,10 +218,20 @@ public partial class ScheduleViewModel
     private async Task SaveShiftOverrideAsync()
     {
         if (CurrentSchedule is null || DayDetailDay is null) return;
-        var day         = DayDetailDay.Date.Day;
-        var selectedIds = ShiftOverrideCells.Where(c => c.IsChecked).Select(c => c.Shift.Id).ToList();
-        var overrides   = CurrentSchedule.ShiftDateOverrides.Where(o => o.Day != day).ToList();
-        overrides.Add(new ShiftDateOverride { Day = day, ShiftIds = selectedIds });
+        var date        = DayDetailDay.Date;
+        var day         = date.Day;
+        var selectedIds = ShiftOverrideCells.Where(c => c.IsChecked).Select(c => c.Shift.Id).ToHashSet();
+
+        // 移除「不再保留」的班別當天既有排班，避免殘留造成班別重疊判定
+        var orphanedEntryIds = CurrentSchedule.Entries
+            .Where(e => e.Date == date && !selectedIds.Contains(e.ShiftSettingId))
+            .Select(e => e.Id)
+            .ToList();
+        if (orphanedEntryIds.Count > 0)
+            await _entryService.RemoveEntriesAsync(orphanedEntryIds);
+
+        var overrides = CurrentSchedule.ShiftDateOverrides.Where(o => o.Day != day).ToList();
+        overrides.Add(new ShiftDateOverride { Day = day, ShiftIds = selectedIds.ToList() });
         await _scheduleService.UpdateShiftDateOverridesAsync(CurrentSchedule.Id, overrides);
 
         IsShiftOverrideEditing = false;
@@ -229,14 +239,32 @@ public partial class ScheduleViewModel
         IsDayDetailOpen = false;
         DayDetailDay    = null;
         await LoadScheduleAsync();
-        _snackbarService.ShowSuccess($"{DayDetailDay?.Date:MM/dd} 班別設定已儲存");
+        _snackbarService.ShowSuccess($"{date:MM/dd} 班別設定已儲存");
     }
 
     [RelayCommand]
     private async Task ClearShiftOverrideAsync()
     {
         if (CurrentSchedule is null || DayDetailDay is null) return;
-        var day      = DayDetailDay.Date.Day;
+        var date = DayDetailDay.Date;
+        var day  = date.Day;
+
+        // 恢復月設定後，原本 override 才允許的班別若不在月設定內，當天既有排班亦需清除
+        var allowedAfterClear = GetShiftsForDay(
+                date,
+                new MonthlySchedule
+                {
+                    ShiftDayConfigs     = CurrentSchedule.ShiftDayConfigs,
+                    ShiftDateOverrides  = new List<ShiftDateOverride>(),
+                })
+            .Select(s => s.Id).ToHashSet();
+        var orphanedEntryIds = CurrentSchedule.Entries
+            .Where(e => e.Date == date && !allowedAfterClear.Contains(e.ShiftSettingId))
+            .Select(e => e.Id)
+            .ToList();
+        if (orphanedEntryIds.Count > 0)
+            await _entryService.RemoveEntriesAsync(orphanedEntryIds);
+
         var overrides = CurrentSchedule.ShiftDateOverrides.Where(o => o.Day != day).ToList();
         await _scheduleService.UpdateShiftDateOverridesAsync(CurrentSchedule.Id, overrides);
 

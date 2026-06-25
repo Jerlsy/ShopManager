@@ -11,7 +11,12 @@ public partial class SalarySettingViewModel(
     IAppSnackbarService snackbarService,
     IAppDialogService dialogService) : ObservableObject
 {
-    [ObservableProperty] private bool _showLaborLaw;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowEmptyHint))]
+    [NotifyPropertyChangedFor(nameof(ShowListCards))]
+    [NotifyPropertyChangedFor(nameof(ShowDetailPane))]
+    private bool _showLaborLaw;
+
     [ObservableProperty] private LaborLawSetting _laborLaw = new();
 
     [ObservableProperty]
@@ -22,9 +27,16 @@ public partial class SalarySettingViewModel(
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowEmptyHint))]
+    [NotifyPropertyChangedFor(nameof(ShowListCards))]
+    [NotifyPropertyChangedFor(nameof(ShowDetailPane))]
     private bool _isEditing;
 
-    public bool ShowEmptyHint => !IsEditing && Salaries.Count == 0;
+    // 編輯方案 / 勞基法設定共用同一個「清單 + 詳細面板」區塊
+    public bool ShowDetailPane => IsEditing || ShowLaborLaw;
+
+    public bool ShowListCards => !IsEditing && !ShowLaborLaw;
+
+    public bool ShowEmptyHint => !IsEditing && !ShowLaborLaw && Salaries.Count == 0;
 
     [ObservableProperty] private string _editAlias = string.Empty;
     [ObservableProperty] private string _editDescription = string.Empty;
@@ -46,7 +58,13 @@ public partial class SalarySettingViewModel(
         Salaries = await service.GetAllAsync();
     }
 
-    [RelayCommand] public void OpenLaborLaw() => ShowLaborLaw = true;
+    [RelayCommand]
+    public void OpenLaborLaw()
+    {
+        IsEditing = false;
+        ShowLaborLaw = true;
+    }
+
     [RelayCommand] public void CloseLaborLaw() => ShowLaborLaw = false;
 
     [RelayCommand]
@@ -101,6 +119,7 @@ public partial class SalarySettingViewModel(
         EditHolidayRate = s.HolidayRate;
         EditDailyMaxHours = s.DailyMaxHours;
         EditWeeklyMaxHours = s.WeeklyMaxHours;
+        ShowLaborLaw = false;
         IsEditing = true;
     }
 

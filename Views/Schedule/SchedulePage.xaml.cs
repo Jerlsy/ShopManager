@@ -427,6 +427,17 @@ public partial class SchedulePage : UserControl
         }
     }
 
+    // ── kebab 動作選單：點按鈕 → 展開 ContextMenu ────────────────────
+    private void ActionsMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.ContextMenu is not null)
+        {
+            btn.ContextMenu.PlacementTarget = btn;
+            btn.ContextMenu.DataContext = DataContext;
+            btn.ContextMenu.IsOpen = true;
+        }
+    }
+
     // ── 轉存班表 ────────────────────────────────────────────────────────────
     private async void ExportSchedule_Click(object sender, RoutedEventArgs e)
     {

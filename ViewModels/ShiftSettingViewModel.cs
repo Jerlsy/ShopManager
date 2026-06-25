@@ -22,7 +22,10 @@ public partial class ShiftSettingViewModel(
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowEmptyHint))]
+    [NotifyPropertyChangedFor(nameof(ShowListCards))]
     private bool _isEditing;
+
+    public bool ShowListCards => !IsEditing;
 
     public bool ShowEmptyHint => !IsEditing && Shifts.Count == 0;
 

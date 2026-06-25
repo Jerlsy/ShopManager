@@ -251,8 +251,14 @@ public class ThemeService
     private static void SetColor(ResourceDictionary resources, string key, Color color) =>
         resources[key] = color;
 
-    private static void SetBrush(ResourceDictionary resources, string key, Color color) =>
-        resources[key] = new SolidColorBrush(color);
+    private static void SetBrush(ResourceDictionary resources, string key, Color color)
+    {
+        // 主題 brush 透過 DynamicResource 被全 App 大量引用；切換主題時整顆替換、不原地改色，
+        // 故凍結安全，且 WPF 對凍結 brush 的渲染有最佳化。
+        var brush = new SolidColorBrush(color);
+        brush.Freeze();
+        resources[key] = brush;
+    }
 
     private static bool TryParseHex(string value, out Color color)
     {

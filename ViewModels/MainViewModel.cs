@@ -49,7 +49,7 @@ public partial class MainViewModel : ObservableObject
     public GridLength NavColumnWidth =>
         IsNavExpanded
             ? new GridLength((double)Application.Current.Resources["LayoutNavExpandedWidth"])
-            : new GridLength(44);
+            : new GridLength(38);
 
     partial void OnIsNavExpandedChanged(bool value) => OnPropertyChanged(nameof(NavColumnWidth));
 

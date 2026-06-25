@@ -45,13 +45,14 @@ public partial class ExportScheduleWindow : Window
         LinePushPanel.Visibility = Visibility.Visible;
     }
 
-    private void RadioFullSchedule_Checked(object sender, RoutedEventArgs e) => SetOwnerEnabled(true);
-    private void RadioPersonalOnly_Checked(object sender, RoutedEventArgs e) => SetOwnerEnabled(false);
+    private void RadioFullSchedule_Checked(object sender, RoutedEventArgs e)        => SetRecipientFilter(owner: true,  employee: true);
+    private void RadioPersonalOnly_Checked(object sender, RoutedEventArgs e)        => SetRecipientFilter(owner: false, employee: true);
+    private void RadioAllPersonalToOwner_Checked(object sender, RoutedEventArgs e)  => SetRecipientFilter(owner: true,  employee: false);
 
-    private void SetOwnerEnabled(bool enabled)
+    private void SetRecipientFilter(bool owner, bool employee)
     {
-        foreach (var r in _recipients.Where(r => r.Recipient.IsOwner))
-            r.IsEnabled = enabled;
+        foreach (var r in _recipients)
+            r.IsEnabled = r.Recipient.IsOwner ? owner : employee;
         if (RecipientList is null) return; // InitializeComponent 期間 Checked 事件提前觸發
         RecipientList.ItemsSource = null;
         RecipientList.ItemsSource = _recipients;
@@ -68,20 +69,27 @@ public partial class ExportScheduleWindow : Window
 
     private async void PushLine_Click(object sender, RoutedEventArgs e)
     {
-        bool isPersonal = RadioPersonalOnly.IsChecked == true;
-        var selected    = _recipients.Where(r => r.IsSelected).ToList();
-        var targets     = isPersonal ? selected.Where(r => !r.Recipient.IsOwner).ToList() : selected;
+        bool isPersonal    = RadioPersonalOnly.IsChecked == true;
+        bool isAllToOwner  = RadioAllPersonalToOwner.IsChecked == true;
+        var selected       = _recipients.Where(r => r.IsSelected && r.IsEnabled).ToList();
+        var targets        = isPersonal     ? selected.Where(r => !r.Recipient.IsOwner).ToList()
+                           : isAllToOwner   ? selected.Where(r =>  r.Recipient.IsOwner).ToList()
+                           : selected;
 
         var snackbar = App.Services.GetRequiredService<IAppSnackbarService>();
         if (targets.Count == 0)
         {
-            snackbar.ShowWarning(isPersonal ? "個人班表模式下須勾選至少一位員工（業主帳號不適用）" : "請先勾選至少一位收件人");
+            snackbar.ShowWarning(
+                isPersonal   ? "個人班表模式下須勾選至少一位員工（業主帳號不適用）"
+              : isAllToOwner ? "全體個人班表模式下須勾選至少一位業主帳號"
+              :                "請先勾選至少一位收件人");
             return;
         }
 
-        string confirmMsg = isPersonal
-            ? $"確定要發送個人班表文字訊息給 {targets.Count} 位員工？"
-            : $"確定要將本月完整班表圖片推播給 {selected.Count} 位收件人？";
+        string confirmMsg =
+            isPersonal   ? $"確定要發送個人班表文字訊息給 {targets.Count} 位員工？"
+          : isAllToOwner ? $"確定要將全體員工的個人班表彙整推播給 {targets.Count} 位業主？"
+          :                $"確定要將本月完整班表圖片推播給 {selected.Count} 位收件人？";
         bool confirmed = await App.Services.GetRequiredService<IAppDialogService>()
             .ShowConfirmAsync("確定推播", confirmMsg, "確定推播", "取消");
         if (!confirmed) return;
@@ -101,6 +109,40 @@ public partial class ExportScheduleWindow : Window
                     _data.LineChannelAccessToken!, r.Recipient.UserId,
                     altText, BuildPersonalScheduleFlex(r.Recipient)));
             ok = (await Task.WhenAll(tasks)).Count(r => r);
+        }
+        else if (isAllToOwner)
+        {
+            // 全體個人班表：直接以 _data.Rows（全體在職員工）建構個人班表 Flex，逐一推給業主
+            // 不受員工 LINE 綁定狀態影響 — 業主端等同於檢視全員班表卡
+            var altText = $"{_data.Year}年{_data.Month}月 全體個人班表";
+            var allEmployees = _data.Rows
+                .Select(row => new ExportScheduleData.PushRecipient(
+                    UserId: string.Empty,
+                    DisplayName: row.Name,
+                    PictureUrl: null,
+                    IsOwner: false,
+                    ShiftIds: row.ShiftIds))
+                .ToList();
+            if (allEmployees.Count == 0)
+            {
+                snackbar.ShowWarning("本月沒有員工資料");
+                pushBtn.IsEnabled = true;
+                return;
+            }
+
+            ok = 0;
+            foreach (var owner in targets)
+            {
+                bool allOk = true;
+                foreach (var emp in allEmployees)
+                {
+                    var flex    = BuildPersonalScheduleFlex(emp);
+                    var success = await lineService.PushFlexMessageAsync(
+                        _data.LineChannelAccessToken!, owner.Recipient.UserId, altText, flex);
+                    if (!success) allOk = false;
+                }
+                if (allOk) ok++;
+            }
         }
         else
         {
