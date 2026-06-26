@@ -24,11 +24,13 @@ public partial class ScheduleViewModel
         }).ToList();
 
         // 每位員工每天的班別 ID（null = 未排）
+        // 同一員工同一天可能有多筆（允許跨班別），但匯出表格每格只顯示一個 → 取當天第一筆，避免重複鍵
         var entryByEmp = CurrentSchedule.Entries
             .GroupBy(e => e.EmployeeId)
             .ToDictionary(
                 g => g.Key,
-                g => g.ToDictionary(e => e.Date.Day, e => e.ShiftSettingId));
+                g => g.GroupBy(e => e.Date.Day)
+                      .ToDictionary(dg => dg.Key, dg => dg.First().ShiftSettingId));
 
         var rows = ActiveEmployees.Select(emp =>
         {

@@ -31,6 +31,10 @@ public class ScheduleService(AppDbContext db, ShopContext shopContext)
     {
         db.ScheduleEntries.Add(entry);
         await db.SaveChangesAsync();
+        // 取消追蹤：VM 之後會把帶有 Employee→DefaultSalary 等 navigation 的離線員工物件
+        // 指派到此 entry 供顯示；若 entry 仍被追蹤，下次 SaveChanges 會嘗試 attach 該關聯 graph，
+        // 與其他離線員工帶來的同 Id 關聯實體（如 SalarySetting）衝突而拋例外。
+        db.Entry(entry).State = EntityState.Detached;
         return entry;
     }
 
@@ -60,7 +64,12 @@ public class ScheduleService(AppDbContext db, ShopContext shopContext)
             }
         }
 
-        if (added.Count > 0) await db.SaveChangesAsync();
+        if (added.Count > 0)
+        {
+            await db.SaveChangesAsync();
+            // 同 AddEntryAsync：取消追蹤，避免 VM 掛上離線 navigation graph 後造成重複追蹤衝突
+            foreach (var e in added) db.Entry(e).State = EntityState.Detached;
+        }
         return added;
     }
 

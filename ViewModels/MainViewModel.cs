@@ -25,6 +25,9 @@ public class SystemConfiguredMessage
 /// <summary>店鋪關閉後發送的通知。</summary>
 public class ShopClosedMessage { }
 
+/// <summary>請求切換到排班管理頁（例如員工設定變更產生衝突後，引導使用者前往調整）。</summary>
+public class NavigateToScheduleMessage { }
+
 /// <summary>導覽項目。</summary>
 public record NavItem(string Label, PackIconKind Icon, Type PageType, bool RequiresConfig = true);
 
@@ -111,6 +114,13 @@ public partial class MainViewModel : ObservableObject
             vm.IsSystemConfigured = true;
             vm.ShopName = m.ShopName;
             vm.ShopLogoData = m.LogoPhotoData;
+        });
+
+        WeakReferenceMessenger.Default.Register<NavigateToScheduleMessage>(this, (r, _) =>
+        {
+            var vm = (MainViewModel)r;
+            var item = vm.AllNavItems.FirstOrDefault(n => n.PageType == typeof(SchedulePage));
+            if (item is not null) vm.SelectedNavItem = item;
         });
     }
 

@@ -79,6 +79,9 @@ public partial class ShiftBlock : ObservableObject
     [ObservableProperty] private string _disabledReasonForCopy = string.Empty;
     // 空班別狀態：EntryItems 為空時為 true（由 EntryItems CollectionChanged 驅動更新）
     [ObservableProperty] private bool _isEmpty = true;
+    // 月視圖頭像水平放不下時為 true（由 CollapsingAvatarPanel 量測後回報）：
+    // 此時收合成單一計數圈、停用頭像拖拉，點圈開當日詳情
+    [ObservableProperty] private bool _isOverflowing;
 
     public ShiftBlock()
     {

@@ -174,7 +174,8 @@ public partial class SalaryViewModel : ObservableObject
             SelectedScheduleItem.Schedule.Month);
         if (schedule is null) return;
 
-        var employees = await _employeeService.GetAllAsync();
+        // NoTracking：避免長壽 DbContext 回傳舊的員工薪資（時薪/加給），導致薪資計算用到過期金額
+        var employees = await _employeeService.GetAllWithDetailsNoTrackingAsync();
         var scheduledEmpIds = schedule.Entries.Select(e => e.EmployeeId).ToHashSet();
         var eligibleEmps = employees
             .Where(e => !e.IsResigned && e.DefaultSalary is not null && scheduledEmpIds.Contains(e.Id))

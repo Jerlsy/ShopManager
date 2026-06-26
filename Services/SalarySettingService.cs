@@ -6,8 +6,10 @@ namespace ShopManager.Services;
 
 public class SalarySettingService(AppDbContext db, ShopContext shopContext)
 {
+    // AsNoTracking：避免長壽 DbContext 在勞基法設定於他頁變更後，仍回傳舊的已追蹤實體
+    // （排班規則評估會用到此設定）。儲存走 SaveLaborLawAsync 另查 existing，不依賴此處追蹤。
     public async Task<LaborLawSetting?> GetLaborLawAsync() =>
-        await db.LaborLawSettings.FirstOrDefaultAsync();
+        await db.LaborLawSettings.AsNoTracking().FirstOrDefaultAsync();
 
     public async Task SaveLaborLawAsync(LaborLawSetting setting)
     {

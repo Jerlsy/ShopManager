@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using MaterialDesignThemes.Wpf;
 using ShopManager.Helpers;
 using ShopManager.Models;
@@ -603,7 +604,14 @@ public partial class EmployeeViewModel : ObservableObject
         {
             var conflictCount = await _conflictService.RecheckByEmployeeAsync(emp.Id);
             if (conflictCount > 0)
-                _snackbarService.ShowWarning($"儲存後發現 {conflictCount} 條排班衝突，請至排班頁面調整");
+            {
+                var goNow = await _dialogService.ShowConfirmAsync(
+                    "發現排班衝突",
+                    $"儲存後發現 {conflictCount} 條排班衝突（既有排班不會被自動移除）。是否前往排班頁面調整？",
+                    "前往排班", "稍後");
+                if (goNow)
+                    WeakReferenceMessenger.Default.Send(new NavigateToScheduleMessage());
+            }
         }
     }
 

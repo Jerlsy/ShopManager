@@ -319,6 +319,8 @@ public partial class ScheduleViewModel : ObservableObject
     public ObservableCollection<EmployeeWorkloadItem> EmployeeWorkloads { get; } = new();
     public List<string> DayHeaders { get; private set; } = new();
     private Dictionary<int, string> _monthHolidays = new();
+    // 假日資料以「年份」快取（key = 月*100+日 → 假日名稱），同年切月免重複下載整年 JSON
+    private readonly Dictionary<int, Dictionary<int, string>> _holidayYearCache = new();
 
     public static List<int> AvailableYears  { get; } = Enumerable.Range(DateTime.Today.Year - 1, 5).ToList();
     public static List<int> AvailableMonths { get; } = Enumerable.Range(1, 12).ToList();
@@ -332,7 +334,7 @@ public partial class ScheduleViewModel : ObservableObject
     {
         // 4 個 Service 各自有獨立 DbContext（Transient），可平行查詢
         var shiftsTask      = _shiftService.GetAllAsync();
-        var employeesTask   = _employeeService.GetAllAsync();
+        var employeesTask   = _employeeService.GetAllWithDetailsNoTrackingAsync();
         var laborLawTask    = _salaryService.GetLaborLawAsync();
         var shopSettingTask = _shopSettingService.GetAsync();
         await Task.WhenAll(shiftsTask, employeesTask, laborLawTask, shopSettingTask);
@@ -437,20 +439,38 @@ public partial class ScheduleViewModel : ObservableObject
     private async Task LoadMonthHolidaysAsync()
     {
         _monthHolidays.Clear();
+        var yearData = await GetHolidayYearAsync(SelectedYear);
+        if (yearData is null) return;
+        foreach (var (key, name) in yearData)
+        {
+            if (key / 100 == SelectedMonth)
+                _monthHolidays[key % 100] = name;
+        }
+    }
+
+    // 取得某年的假日（key = 月*100+日）。成功才快取；失敗回 null 以便下次重試
+    private async Task<Dictionary<int, string>?> GetHolidayYearAsync(int year)
+    {
+        if (_holidayYearCache.TryGetValue(year, out var cached))
+            return cached;
         try
         {
-            var url  = $"https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/{SelectedYear}.json";
+            var url  = $"https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data/{year}.json";
             var json = await _http.GetStringAsync(url);
             var all  = JsonSerializer.Deserialize<List<CalendarDayDto>>(json);
-            if (all is null) return;
-            var prefix = $"{SelectedYear}{SelectedMonth:D2}";
+            if (all is null) return null;
+            var map = new Dictionary<int, string>();
             foreach (var d in all.Where(d =>
-                d.Date.StartsWith(prefix) && d.IsHoliday && !string.IsNullOrEmpty(d.Description)))
+                d.IsHoliday && !string.IsNullOrEmpty(d.Description) && d.Date.Length >= 8))
             {
-                _monthHolidays[int.Parse(d.Date[6..])] = d.Description;
+                var month = int.Parse(d.Date.Substring(4, 2));
+                var day   = int.Parse(d.Date.Substring(6, 2));
+                map[month * 100 + day] = d.Description!;
             }
+            _holidayYearCache[year] = map;
+            return map;
         }
-        catch { }
+        catch { return null; }
     }
 
     // ══════════════════════════════════════════

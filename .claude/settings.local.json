@@ -81,7 +81,9 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "PowerShell(dotnet build *)",
       "Bash(cp Views/Schedule/SchedulePage.xaml /tmp/SchedulePage.bak)",
-      "Bash(sed -i '579,1142d' Views/Schedule/SchedulePage.xaml)"
+      "Bash(sed -i '579,1142d' Views/Schedule/SchedulePage.xaml)",
+      "PowerShell($w = Get-Command winget -ErrorAction SilentlyContinue; if \\($w\\) { \"winget: \" + $w.Source; winget --version } else { \"winget NOT FOUND\" })",
+      "PowerShell(git *)"
     ]
   }
 }

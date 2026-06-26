@@ -6,8 +6,11 @@ namespace ShopManager.Services;
 
 public class ShopSettingService(AppDbContext db, ShopContext shopContext)
 {
+    // AsNoTracking：本服務的 DbContext 隨頁面（如排班頁）長期存活，若用追蹤查詢，
+    // 在設定頁（另一個 DbContext）改了業主 LINE 綁定/Token 後，這裡會從 EF identity map
+    // 回傳舊的已追蹤實體而非 DB 最新值。唯讀讀取一律繞過追蹤以確保拿到最新資料。
     public async Task<ShopSetting?> GetAsync() =>
-        await db.ShopSettings.FirstOrDefaultAsync(s => s.ShopId == shopContext.ShopId);
+        await db.ShopSettings.AsNoTracking().FirstOrDefaultAsync(s => s.ShopId == shopContext.ShopId);
 
     public async Task SaveAsync(ShopSetting setting)
     {

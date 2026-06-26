@@ -23,6 +23,20 @@ public class EmployeeService(AppDbContext db, ShopContext shopContext)
             .OrderBy(e => e.Name)
             .ToListAsync();
 
+    // 排班頁專用：與 GetAllAsync 相同的 Include，但 AsNoTracking。
+    // 排班頁的 DbContext 隨頁面長期存活，用追蹤會讓他頁改過的「既有員工」（姓名/顏色/排班規則）
+    // 從 EF identity map 回傳舊值；排班頁只讀不存員工，故繞過追蹤以確保拿到最新。
+    public async Task<List<Employee>> GetAllWithDetailsNoTrackingAsync() =>
+        await db.Employees
+            .AsNoTracking()
+            .Where(e => e.ShopId == shopContext.ShopId)
+            .Include(e => e.DefaultShift)
+            .Include(e => e.DefaultSalary)
+            .Include(e => e.ScheduleRules)
+            .Include(e => e.DefaultBonuses)
+            .OrderBy(e => e.Name)
+            .ToListAsync();
+
     public async Task<Employee?> GetByIdAsync(int id) =>
         await db.Employees
             .Include(e => e.DefaultShift)

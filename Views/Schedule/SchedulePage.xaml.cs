@@ -1,6 +1,7 @@
 using ShopManager.Models;
 using ShopManager.ViewModels;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -327,6 +328,18 @@ public partial class SchedulePage : UserControl
         DragTooltipPopup.IsOpen = false;
         await vm.SwapEmployeeAsync(dragEmp, sourceEntryId, targetEntry);
         e.Handled = true;
+    }
+
+    // ── 收合計數圈點擊 → 開啟當日詳情（頭像放不下時的入口）──
+    private void CollapsedAvatars_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.DataContext is ShiftBlock block
+            && DataContext is ScheduleViewModel vm)
+        {
+            var day = vm.CalendarDays.FirstOrDefault(d => d.Date == block.Date);
+            if (day is not null) vm.OpenDayDetailCommand.Execute(day);
+            e.Handled = true;
+        }
     }
 
     // ── 日期格子點擊 → 開啟當日詳情 ───────

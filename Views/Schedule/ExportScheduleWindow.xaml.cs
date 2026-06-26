@@ -208,7 +208,9 @@ public partial class ExportScheduleWindow : Window
                 if (!legendById.TryGetValue(shiftId.Value, out var leg)) continue;
                 hasAny = true;
 
-                // 一列：日期 (週幾) [色塊班別] 時間
+                // 一列：日期(週幾) [色塊班別] 時間
+                // 日期與(週幾)合併為單一文字，避免兩欄之間留下過大空隙；
+                // 色塊 flex 加大、時間 flex 縮小，讓中間班別名稱可完整顯示。
                 body.Add(new
                 {
                     type     = "box",
@@ -216,13 +218,13 @@ public partial class ExportScheduleWindow : Window
                     spacing  = "sm",
                     contents = new object[]
                     {
-                        new { type = "text", text = $"{_data.Month:D2}/{col.Day:D2}", flex = 2, size = "sm", color = "#222222" },
-                        new { type = "text", text = $"({col.DayOfWeekLabel})",        flex = 1, size = "sm", color = "#888888" },
+                        new { type = "text", text = $"{_data.Month:D2}/{col.Day:D2} ({col.DayOfWeekLabel})", flex = 4, size = "sm", color = "#222222", adjustMode = "shrink-to-fit" },
                         new
                         {
                             type            = "box",
                             layout          = "vertical",
-                            flex            = 2,
+                            flex            = 3,
+                            justifyContent  = "center",
                             backgroundColor = leg.ColorHex,
                             cornerRadius    = "md",
                             paddingTop      = "2px",
@@ -234,7 +236,7 @@ public partial class ExportScheduleWindow : Window
                                 new { type = "text", text = leg.Alias, color = "#FFFFFF", weight = "bold", size = "xs", align = "center" },
                             }
                         },
-                        new { type = "text", text = leg.TimeRange, flex = 4, size = "sm", color = "#222222", align = "end" },
+                        new { type = "text", text = leg.TimeRange, flex = 4, size = "sm", color = "#222222", align = "start", gravity = "center", adjustMode = "shrink-to-fit" },
                     }
                 });
             }
@@ -330,6 +332,7 @@ public partial class ExportScheduleWindow : Window
 
         // 班別顏色快取
         var colorMap = data.ShiftLegend.ToDictionary(l => l.Id, l => ParseHex(l.ColorHex));
+        var legendById = data.ShiftLegend.ToDictionary(l => l.Id);
 
         double tableW = nameW + data.DaysInMonth * cellW;
         double tableH = colH + data.Rows.Count * rowH;
@@ -429,9 +432,31 @@ public partial class ExportScheduleWindow : Window
                     }
                     else if (shiftId.HasValue && colorMap.TryGetValue(shiftId.Value, out var sc))
                     {
-                        var fill = new SolidColorBrush(Color.FromArgb(0xCC, sc.R, sc.G, sc.B));
+                        var fill = new SolidColorBrush(Color.FromArgb(0xFF, sc.R, sc.G, sc.B));
                         fill.Freeze();
                         dc.DrawRectangle(fill, null, new Rect(x, y, cellW, rowH));
+
+                        // 班別起訖時間塞進色塊內（兩列，小字）
+                        if (legendById.TryGetValue(shiftId.Value, out var leg)
+                            && !string.IsNullOrEmpty(leg.TimeRange))
+                        {
+                            var parts = leg.TimeRange.Split('–', '-', '~');
+                            double ts = S(9);
+                            if (parts.Length >= 2)
+                            {
+                                var t1 = Fmt(parts[0].Trim(), boldFace, ts, Brushes.White);
+                                var t2 = Fmt(parts[1].Trim(), boldFace, ts, Brushes.White);
+                                double ty = y + (rowH - t1.Height - t2.Height) / 2;
+                                dc.DrawText(t1, new Point(x + (cellW - t1.Width) / 2, ty));
+                                dc.DrawText(t2, new Point(x + (cellW - t2.Width) / 2, ty + t1.Height));
+                            }
+                            else
+                            {
+                                var t1 = Fmt(leg.TimeRange, boldFace, ts, Brushes.White);
+                                dc.DrawText(t1, new Point(x + (cellW - t1.Width) / 2,
+                                    y + (rowH - t1.Height) / 2));
+                            }
+                        }
                     }
 
                     dc.DrawRectangle(null, pen05, new Rect(x, y, cellW, rowH));
