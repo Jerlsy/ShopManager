@@ -17,6 +17,11 @@ public partial class ExportScheduleWindow : Window
     private RenderTargetBitmap? _bitmap;
     private readonly List<PushRecipientItem> _recipients = new();
 
+    // 推播進行中若使用者關閉視窗：攔截關閉動作、詢問是否中止，避免使用者以為關閉=取消，
+    // 結果背景仍悄悄繼續送出（Task 不會因為視窗關閉而被取消）。
+    private bool _isPushing;
+    private CancellationTokenSource? _pushCts;
+
     public ExportScheduleWindow(ExportScheduleData data)
     {
         InitializeComponent();
@@ -28,6 +33,23 @@ public partial class ExportScheduleWindow : Window
             PreviewImage.Source = _bitmap;
             SetupLinePushPanel(data);
         };
+        Closing += Window_Closing;
+    }
+
+    private async void Window_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        if (!_isPushing) return; // 沒有進行中的推播，正常關閉
+
+        e.Cancel = true; // 先攔下，問清楚意圖後再決定是否真的關閉
+        var confirmed = await App.Services.GetRequiredService<IAppDialogService>().ShowConfirmAsync(
+            "推播尚未完成",
+            "目前還有排隊中的推播尚未送出，確定要中止並關閉視窗嗎？已送出的訊息不會被收回。",
+            "中止並關閉", "繼續等待");
+        if (!confirmed) return;
+
+        _pushCts?.Cancel();
+        _isPushing = false;
+        Close();
     }
 
     private void SetupLinePushPanel(ExportScheduleData data)
@@ -96,101 +118,155 @@ public partial class ExportScheduleWindow : Window
 
         var pushBtn = (System.Windows.Controls.Button)sender;
         pushBtn.IsEnabled = false;
+        ToggleAllButton.IsEnabled = false;
+        ShowPushProgress();
+
+        _isPushing = true;
+        _pushCts   = new CancellationTokenSource();
+        var token  = _pushCts.Token;
 
         var lineService = App.Services.GetRequiredService<LineService>();
         int ok;
 
-        if (isPersonal)
+        try
         {
-            // 個人班表：每位員工各渲染一張只含自己排班的圖片並推播（圖片訊息可轉傳，且欄寬依內容自動撐開不裁切）
-            ok = 0;
-            var keys = new List<string>();
-            foreach (var r in targets)
+            if (isPersonal)
             {
-                var bytes = EncodePng(RenderPersonalSchedule(_data, r.Recipient));
-                var uploaded = await lineService.UploadScheduleImageAsync(
-                    _data.LineWorkerUrl!, _data.LineWorkerApiKey!, bytes);
-                if (uploaded is null) continue;
-                keys.Add(uploaded.Value.Key);
-                if (await lineService.PushImageAsync(_data.LineChannelAccessToken!, r.Recipient.UserId, uploaded.Value.Url))
-                    ok++;
-            }
-            ScheduleImageCleanup(lineService, keys);
-        }
-        else if (isAllToOwner)
-        {
-            // 全體個人班表：以 _data.Rows（全體在職員工）逐一渲染個人班表圖片，推給每位業主
-            // 不受員工 LINE 綁定狀態影響 — 業主端等同於檢視全員班表卡；每位員工圖片只渲染/上傳一次，多位業主共用同一張
-            var allEmployees = _data.Rows
-                .Select(row => new ExportScheduleData.PushRecipient(
-                    UserId: string.Empty,
-                    DisplayName: row.Name,
-                    PictureUrl: null,
-                    IsOwner: false,
-                    ShiftIds: row.ShiftIds))
-                .ToList();
-            if (allEmployees.Count == 0)
-            {
-                snackbar.ShowWarning("本月沒有員工資料");
-                pushBtn.IsEnabled = true;
-                return;
-            }
-
-            var employeeImages = new List<string>(); // image URLs
-            var keys = new List<string>();
-            foreach (var emp in allEmployees)
-            {
-                var bytes = EncodePng(RenderPersonalSchedule(_data, emp));
-                var uploaded = await lineService.UploadScheduleImageAsync(
-                    _data.LineWorkerUrl!, _data.LineWorkerApiKey!, bytes);
-                if (uploaded is null) continue;
-                employeeImages.Add(uploaded.Value.Url);
-                keys.Add(uploaded.Value.Key);
-            }
-
-            ok = 0;
-            foreach (var owner in targets)
-            {
-                bool allOk = employeeImages.Count > 0;
-                foreach (var url in employeeImages)
+                // 個人班表：每位員工各渲染一張只含自己排班的圖片並推播（圖片訊息可轉傳，且欄寬依內容自動撐開不裁切）
+                ok = 0;
+                var keys = new List<string>();
+                for (int i = 0; i < targets.Count; i++)
                 {
-                    var success = await lineService.PushImageAsync(
-                        _data.LineChannelAccessToken!, owner.Recipient.UserId, url);
-                    if (!success) allOk = false;
+                    if (token.IsCancellationRequested) break;
+                    var r = targets[i];
+                    SetPushProgress("推播個人班表", i, targets.Count);
+                    var bytes = EncodePng(RenderPersonalSchedule(_data, r.Recipient));
+                    var uploaded = await lineService.UploadScheduleImageAsync(
+                        _data.LineWorkerUrl!, _data.LineWorkerApiKey!, bytes);
+                    if (uploaded is null) continue;
+                    keys.Add(uploaded.Value.Key);
+                    if (await lineService.PushImageAsync(_data.LineChannelAccessToken!, r.Recipient.UserId, uploaded.Value.Url))
+                        ok++;
                 }
-                if (allOk) ok++;
+                ScheduleImageCleanup(lineService, keys);
             }
-            ScheduleImageCleanup(lineService, keys);
+            else if (isAllToOwner)
+            {
+                // 全體個人班表：以 _data.Rows（全體在職員工）逐一渲染個人班表圖片，推給每位業主
+                // 不受員工 LINE 綁定狀態影響 — 業主端等同於檢視全員班表卡；每位員工圖片只渲染/上傳一次，多位業主共用同一張
+                var allEmployees = _data.Rows
+                    .Select(row => new ExportScheduleData.PushRecipient(
+                        UserId: string.Empty,
+                        DisplayName: row.Name,
+                        PictureUrl: null,
+                        IsOwner: false,
+                        ShiftIds: row.ShiftIds))
+                    .ToList();
+                if (allEmployees.Count == 0)
+                {
+                    snackbar.ShowWarning("本月沒有員工資料");
+                    return;
+                }
+
+                var employeeImages = new List<string>(); // image URLs
+                var keys = new List<string>();
+                for (int i = 0; i < allEmployees.Count; i++)
+                {
+                    if (token.IsCancellationRequested) break;
+                    SetPushProgress("渲染員工班表圖片", i, allEmployees.Count);
+                    var bytes = EncodePng(RenderPersonalSchedule(_data, allEmployees[i]));
+                    var uploaded = await lineService.UploadScheduleImageAsync(
+                        _data.LineWorkerUrl!, _data.LineWorkerApiKey!, bytes);
+                    if (uploaded is null) continue;
+                    employeeImages.Add(uploaded.Value.Url);
+                    keys.Add(uploaded.Value.Key);
+                }
+
+                ok = 0;
+                int pushTotal = targets.Count * Math.Max(employeeImages.Count, 1);
+                int pushDone  = 0;
+                foreach (var owner in targets)
+                {
+                    if (token.IsCancellationRequested) break;
+                    bool allOk = employeeImages.Count > 0;
+                    foreach (var url in employeeImages)
+                    {
+                        if (token.IsCancellationRequested) break;
+                        SetPushProgress("推播給業主", pushDone, pushTotal);
+                        var success = await lineService.PushImageAsync(
+                            _data.LineChannelAccessToken!, owner.Recipient.UserId, url);
+                        if (!success) allOk = false;
+                        pushDone++;
+                    }
+                    if (allOk) ok++;
+                }
+                ScheduleImageCleanup(lineService, keys);
+            }
+            else
+            {
+                // 完整班表：所有收件人收到相同班表圖片
+                if (_bitmap is null) return;
+                SetPushProgress("上傳班表圖片", 0, 0);
+                var uploaded = await lineService.UploadScheduleImageAsync(
+                    _data.LineWorkerUrl!, _data.LineWorkerApiKey!, EncodePng(_bitmap));
+                if (uploaded is null)
+                {
+                    snackbar.ShowError("圖片上傳失敗，請確認 Worker URL 與 API Key");
+                    return;
+                }
+                var (imageUrl, imageKey) = uploaded.Value;
+
+                ok = 0;
+                for (int i = 0; i < selected.Count; i++)
+                {
+                    if (token.IsCancellationRequested) break;
+                    SetPushProgress("推播給收件人", i, selected.Count);
+                    if (await lineService.PushImageAsync(_data.LineChannelAccessToken!, selected[i].Recipient.UserId, imageUrl))
+                        ok++;
+                }
+
+                ScheduleImageCleanup(lineService, new List<string> { imageKey });
+            }
+
+            if (token.IsCancellationRequested)
+                snackbar.ShowWarning($"已中止推播：成功送出 {ok} 位，其餘已取消未送出");
+            else if (ok == targets.Count)
+                snackbar.ShowSuccess($"已成功推播給 {ok} 位收件人");
+            else
+                snackbar.ShowWarning($"推播完成：{ok}/{targets.Count} 位成功，可再次推播");
+        }
+        finally
+        {
+            _isPushing = false;
+            _pushCts?.Dispose();
+            _pushCts = null;
+
+            // 不論成功與否都解鎖按鈕，避免使用者要再次推播時無法點擊
+            pushBtn.IsEnabled = true;
+            ToggleAllButton.IsEnabled = true;
+            HidePushProgress();
+        }
+    }
+
+    private void ShowPushProgress() => PushProgressPanel.Visibility = Visibility.Visible;
+
+    private void HidePushProgress() => PushProgressPanel.Visibility = Visibility.Collapsed;
+
+    /// <summary>更新推播進度條；total=0 時顯示不確定進度（例如單次圖片上傳，無法拆步驟）。</summary>
+    private void SetPushProgress(string phase, int done, int total)
+    {
+        if (total <= 0)
+        {
+            PushProgressBar.IsIndeterminate = true;
+            PushProgressText.Text = $"{phase}…";
         }
         else
         {
-            // 完整班表：所有收件人收到相同班表圖片
-            if (_bitmap is null) { pushBtn.IsEnabled = true; return; }
-            var uploaded = await lineService.UploadScheduleImageAsync(
-                _data.LineWorkerUrl!, _data.LineWorkerApiKey!, EncodePng(_bitmap));
-            if (uploaded is null)
-            {
-                snackbar.ShowError("圖片上傳失敗，請確認 Worker URL 與 API Key");
-                pushBtn.IsEnabled = true;
-                return;
-            }
-            var (imageUrl, imageKey) = uploaded.Value;
-
-            ok = (await Task.WhenAll(
-                selected.Select(r => lineService.PushImageAsync(
-                    _data.LineChannelAccessToken!, r.Recipient.UserId, imageUrl))))
-                .Count(r => r);
-
-            ScheduleImageCleanup(lineService, new List<string> { imageKey });
+            PushProgressBar.IsIndeterminate = false;
+            PushProgressBar.Maximum = total;
+            PushProgressBar.Value = done;
+            PushProgressText.Text = $"{phase}… {done}/{total}";
         }
-
-        if (ok == targets.Count)
-            snackbar.ShowSuccess($"已成功推播給 {ok} 位收件人");
-        else
-            snackbar.ShowWarning($"推播完成：{ok}/{targets.Count} 位成功，可再次推播");
-
-        // 不論成功與否都解鎖按鈕，避免使用者要再次推播時無法點擊
-        pushBtn.IsEnabled = true;
     }
 
     /// <summary>將 PNG 位元組上傳前的編碼，供班表圖片（完整版／個人版）共用</summary>

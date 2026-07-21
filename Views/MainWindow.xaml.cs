@@ -101,9 +101,31 @@ public partial class MainWindow : Window
             var dlResp = await http.SendAsync(dlReq, HttpCompletionOption.ResponseHeadersRead);
             dlResp.EnsureSuccessStatusCode();
 
-            var tempPath = Path.Combine(Path.GetTempPath(), assetName!);
-            await using (var fs = File.Create(tempPath))
-                await dlResp.Content.CopyToAsync(fs);
+            var totalBytes = dlResp.Content.Headers.ContentLength;
+            var tempPath   = Path.Combine(Path.GetTempPath(), assetName!);
+
+            // 安裝檔通常有數十 MB，CopyToAsync 之前完全沒有進度顯示，看起來像整個程式卡住；
+            // 改成逐塊複製並即時回報進度。
+            var progressWindow = new UpdateDownloadWindow { Owner = this };
+            progressWindow.Show();
+            try
+            {
+                await using var httpStream = await dlResp.Content.ReadAsStreamAsync();
+                await using var fs = File.Create(tempPath);
+                var buffer = new byte[81920];
+                long totalRead = 0;
+                int read;
+                while ((read = await httpStream.ReadAsync(buffer)) > 0)
+                {
+                    await fs.WriteAsync(buffer.AsMemory(0, read));
+                    totalRead += read;
+                    progressWindow.SetProgress(totalRead, totalBytes);
+                }
+            }
+            finally
+            {
+                progressWindow.Close();
+            }
 
             Process.Start(new ProcessStartInfo(tempPath) { UseShellExecute = true });
             Application.Current.Shutdown();

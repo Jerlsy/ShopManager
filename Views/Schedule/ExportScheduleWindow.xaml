@@ -96,7 +96,7 @@
 
                 <!-- 操作按鈕 -->
                 <StackPanel Grid.Row="3" Orientation="Horizontal">
-                    <Button Style="{StaticResource MaterialDesignFlatButton}"
+                    <Button x:Name="ToggleAllButton" Style="{StaticResource MaterialDesignFlatButton}"
                             Margin="0,0,8,0" Click="ToggleAll_Click">
                         <TextBlock Text="全選 / 取消"/>
                     </Button>
@@ -107,6 +107,16 @@
                             <TextBlock Text="確定推播"/>
                         </StackPanel>
                     </Button>
+
+                    <!-- 推播進度：渲染/上傳/送出 LINE 都需要時間，避免使用者以為卡住 -->
+                    <StackPanel x:Name="PushProgressPanel" Orientation="Horizontal"
+                                VerticalAlignment="Center" Margin="16,0,0,0" Visibility="Collapsed">
+                        <ProgressBar x:Name="PushProgressBar" Width="160" Height="6"
+                                     Minimum="0" Maximum="1" Value="0"/>
+                        <TextBlock x:Name="PushProgressText" Margin="10,0,0,0" FontSize="12"
+                                   Foreground="{DynamicResource AppSubtleTextBrush}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
                 </StackPanel>
             </Grid>
         </Border>
