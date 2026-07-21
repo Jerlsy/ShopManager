@@ -87,7 +87,7 @@ public partial class ExportScheduleWindow : Window
         }
 
         string confirmMsg =
-            isPersonal   ? $"確定要發送個人班表文字訊息給 {targets.Count} 位員工？"
+            isPersonal   ? $"確定要發送個人班表圖片給 {targets.Count} 位員工？"
           : isAllToOwner ? $"確定要將全體員工的個人班表彙整推播給 {targets.Count} 位業主？"
           :                $"確定要將本月完整班表圖片推播給 {selected.Count} 位收件人？";
         bool confirmed = await App.Services.GetRequiredService<IAppDialogService>()
@@ -102,19 +102,25 @@ public partial class ExportScheduleWindow : Window
 
         if (isPersonal)
         {
-            // 個人班表：每位員工收到 Flex Message 卡片
-            var altText = $"{_data.Year}年{_data.Month}月 個人班表";
-            var tasks = targets.Select(r =>
-                lineService.PushFlexMessageAsync(
-                    _data.LineChannelAccessToken!, r.Recipient.UserId,
-                    altText, BuildPersonalScheduleFlex(r.Recipient)));
-            ok = (await Task.WhenAll(tasks)).Count(r => r);
+            // 個人班表：每位員工各渲染一張只含自己排班的圖片並推播（圖片訊息可轉傳，且欄寬依內容自動撐開不裁切）
+            ok = 0;
+            var keys = new List<string>();
+            foreach (var r in targets)
+            {
+                var bytes = EncodePng(RenderPersonalSchedule(_data, r.Recipient));
+                var uploaded = await lineService.UploadScheduleImageAsync(
+                    _data.LineWorkerUrl!, _data.LineWorkerApiKey!, bytes);
+                if (uploaded is null) continue;
+                keys.Add(uploaded.Value.Key);
+                if (await lineService.PushImageAsync(_data.LineChannelAccessToken!, r.Recipient.UserId, uploaded.Value.Url))
+                    ok++;
+            }
+            ScheduleImageCleanup(lineService, keys);
         }
         else if (isAllToOwner)
         {
-            // 全體個人班表：直接以 _data.Rows（全體在職員工）建構個人班表 Flex，逐一推給業主
-            // 不受員工 LINE 綁定狀態影響 — 業主端等同於檢視全員班表卡
-            var altText = $"{_data.Year}年{_data.Month}月 全體個人班表";
+            // 全體個人班表：以 _data.Rows（全體在職員工）逐一渲染個人班表圖片，推給每位業主
+            // 不受員工 LINE 綁定狀態影響 — 業主端等同於檢視全員班表卡；每位員工圖片只渲染/上傳一次，多位業主共用同一張
             var allEmployees = _data.Rows
                 .Select(row => new ExportScheduleData.PushRecipient(
                     UserId: string.Empty,
@@ -130,31 +136,38 @@ public partial class ExportScheduleWindow : Window
                 return;
             }
 
+            var employeeImages = new List<string>(); // image URLs
+            var keys = new List<string>();
+            foreach (var emp in allEmployees)
+            {
+                var bytes = EncodePng(RenderPersonalSchedule(_data, emp));
+                var uploaded = await lineService.UploadScheduleImageAsync(
+                    _data.LineWorkerUrl!, _data.LineWorkerApiKey!, bytes);
+                if (uploaded is null) continue;
+                employeeImages.Add(uploaded.Value.Url);
+                keys.Add(uploaded.Value.Key);
+            }
+
             ok = 0;
             foreach (var owner in targets)
             {
-                bool allOk = true;
-                foreach (var emp in allEmployees)
+                bool allOk = employeeImages.Count > 0;
+                foreach (var url in employeeImages)
                 {
-                    var flex    = BuildPersonalScheduleFlex(emp);
-                    var success = await lineService.PushFlexMessageAsync(
-                        _data.LineChannelAccessToken!, owner.Recipient.UserId, altText, flex);
+                    var success = await lineService.PushImageAsync(
+                        _data.LineChannelAccessToken!, owner.Recipient.UserId, url);
                     if (!success) allOk = false;
                 }
                 if (allOk) ok++;
             }
+            ScheduleImageCleanup(lineService, keys);
         }
         else
         {
             // 完整班表：所有收件人收到相同班表圖片
             if (_bitmap is null) { pushBtn.IsEnabled = true; return; }
-            var encoder = new PngBitmapEncoder();
-            encoder.Frames.Add(BitmapFrame.Create(_bitmap));
-            using var ms = new MemoryStream();
-            encoder.Save(ms);
-
             var uploaded = await lineService.UploadScheduleImageAsync(
-                _data.LineWorkerUrl!, _data.LineWorkerApiKey!, ms.ToArray());
+                _data.LineWorkerUrl!, _data.LineWorkerApiKey!, EncodePng(_bitmap));
             if (uploaded is null)
             {
                 snackbar.ShowError("圖片上傳失敗，請確認 Worker URL 與 API Key");
@@ -168,8 +181,7 @@ public partial class ExportScheduleWindow : Window
                     _data.LineChannelAccessToken!, r.Recipient.UserId, imageUrl))))
                 .Count(r => r);
 
-            _ = Task.Delay(TimeSpan.FromMinutes(5)).ContinueWith(_ =>
-                lineService.DeleteScheduleImageAsync(_data.LineWorkerUrl!, _data.LineWorkerApiKey!, imageKey));
+            ScheduleImageCleanup(lineService, new List<string> { imageKey });
         }
 
         if (ok == targets.Count)
@@ -181,72 +193,132 @@ public partial class ExportScheduleWindow : Window
         pushBtn.IsEnabled = true;
     }
 
-    private object BuildPersonalScheduleFlex(ExportScheduleData.PushRecipient recipient)
+    /// <summary>將 PNG 位元組上傳前的編碼，供班表圖片（完整版／個人版）共用</summary>
+    private static byte[] EncodePng(BitmapSource bmp)
     {
-        var body = new List<object>
-        {
-            new
-            {
-                type   = "text",
-                text   = $"您好 {recipient.DisplayName}，以下是您本月的排班：",
-                size   = "sm",
-                color  = "#888888",
-                wrap   = true,
-            },
-            LineFlexHelpers.Separator(),
-        };
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(bmp));
+        using var ms = new MemoryStream();
+        encoder.Save(ms);
+        return ms.ToArray();
+    }
 
-        bool hasAny = false;
+    /// <summary>延遲清除已上傳的暫存班表圖片（best-effort，不等待結果）</summary>
+    private void ScheduleImageCleanup(LineService lineService, List<string> keys)
+    {
+        if (keys.Count == 0) return;
+        _ = Task.Delay(TimeSpan.FromMinutes(5)).ContinueWith(_ =>
+        {
+            foreach (var key in keys)
+                _ = lineService.DeleteScheduleImageAsync(_data.LineWorkerUrl!, _data.LineWorkerApiKey!, key);
+        });
+    }
+
+    /// <summary>
+    /// 個人班表圖片渲染：只列出該員工本月有排班的日子，逐列直排。
+    /// 欄寬依實際文字量測結果撐開（非固定比例），保證班別名稱／時間不被裁切；圖片訊息也可在 LINE 中轉傳。
+    /// </summary>
+    private static RenderTargetBitmap RenderPersonalSchedule(ExportScheduleData data, ExportScheduleData.PushRecipient recipient)
+    {
+        const double dpi   = 96;
+        const double scale = 1.5;
+        double S(double v) => v * scale;
+
+        var fontFamily   = new FontFamily("Microsoft JhengHei UI, Microsoft JhengHei, sans-serif");
+        var normalFace   = new Typeface(fontFamily, FontStyles.Normal, FontWeights.Normal,   FontStretches.Normal);
+        var boldFace     = new Typeface(fontFamily, FontStyles.Normal, FontWeights.Bold,     FontStretches.Normal);
+        var semiBoldFace = new Typeface(fontFamily, FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
+
+        var legendById = data.ShiftLegend.ToDictionary(l => l.Id);
+
+        var rows = new List<(ExportScheduleData.DayColumn Col, ExportScheduleData.ShiftLegendItem Leg)>();
         if (recipient.ShiftIds is not null)
         {
-            var legendById = _data.ShiftLegend.ToDictionary(l => l.Id);
-            for (int i = 0; i < recipient.ShiftIds.Count && i < _data.Columns.Count; i++)
+            for (int i = 0; i < recipient.ShiftIds.Count && i < data.Columns.Count; i++)
             {
-                var col     = _data.Columns[i];
                 var shiftId = recipient.ShiftIds[i];
                 if (!shiftId.HasValue) continue;
                 if (!legendById.TryGetValue(shiftId.Value, out var leg)) continue;
-                hasAny = true;
-
-                // 一列：日期(週幾) [色塊班別] 時間
-                // 日期與(週幾)合併為單一文字，避免兩欄之間留下過大空隙；
-                // 色塊 flex 加大、時間 flex 縮小，讓中間班別名稱可完整顯示。
-                body.Add(new
-                {
-                    type     = "box",
-                    layout   = "horizontal",
-                    spacing  = "sm",
-                    contents = new object[]
-                    {
-                        new { type = "text", text = $"{_data.Month:D2}/{col.Day:D2} ({col.DayOfWeekLabel})", flex = 4, size = "sm", color = "#222222", adjustMode = "shrink-to-fit" },
-                        new
-                        {
-                            type            = "box",
-                            layout          = "vertical",
-                            flex            = 3,
-                            justifyContent  = "center",
-                            backgroundColor = leg.ColorHex,
-                            cornerRadius    = "md",
-                            paddingTop      = "2px",
-                            paddingBottom   = "2px",
-                            paddingStart    = "4px",
-                            paddingEnd      = "4px",
-                            contents = new object[]
-                            {
-                                new { type = "text", text = leg.Alias, color = "#FFFFFF", weight = "bold", size = "xs", align = "center" },
-                            }
-                        },
-                        new { type = "text", text = leg.TimeRange, flex = 4, size = "sm", color = "#222222", align = "start", gravity = "center", adjustMode = "shrink-to-fit" },
-                    }
-                });
+                rows.Add((data.Columns[i], leg));
             }
         }
 
-        if (!hasAny)
-            body.Add(new { type = "text", text = "本月尚無排班紀錄", size = "sm", color = "#888888", align = "center", margin = "lg" });
+        double titleH = S(56);
+        double rowH   = S(40);
+        double padL   = S(16);
+        double padR   = S(16);
+        double gap    = S(10);
+        double badgePadH = S(10);
+        double dateSize = S(14), badgeSize = S(13), timeSize = S(14);
 
-        var header = LineFlexHelpers.Header(_data.ShopName, $"{_data.Year}年{_data.Month}月 個人班表");
-        return LineFlexHelpers.Bubble(header, body);
+        // 第一輪：量測各欄實際所需寬度，欄寬依內容分配，不用固定比例
+        double dateW = 0, badgeW = 0, timeW = 0;
+        foreach (var (col, leg) in rows)
+        {
+            var dateT  = Fmt($"{data.Month:D2}/{col.Day:D2} ({col.DayOfWeekLabel})", semiBoldFace, dateSize, Brushes.Black);
+            var badgeT = Fmt(leg.Alias, boldFace, badgeSize, Brushes.White);
+            var timeT  = Fmt(leg.TimeRange, normalFace, timeSize, Brushes.Black);
+            dateW  = Math.Max(dateW, dateT.Width);
+            badgeW = Math.Max(badgeW, badgeT.Width);
+            timeW  = Math.Max(timeW, timeT.Width);
+        }
+        double badgeBoxW = badgeW + badgePadH * 2;
+
+        double totalW = rows.Count == 0 ? S(300) : padL + dateW + gap + badgeBoxW + gap + timeW + padR;
+        double bodyH  = rows.Count == 0 ? S(70) : rows.Count * rowH;
+        double totalH = titleH + bodyH + 1;
+
+        var lineDivider = FreezePen(Color.FromRgb(0xE5, 0xE5, 0xE5), 0.5);
+
+        var visual = new DrawingVisual();
+        using (var dc = visual.RenderOpen())
+        {
+            dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, totalW, totalH));
+
+            dc.DrawRectangle(FreezeColor(Color.FromRgb(0x2A, 0x5C, 0x8A)), null, new Rect(0, 0, totalW, titleH));
+            var subT = Fmt($"{data.ShopName}　{data.Year}年{data.Month}月", normalFace, S(11), FreezeColor(Color.FromArgb(0xB0, 0xFF, 0xFF, 0xFF)));
+            dc.DrawText(subT, new Point(padL, S(10)));
+            var nameT = Fmt($"{recipient.DisplayName}　個人班表", boldFace, S(16), Brushes.White);
+            dc.DrawText(nameT, new Point(padL, S(27)));
+
+            if (rows.Count == 0)
+            {
+                var emptyT = Fmt("本月尚無排班紀錄", normalFace, S(13), FreezeColor(Color.FromRgb(0x88, 0x88, 0x88)));
+                dc.DrawText(emptyT, new Point((totalW - emptyT.Width) / 2, titleH + (bodyH - emptyT.Height) / 2));
+            }
+            else
+            {
+                for (int i = 0; i < rows.Count; i++)
+                {
+                    var (col, leg) = rows[i];
+                    double y = titleH + i * rowH;
+                    dc.DrawRectangle(i % 2 == 0 ? Brushes.White : (Brush)FreezeColor(Color.FromRgb(0xF6, 0xFA, 0xFD)),
+                        null, new Rect(0, y, totalW, rowH));
+
+                    double x = padL;
+                    var dateT = Fmt($"{data.Month:D2}/{col.Day:D2} ({col.DayOfWeekLabel})", semiBoldFace, dateSize, Brushes.Black);
+                    dc.DrawText(dateT, new Point(x, y + (rowH - dateT.Height) / 2));
+                    x += dateW + gap;
+
+                    var badgeBrush = new SolidColorBrush(ParseHex(leg.ColorHex)); badgeBrush.Freeze();
+                    double badgeBoxH = S(24);
+                    dc.DrawRoundedRectangle(badgeBrush, null,
+                        new Rect(x, y + (rowH - badgeBoxH) / 2, badgeBoxW, badgeBoxH), S(4), S(4));
+                    var badgeT = Fmt(leg.Alias, boldFace, badgeSize, Brushes.White);
+                    dc.DrawText(badgeT, new Point(x + (badgeBoxW - badgeT.Width) / 2, y + (rowH - badgeT.Height) / 2));
+                    x += badgeBoxW + gap;
+
+                    var timeT = Fmt(leg.TimeRange, normalFace, timeSize, FreezeColor(Color.FromRgb(0x33, 0x44, 0x55)));
+                    dc.DrawText(timeT, new Point(x, y + (rowH - timeT.Height) / 2));
+
+                    dc.DrawLine(lineDivider, new Point(0, y + rowH), new Point(totalW, y + rowH));
+                }
+            }
+        }
+
+        var rtb = new RenderTargetBitmap((int)totalW, (int)totalH, dpi, dpi, PixelFormats.Pbgra32);
+        rtb.Render(visual);
+        return rtb;
     }
 
     private void SaveImage_Click(object sender, RoutedEventArgs e)

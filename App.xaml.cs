@@ -235,15 +235,31 @@ public partial class App : Application
                 ("SalaryEmployeeRecords", "IsPaid",                  "INTEGER NOT NULL DEFAULT 0"),
                 ("SalaryEmployeeRecords", "PaidAt",                  "TEXT"),
             };
+            // 每個資料表只查一次現有欄位（PRAGMA table_info），只對真正缺少的欄位下 ALTER TABLE。
+            // 舊作法是每個候選欄位都直接 ALTER、失敗（欄位已存在）就吃例外——在全新安裝或已升級過的資料庫上，
+            // 這代表每次啟動都要拋近 35 次例外，例外的堆疊回溯成本遠高於查一次 PRAGMA。
+            var existingByTable = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var table in cols.Select(c => c.Item1).Distinct())
+            {
+                var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                using (var cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = $"PRAGMA table_info(\"{table}\")";
+                    using var reader = cmd.ExecuteReader();
+                    int nameOrdinal = reader.GetOrdinal("name");
+                    while (reader.Read())
+                        set.Add(reader.GetString(nameOrdinal));
+                }
+                existingByTable[table] = set;
+            }
+
             foreach (var (table, col, type) in cols)
             {
-                try
-                {
-                    using var cmd = conn.CreateCommand();
-                    cmd.CommandText = $"ALTER TABLE \"{table}\" ADD COLUMN \"{col}\" {type}";
-                    cmd.ExecuteNonQuery();
-                }
-                catch { /* 欄位已存在時 SQLite 拋出例外，忽略即可 */ }
+                if (existingByTable.TryGetValue(table, out var existing) && existing.Contains(col))
+                    continue;
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = $"ALTER TABLE \"{table}\" ADD COLUMN \"{col}\" {type}";
+                cmd.ExecuteNonQuery();
             }
         }
         finally { conn.Close(); }

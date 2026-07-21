@@ -37,6 +37,8 @@ public partial class LogoCropWindow : Window
         bi.BeginInit();
         bi.UriSource = new Uri(path, UriKind.Absolute);
         bi.CacheOption = BitmapCacheOption.OnLoad;
+        // 手機照片常見 12MP+，裁切輸出只有 240px，解碼寬度上限 2000 已遠超所需畫質，避免 UI 執行緒卡在全解析度解碼
+        bi.DecodePixelWidth = 2000;
         bi.EndInit();
         _source = bi;
 
