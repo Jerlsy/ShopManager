@@ -14,7 +14,9 @@ namespace ShopManager.Views.Schedule;
 public partial class ExportScheduleWindow : Window
 {
     private readonly ExportScheduleData _data;
-    private RenderTargetBitmap? _bitmap;
+    // 全體班表拆上半月／下半月兩張圖（A4 橫式）
+    private RenderTargetBitmap? _bitmapTop;
+    private RenderTargetBitmap? _bitmapBottom;
     private readonly List<PushRecipientItem> _recipients = new();
 
     // 推播進行中若使用者關閉視窗：攔截關閉動作、詢問是否中止，避免使用者以為關閉=取消，
@@ -29,8 +31,11 @@ public partial class ExportScheduleWindow : Window
         Title = $"{data.Year} 年 {data.Month:D2} 月  班表匯出";
         Loaded += (_, _) =>
         {
-            _bitmap = RenderSchedule(data);
-            PreviewImage.Source = _bitmap;
+            int split = HalfSplitIndex(data.DaysInMonth);
+            _bitmapTop    = RenderScheduleRange(data, 0, split, "上半月");
+            _bitmapBottom = RenderScheduleRange(data, split, data.DaysInMonth, "下半月");
+            PreviewTopImage.Source    = _bitmapTop;
+            PreviewBottomImage.Source = _bitmapBottom;
             SetupLinePushPanel(data);
         };
         Closing += Window_Closing;
@@ -67,19 +72,6 @@ public partial class ExportScheduleWindow : Window
         LinePushPanel.Visibility = Visibility.Visible;
     }
 
-    private void RadioFullSchedule_Checked(object sender, RoutedEventArgs e)        => SetRecipientFilter(owner: true,  employee: true);
-    private void RadioPersonalOnly_Checked(object sender, RoutedEventArgs e)        => SetRecipientFilter(owner: false, employee: true);
-    private void RadioAllPersonalToOwner_Checked(object sender, RoutedEventArgs e)  => SetRecipientFilter(owner: true,  employee: false);
-
-    private void SetRecipientFilter(bool owner, bool employee)
-    {
-        foreach (var r in _recipients)
-            r.IsEnabled = r.Recipient.IsOwner ? owner : employee;
-        if (RecipientList is null) return; // InitializeComponent 期間 Checked 事件提前觸發
-        RecipientList.ItemsSource = null;
-        RecipientList.ItemsSource = _recipients;
-    }
-
     private void ToggleAll_Click(object sender, RoutedEventArgs e)
     {
         bool allSelected = _recipients.Where(r => r.IsEnabled).All(r => r.IsSelected);
@@ -91,27 +83,19 @@ public partial class ExportScheduleWindow : Window
 
     private async void PushLine_Click(object sender, RoutedEventArgs e)
     {
-        bool isPersonal    = RadioPersonalOnly.IsChecked == true;
-        bool isAllToOwner  = RadioAllPersonalToOwner.IsChecked == true;
-        var selected       = _recipients.Where(r => r.IsSelected && r.IsEnabled).ToList();
-        var targets        = isPersonal     ? selected.Where(r => !r.Recipient.IsOwner).ToList()
-                           : isAllToOwner   ? selected.Where(r =>  r.Recipient.IsOwner).ToList()
-                           : selected;
+        bool isPersonal = RadioPersonalOnly.IsChecked == true;
+        var selected    = _recipients.Where(r => r.IsSelected && r.IsEnabled).ToList();
 
         var snackbar = App.Services.GetRequiredService<IAppSnackbarService>();
-        if (targets.Count == 0)
+        if (selected.Count == 0)
         {
-            snackbar.ShowWarning(
-                isPersonal   ? "個人班表模式下須勾選至少一位員工（業主帳號不適用）"
-              : isAllToOwner ? "全體個人班表模式下須勾選至少一位業主帳號"
-              :                "請先勾選至少一位收件人");
+            snackbar.ShowWarning("請先勾選至少一位收件人");
             return;
         }
 
-        string confirmMsg =
-            isPersonal   ? $"確定要發送個人班表圖片給 {targets.Count} 位員工？"
-          : isAllToOwner ? $"確定要將全體員工的個人班表彙整推播給 {targets.Count} 位業主？"
-          :                $"確定要將本月完整班表圖片推播給 {selected.Count} 位收件人？";
+        string confirmMsg = isPersonal
+            ? $"確定要推播個人班表給 {selected.Count} 位收件人？（業主會收到全部員工的個人班表，員工只收到自己的）"
+            : $"確定要將本月完整班表圖片推播給 {selected.Count} 位收件人？";
         bool confirmed = await App.Services.GetRequiredService<IAppDialogService>()
             .ShowConfirmAsync("確定推播", confirmMsg, "確定推播", "取消");
         if (!confirmed) return;
@@ -126,114 +110,119 @@ public partial class ExportScheduleWindow : Window
         var token  = _pushCts.Token;
 
         var lineService = App.Services.GetRequiredService<LineService>();
-        int ok;
+        int ok = 0;
 
         try
         {
             if (isPersonal)
             {
-                // 個人班表：每位員工各渲染一張只含自己排班的圖片並推播（圖片訊息可轉傳，且欄寬依內容自動撐開不裁切）
-                ok = 0;
+                // 個人班表：
+                //   業主 → 無條件收到「全體員工」的個人班表（不受員工 LINE 綁定狀態影響）
+                //   員工 → 只收到自己的個人班表
+                // 圖片訊息可在 LINE 轉傳，且欄寬依內容自動撐開不裁切。
                 var keys = new List<string>();
-                for (int i = 0; i < targets.Count; i++)
-                {
-                    if (token.IsCancellationRequested) break;
-                    var r = targets[i];
-                    SetPushProgress("推播個人班表", i, targets.Count);
-                    var bytes = EncodePng(RenderPersonalSchedule(_data, r.Recipient));
-                    var uploaded = await lineService.UploadScheduleImageAsync(
-                        _data.LineWorkerUrl!, _data.LineWorkerApiKey!, bytes);
-                    if (uploaded is null) continue;
-                    keys.Add(uploaded.Value.Key);
-                    if (await lineService.PushImageAsync(_data.LineChannelAccessToken!, r.Recipient.UserId, uploaded.Value.Url))
-                        ok++;
-                }
-                ScheduleImageCleanup(lineService, keys);
-            }
-            else if (isAllToOwner)
-            {
-                // 全體個人班表：以 _data.Rows（全體在職員工）逐一渲染個人班表圖片，推給每位業主
-                // 不受員工 LINE 綁定狀態影響 — 業主端等同於檢視全員班表卡；每位員工圖片只渲染/上傳一次，多位業主共用同一張
-                var allEmployees = _data.Rows
-                    .Select(row => new ExportScheduleData.PushRecipient(
-                        UserId: string.Empty,
-                        DisplayName: row.Name,
-                        PictureUrl: null,
-                        IsOwner: false,
-                        ShiftIds: row.ShiftIds))
-                    .ToList();
-                if (allEmployees.Count == 0)
-                {
-                    snackbar.ShowWarning("本月沒有員工資料");
-                    return;
-                }
 
-                var employeeImages = new List<string>(); // image URLs
-                var keys = new List<string>();
-                for (int i = 0; i < allEmployees.Count; i++)
+                // 只要有業主收件人，先把全體員工（_data.Rows）的個人班表各渲染／上傳一次，多位業主共用同一批 URL
+                List<string>? allEmployeeUrls = null;
+                if (selected.Any(r => r.Recipient.IsOwner))
                 {
-                    if (token.IsCancellationRequested) break;
-                    SetPushProgress("渲染員工班表圖片", i, allEmployees.Count);
-                    var bytes = EncodePng(RenderPersonalSchedule(_data, allEmployees[i]));
-                    var uploaded = await lineService.UploadScheduleImageAsync(
-                        _data.LineWorkerUrl!, _data.LineWorkerApiKey!, bytes);
-                    if (uploaded is null) continue;
-                    employeeImages.Add(uploaded.Value.Url);
-                    keys.Add(uploaded.Value.Key);
-                }
-
-                ok = 0;
-                int pushTotal = targets.Count * Math.Max(employeeImages.Count, 1);
-                int pushDone  = 0;
-                foreach (var owner in targets)
-                {
-                    if (token.IsCancellationRequested) break;
-                    bool allOk = employeeImages.Count > 0;
-                    foreach (var url in employeeImages)
+                    allEmployeeUrls = new List<string>();
+                    for (int i = 0; i < _data.Rows.Count; i++)
                     {
                         if (token.IsCancellationRequested) break;
-                        SetPushProgress("推播給業主", pushDone, pushTotal);
-                        var success = await lineService.PushImageAsync(
-                            _data.LineChannelAccessToken!, owner.Recipient.UserId, url);
-                        if (!success) allOk = false;
-                        pushDone++;
+                        SetPushProgress("渲染員工班表圖片", i, _data.Rows.Count);
+                        var row = _data.Rows[i];
+                        var rec = new ExportScheduleData.PushRecipient(
+                            UserId: string.Empty, DisplayName: row.Name, PictureUrl: null,
+                            IsOwner: false, ShiftIds: row.ShiftIds);
+                        var uploaded = await lineService.UploadScheduleImageAsync(
+                            _data.LineWorkerUrl!, _data.LineWorkerApiKey!,
+                            EncodePng(RenderPersonalSchedule(_data, rec)));
+                        if (uploaded is null) continue;
+                        allEmployeeUrls.Add(uploaded.Value.Url);
+                        keys.Add(uploaded.Value.Key);
                     }
-                    if (allOk) ok++;
                 }
+
+                int done = 0;
+                foreach (var t in selected)
+                {
+                    if (token.IsCancellationRequested) break;
+
+                    if (t.Recipient.IsOwner)
+                    {
+                        // 業主：把全體員工的個人班表逐張推給他
+                        bool allOk = allEmployeeUrls is { Count: > 0 };
+                        if (allEmployeeUrls is not null)
+                        {
+                            foreach (var url in allEmployeeUrls)
+                            {
+                                if (token.IsCancellationRequested) break;
+                                SetPushProgress("推播給業主", done, selected.Count);
+                                if (!await lineService.PushImageAsync(
+                                        _data.LineChannelAccessToken!, t.Recipient.UserId, url))
+                                    allOk = false;
+                            }
+                        }
+                        if (allOk) ok++;
+                    }
+                    else
+                    {
+                        // 員工：只推自己的個人班表
+                        SetPushProgress("推播個人班表", done, selected.Count);
+                        var uploaded = await lineService.UploadScheduleImageAsync(
+                            _data.LineWorkerUrl!, _data.LineWorkerApiKey!,
+                            EncodePng(RenderPersonalSchedule(_data, t.Recipient)));
+                        if (uploaded is not null)
+                        {
+                            keys.Add(uploaded.Value.Key);
+                            if (await lineService.PushImageAsync(
+                                    _data.LineChannelAccessToken!, t.Recipient.UserId, uploaded.Value.Url))
+                                ok++;
+                        }
+                    }
+                    done++;
+                }
+
                 ScheduleImageCleanup(lineService, keys);
             }
             else
             {
-                // 完整班表：所有收件人收到相同班表圖片
-                if (_bitmap is null) return;
-                SetPushProgress("上傳班表圖片", 0, 0);
-                var uploaded = await lineService.UploadScheduleImageAsync(
-                    _data.LineWorkerUrl!, _data.LineWorkerApiKey!, EncodePng(_bitmap));
-                if (uploaded is null)
+                // 完整班表：所有收件人收到相同的上半月＋下半月兩張圖片
+                if (_bitmapTop is null || _bitmapBottom is null) return;
+
+                SetPushProgress("上傳班表圖片（上半月）", 0, 0);
+                var upTop = await lineService.UploadScheduleImageAsync(
+                    _data.LineWorkerUrl!, _data.LineWorkerApiKey!, EncodePng(_bitmapTop));
+                SetPushProgress("上傳班表圖片（下半月）", 0, 0);
+                var upBottom = await lineService.UploadScheduleImageAsync(
+                    _data.LineWorkerUrl!, _data.LineWorkerApiKey!, EncodePng(_bitmapBottom));
+                if (upTop is null || upBottom is null)
                 {
                     snackbar.ShowError("圖片上傳失敗，請確認 Worker URL 與 API Key");
                     return;
                 }
-                var (imageUrl, imageKey) = uploaded.Value;
 
-                ok = 0;
                 for (int i = 0; i < selected.Count; i++)
                 {
                     if (token.IsCancellationRequested) break;
                     SetPushProgress("推播給收件人", i, selected.Count);
-                    if (await lineService.PushImageAsync(_data.LineChannelAccessToken!, selected[i].Recipient.UserId, imageUrl))
-                        ok++;
+                    var uid = selected[i].Recipient.UserId;
+                    // 兩張皆送達才算成功；上半月先送、下半月後送，收件人依序看到
+                    bool a = await lineService.PushImageAsync(_data.LineChannelAccessToken!, uid, upTop.Value.Url);
+                    bool b = await lineService.PushImageAsync(_data.LineChannelAccessToken!, uid, upBottom.Value.Url);
+                    if (a && b) ok++;
                 }
 
-                ScheduleImageCleanup(lineService, new List<string> { imageKey });
+                ScheduleImageCleanup(lineService, new List<string> { upTop.Value.Key, upBottom.Value.Key });
             }
 
             if (token.IsCancellationRequested)
                 snackbar.ShowWarning($"已中止推播：成功送出 {ok} 位，其餘已取消未送出");
-            else if (ok == targets.Count)
+            else if (ok == selected.Count)
                 snackbar.ShowSuccess($"已成功推播給 {ok} 位收件人");
             else
-                snackbar.ShowWarning($"推播完成：{ok}/{targets.Count} 位成功，可再次推播");
+                snackbar.ShowWarning($"推播完成：{ok}/{selected.Count} 位成功，可再次推播");
         }
         finally
         {
@@ -399,7 +388,8 @@ public partial class ExportScheduleWindow : Window
 
     private void SaveImage_Click(object sender, RoutedEventArgs e)
     {
-        if (_bitmap is null) return;
+        if (_bitmapTop is null || _bitmapBottom is null) return;
+        // 使用者選一個基準檔名，實際輸出兩個檔：_上半月 / _下半月
         var dlg = new SaveFileDialog
         {
             Filter = "PNG 圖片|*.png",
@@ -407,16 +397,49 @@ public partial class ExportScheduleWindow : Window
             DefaultExt = "png"
         };
         if (dlg.ShowDialog() != true) return;
+
+        var dir  = Path.GetDirectoryName(dlg.FileName) ?? "";
+        var name = Path.GetFileNameWithoutExtension(dlg.FileName);
+        SavePng(_bitmapTop,    Path.Combine(dir, $"{name}_上半月.png"));
+        SavePng(_bitmapBottom, Path.Combine(dir, $"{name}_下半月.png"));
+
+        App.Services.GetRequiredService<IAppSnackbarService>()
+            .ShowSuccess($"已儲存兩張圖片：{name}_上半月.png、{name}_下半月.png");
+    }
+
+    private static void SavePng(BitmapSource bmp, string path)
+    {
         var encoder = new PngBitmapEncoder();
-        encoder.Frames.Add(BitmapFrame.Create(_bitmap));
-        using var fs = File.OpenWrite(dlg.FileName);
+        encoder.Frames.Add(BitmapFrame.Create(bmp));
+        using var fs = File.OpenWrite(path);
         encoder.Save(fs);
     }
 
     private void CopyToClipboard_Click(object sender, RoutedEventArgs e)
     {
-        if (_bitmap is null) return;
-        Clipboard.SetImage(_bitmap);
+        if (_bitmapTop is null || _bitmapBottom is null) return;
+        // 剪貼簿一次只能放一張，將上下半月直向合併成一張供複製
+        Clipboard.SetImage(StitchVertical(_bitmapTop, _bitmapBottom));
+    }
+
+    /// <summary>將兩張圖直向合併為一張（置中對齊、白底），供複製到剪貼簿使用。</summary>
+    private static RenderTargetBitmap StitchVertical(BitmapSource top, BitmapSource bottom)
+    {
+        const double dpi = 96;
+        const double gap = 16;
+        double w = Math.Max(top.Width, bottom.Width);
+        double h = top.Height + gap + bottom.Height;
+
+        var visual = new DrawingVisual();
+        using (var dc = visual.RenderOpen())
+        {
+            dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, w, h));
+            dc.DrawImage(top,    new Rect((w - top.Width) / 2, 0, top.Width, top.Height));
+            dc.DrawImage(bottom, new Rect((w - bottom.Width) / 2, top.Height + gap, bottom.Width, bottom.Height));
+        }
+        var rtb = new RenderTargetBitmap((int)w, (int)h, dpi, dpi, PixelFormats.Pbgra32);
+        rtb.Render(visual);
+        return rtb;
     }
 
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
@@ -446,109 +469,118 @@ public partial class ExportScheduleWindow : Window
         public SolidColorBrush CircleBrush => Recipient.IsOwner ? OwnerBrush : EmployeeBrush;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // 班表圖片渲染
-    // 所有座標與字體直接以 1.5× 繪製，DrawingVisual 不做事後縮放，
-    // 保證文字由 WPF 字型引擎在目標解析度下原生渲染，無鋸齒。
-    // ─────────────────────────────────────────────────────────────────────────
-    internal static RenderTargetBitmap RenderSchedule(ExportScheduleData data)
-    {
-        const double dpi   = 96;
-        const double scale = 1.5;
+    /// <summary>本月拆上／下半月的分界欄索引（上半月＝索引 [0, split)，下半月＝[split, 月天數)）。</summary>
+    private static int HalfSplitIndex(int daysInMonth) => (daysInMonth + 1) / 2;
 
-        // ── 版面常數（邏輯尺寸 × scale，直接繪製到目標像素）──────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    // 班表圖片渲染（指定日期區段，供上半月／下半月各出一張 A4 橫式圖）
+    //   ‧ 版面以「單位尺寸」定義，最後依 A4 橫式畫布(1754×1240 @150dpi)反推等比 scale，
+    //     整體放大→字體由 WPF 字型引擎在目標解析度原生渲染，絕不裁切。
+    //   ‧ 表格頭尾各有一排欄標題（日期／星期），每張左側皆保留員工姓名欄。
+    // ─────────────────────────────────────────────────────────────────────────
+    internal static RenderTargetBitmap RenderScheduleRange(
+        ExportScheduleData data, int startIndex, int endIndexExclusive, string rangeLabel)
+    {
+        const double dpi = 96;
+        int numDays = Math.Max(0, Math.Min(endIndexExclusive, data.Columns.Count) - startIndex);
+
+        // ── 單位版面常數（scale=1）──────────────────────────────────────────
+        const double nameW_u = 90, cellW_u = 44, titleH_u = 44, colH_u = 46, rowH_u = 34;
+        const double legTopGap_u = 20, legPadV_u = 12, legTitleRowH_u = 22, legTitleGap_u = 6,
+                     legItemH_u = 28, legItemW_u = 180;
+
+        int legendCount  = data.ShiftLegend.Count;
+        double tableW_u  = nameW_u + numDays * cellW_u;
+        int itemsPerRow  = legendCount == 0 ? 1 : Math.Max(1, (int)((tableW_u - 24) / legItemW_u));
+        int itemRowCount = legendCount == 0 ? 0 : (legendCount + itemsPerRow - 1) / itemsPerRow;
+        double legBoxH_u = legendCount > 0
+            ? legPadV_u + legTitleRowH_u + legTitleGap_u + itemRowCount * legItemH_u + legPadV_u : 0;
+        double legAreaH_u = legendCount > 0 ? legTopGap_u + legBoxH_u : 0;
+        // 表格含上下兩排欄標題（頭尾都有日期）
+        double tableH_u   = colH_u + data.Rows.Count * rowH_u + colH_u;
+        double totalW_u   = tableW_u;
+        double totalH_u   = titleH_u + tableH_u + legAreaH_u + 1;
+
+        // A4 橫式 @150dpi ≈ 1754×1240，取等比縮放塞入畫布（不強制填滿高，避免變形），並夾在合理清晰度區間
+        const double targetW = 1754, targetH = 1240, minScale = 1.3, maxScale = 2.6;
+        double scale = Math.Clamp(Math.Min(targetW / totalW_u, targetH / totalH_u), minScale, maxScale);
         double S(double v) => v * scale;
 
-        double nameW        = S(90);   // 員工姓名欄寬
-        double cellW        = S(44);   // 日期格寬
-        double titleH       = S(44);   // 標題列高
-        double colH         = S(46);   // 欄標題高
-        double rowH         = S(34);   // 資料列高
-        double legTopGap    = S(20);   // 表格底部到圖例框的白色間距
-        double legPadV      = S(12);   // 圖例框上下 padding
-        double legTitleRowH = S(22);   // 圖例框內「班別說明」標題列高
-        double legTitleGap  = S(6);    // 標題列下到第一條圖例的間距
-        double legItemH     = S(28);   // 每條圖例高
-        double legItemW     = S(180);  // 每條圖例欄寬（橫排用）
-        double legSwatchSz  = S(14);   // 色塊大小
+        // ── 縮放後的實際尺寸 ────────────────────────────────────────────────
+        double nameW = S(nameW_u), cellW = S(cellW_u), titleH = S(titleH_u), colH = S(colH_u), rowH = S(rowH_u);
+        double legTopGap = S(legTopGap_u), legPadV = S(legPadV_u), legTitleRowH = S(legTitleRowH_u),
+               legTitleGap = S(legTitleGap_u), legItemH = S(legItemH_u), legItemW = S(legItemW_u), legSwatchSz = S(14);
+        double tableW  = nameW + numDays * cellW;
+        double tableH  = colH + data.Rows.Count * rowH + colH;
+        double legBoxH = legendCount > 0 ? legPadV + legTitleRowH + legTitleGap + itemRowCount * legItemH + legPadV : 0;
+        double legAreaH = legendCount > 0 ? legTopGap + legBoxH : 0;
+        double totalW  = tableW;
+        double totalH  = titleH + tableH + legAreaH + 1;
 
-        // 字體 typeface
+        // ── 字體 typeface ───────────────────────────────────────────────────
         var fontFamily  = new FontFamily("Microsoft JhengHei UI, Microsoft JhengHei, sans-serif");
         var normalFace  = new Typeface(fontFamily, FontStyles.Normal, FontWeights.Normal,   FontStretches.Normal);
         var boldFace    = new Typeface(fontFamily, FontStyles.Normal, FontWeights.Bold,     FontStretches.Normal);
         var semiBoldFace= new Typeface(fontFamily, FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
 
-        // 班別顏色快取
-        var colorMap = data.ShiftLegend.ToDictionary(l => l.Id, l => ParseHex(l.ColorHex));
+        var colorMap   = data.ShiftLegend.ToDictionary(l => l.Id, l => ParseHex(l.ColorHex));
         var legendById = data.ShiftLegend.ToDictionary(l => l.Id);
 
-        double tableW = nameW + data.DaysInMonth * cellW;
-        double tableH = colH + data.Rows.Count * rowH;
-
-        // 圖例區：計算橫排後需幾列
-        int itemsPerRow  = data.ShiftLegend.Count == 0 ? 1
-            : Math.Max(1, (int)((tableW - S(24)) / legItemW));
-        int itemRowCount = data.ShiftLegend.Count == 0 ? 0
-            : (data.ShiftLegend.Count + itemsPerRow - 1) / itemsPerRow;
-        double legBoxH = data.ShiftLegend.Count > 0
-            ? legPadV + legTitleRowH + legTitleGap + itemRowCount * legItemH + legPadV
-            : 0;
-        double legAreaH = data.ShiftLegend.Count > 0 ? legTopGap + legBoxH : 0;
-
-        double totalW = tableW;
-        double totalH = titleH + tableH + legAreaH + 1;
-
-        var pen05    = FreezePen(Color.FromRgb(0xCC, 0xCC, 0xCC), 0.5);
-        var pen10    = FreezePen(Color.FromRgb(0x99, 0xAA, 0xBB), 1.0);
-        var outerPen = FreezePen(Color.FromRgb(0x88, 0x99, 0xAA), 1.5);
+        var pen05       = FreezePen(Color.FromRgb(0xCC, 0xCC, 0xCC), 0.5);
+        var pen10       = FreezePen(Color.FromRgb(0x99, 0xAA, 0xBB), 1.0);
+        var outerPen    = FreezePen(Color.FromRgb(0x88, 0x99, 0xAA), 1.5);
+        var colHeaderBg = FreezeColor(Color.FromRgb(0xE3, 0xEE, 0xF7));
+        var nameHdrFg   = FreezeColor(Color.FromRgb(0x44, 0x66, 0x88));
 
         var visual = new DrawingVisual();
         using (var dc = visual.RenderOpen())
         {
             dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, totalW, totalH));
 
+            // ── 欄標題列（頭尾共用）──────────────────────────────────────────
+            void DrawColumnHeader(double headerY)
+            {
+                dc.DrawRectangle(colHeaderBg, null, new Rect(0, headerY, totalW, colH));
+                dc.DrawRectangle(null, pen10, new Rect(0, headerY, nameW, colH));
+                var nameHdrT = Fmt("員工", semiBoldFace, S(12), nameHdrFg);
+                dc.DrawText(nameHdrT, new Point((nameW - nameHdrT.Width) / 2, headerY + (colH - nameHdrT.Height) / 2));
+
+                for (int i = startIndex; i < endIndexExclusive && i < data.Columns.Count; i++)
+                {
+                    var col = data.Columns[i];
+                    double x = nameW + (i - startIndex) * cellW;
+
+                    Brush colCellBg; Brush dowFg;
+                    if (col.IsClosed)
+                    { colCellBg = FreezeColor(Color.FromRgb(0xD5, 0xD5, 0xD5)); dowFg = Brushes.Gray; }
+                    else if (col.DayOfWeekLabel == "日")
+                    { colCellBg = FreezeColor(Color.FromRgb(0xFF, 0xE3, 0xE3)); dowFg = Brushes.Crimson; }
+                    else if (col.DayOfWeekLabel == "六")
+                    { colCellBg = FreezeColor(Color.FromRgb(0xE3, 0xEE, 0xFF)); dowFg = Brushes.RoyalBlue; }
+                    else
+                    { colCellBg = colHeaderBg; dowFg = FreezeColor(Color.FromRgb(0x44, 0x55, 0x66)); }
+
+                    dc.DrawRectangle(colCellBg, null, new Rect(x, headerY, cellW, colH));
+                    dc.DrawRectangle(null, pen05, new Rect(x, headerY, cellW, colH));
+
+                    var dayT = Fmt(col.Day.ToString(), boldFace, S(14), Brushes.Black);
+                    dc.DrawText(dayT, new Point(x + (cellW - dayT.Width) / 2, headerY + S(4)));
+
+                    var dowT = Fmt(col.DayOfWeekLabel, normalFace, S(11), dowFg);
+                    dc.DrawText(dowT, new Point(x + (cellW - dowT.Width) / 2,
+                        headerY + colH - dowT.Height - S(5)));
+                }
+            }
+
             // ── 標題列 ──────────────────────────────────────────────────────
             dc.DrawRectangle(FreezeColor(Color.FromRgb(0x2A, 0x5C, 0x8A)), null,
                 new Rect(0, 0, totalW, titleH));
-            var titleT = Fmt($"{data.ShopName}　{data.Year} 年 {data.Month} 月　班表",
+            var titleT = Fmt($"{data.ShopName}　{data.Year} 年 {data.Month} 月　班表（{rangeLabel}）",
                 boldFace, S(15), Brushes.White);
             dc.DrawText(titleT, new Point(S(14), (titleH - titleT.Height) / 2));
 
-            // ── 欄標題列 ─────────────────────────────────────────────────────
-            double colY        = titleH;
-            var    colHeaderBg = FreezeColor(Color.FromRgb(0xE3, 0xEE, 0xF7));
-            dc.DrawRectangle(colHeaderBg, null, new Rect(0, colY, totalW, colH));
-
-            dc.DrawRectangle(null, pen10, new Rect(0, colY, nameW, colH));
-            var nameHdrT = Fmt("員工", semiBoldFace, S(12), FreezeColor(Color.FromRgb(0x44, 0x66, 0x88)));
-            dc.DrawText(nameHdrT, new Point((nameW - nameHdrT.Width) / 2,
-                colY + (colH - nameHdrT.Height) / 2));
-
-            for (int i = 0; i < data.Columns.Count; i++)
-            {
-                var col = data.Columns[i];
-                double x = nameW + i * cellW;
-
-                Brush colCellBg; Brush dowFg;
-                if (col.IsClosed)
-                { colCellBg = FreezeColor(Color.FromRgb(0xD5, 0xD5, 0xD5)); dowFg = Brushes.Gray; }
-                else if (col.DayOfWeekLabel == "日")
-                { colCellBg = FreezeColor(Color.FromRgb(0xFF, 0xE3, 0xE3)); dowFg = Brushes.Crimson; }
-                else if (col.DayOfWeekLabel == "六")
-                { colCellBg = FreezeColor(Color.FromRgb(0xE3, 0xEE, 0xFF)); dowFg = Brushes.RoyalBlue; }
-                else
-                { colCellBg = colHeaderBg; dowFg = FreezeColor(Color.FromRgb(0x44, 0x55, 0x66)); }
-
-                dc.DrawRectangle(colCellBg, null, new Rect(x, colY, cellW, colH));
-                dc.DrawRectangle(null, pen05, new Rect(x, colY, cellW, colH));
-
-                var dayT = Fmt(col.Day.ToString(), boldFace, S(14), Brushes.Black);
-                dc.DrawText(dayT, new Point(x + (cellW - dayT.Width) / 2, colY + S(4)));
-
-                var dowT = Fmt(col.DayOfWeekLabel, normalFace, S(11), dowFg);
-                dc.DrawText(dowT, new Point(x + (cellW - dowT.Width) / 2,
-                    colY + colH - dowT.Height - S(5)));
-            }
+            // ── 上方欄標題列 ─────────────────────────────────────────────────
+            DrawColumnHeader(titleH);
 
             // ── 資料列 ───────────────────────────────────────────────────────
             for (int r = 0; r < data.Rows.Count; r++)
@@ -564,11 +596,11 @@ public partial class ExportScheduleWindow : Window
                 var nameT = Fmt(row.Name, semiBoldFace, S(13), Brushes.Black);
                 dc.DrawText(nameT, new Point(S(8), y + (rowH - nameT.Height) / 2));
 
-                for (int c = 0; c < row.ShiftIds.Count && c < data.Columns.Count; c++)
+                for (int i = startIndex; i < endIndexExclusive && i < data.Columns.Count && i < row.ShiftIds.Count; i++)
                 {
-                    var col     = data.Columns[c];
-                    var shiftId = row.ShiftIds[c];
-                    double x    = nameW + c * cellW;
+                    var col     = data.Columns[i];
+                    var shiftId = row.ShiftIds[i];
+                    double x    = nameW + (i - startIndex) * cellW;
 
                     if (col.IsClosed)
                     {
@@ -611,12 +643,14 @@ public partial class ExportScheduleWindow : Window
                 }
             }
 
+            // ── 下方欄標題列（頭尾都有日期）──────────────────────────────────
+            DrawColumnHeader(titleH + colH + data.Rows.Count * rowH);
+
             dc.DrawRectangle(null, outerPen, new Rect(0, titleH, totalW, tableH));
 
             // ── 圖例區 ───────────────────────────────────────────────────────
-            if (data.ShiftLegend.Count > 0)
+            if (legendCount > 0)
             {
-                // legTopGap 是白色留白，不需繪製背景（已是白底）
                 double legBoxY = titleH + tableH + legTopGap;
 
                 dc.DrawRectangle(FreezeColor(Color.FromRgb(0xF1, 0xF6, 0xFB)), null,
@@ -624,13 +658,11 @@ public partial class ExportScheduleWindow : Window
                 dc.DrawRectangle(null, FreezePen(Color.FromRgb(0xBB, 0xCC, 0xDD), 1.0),
                     new Rect(0, legBoxY, totalW, legBoxH));
 
-                // 「班別說明」標題
                 var legHdrT = Fmt("班別說明", semiBoldFace, S(12),
                     FreezeColor(Color.FromRgb(0x33, 0x55, 0x77)));
                 dc.DrawText(legHdrT, new Point(S(12),
                     legBoxY + legPadV + (legTitleRowH - legHdrT.Height) / 2));
 
-                // 圖例項目
                 double itemsY = legBoxY + legPadV + legTitleRowH + legTitleGap;
                 double legX   = S(12);
                 int    col_i  = 0;
@@ -655,7 +687,6 @@ public partial class ExportScheduleWindow : Window
             }
         }
 
-        // ScaleTransform 移除：DrawingVisual 已在目標解析度直接繪製
         var rtb = new RenderTargetBitmap((int)totalW, (int)totalH, dpi, dpi, PixelFormats.Pbgra32);
         rtb.Render(visual);
         return rtb;

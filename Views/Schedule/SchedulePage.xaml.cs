@@ -77,7 +77,9 @@ public partial class SchedulePage : UserControl
 
         if (DataContext is ScheduleViewModel vm)
         {
-            vm.OpenEmployeeDetailCommand.Execute(item);
+            // 觸控點選流程：點一下員工＝直接進入「待新增」，取代原本開員工詳情
+            // （滑鼠使用者仍可用拖曳直接排入；詳情可從月曆頭像的排班卡片查看）
+            vm.StartTouchAdd(item.Employee);
             e.Handled = true;
         }
     }
@@ -121,13 +123,28 @@ public partial class SchedulePage : UserControl
         DragTooltipPopup.IsOpen = false;
     }
 
-    private void EntryRow_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    private async void EntryRow_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
         if (_dragEntryCandidate is null) return;
         var entry = _dragEntryCandidate;
         _dragEntryCandidate = null;
 
         if (DataContext is not ScheduleViewModel vm) return;
+
+        // 觸控點選流程進行中：這次點擊視為完成交換／移動／新增，不開卡片也不開選單
+        if (vm.TouchPendingAction == TouchPendingAction.Swap)
+        {
+            await vm.CompleteTouchSwapAsync(entry);
+            e.Handled = true;
+            return;
+        }
+        if (vm.TouchPendingAction is TouchPendingAction.Move or TouchPendingAction.Add)
+        {
+            if (entry.ShiftSetting is not null)
+                await vm.CompleteTouchMoveOrAddAsync(entry.Date, entry.ShiftSetting);
+            e.Handled = true;
+            return;
+        }
 
         // Ctrl+Click：切換選取（不開卡片）
         if ((Keyboard.Modifiers & ModifierKeys.Control) != 0)
@@ -141,7 +158,28 @@ public partial class SchedulePage : UserControl
         // 一般點擊：若有既存選取，先清除（避免誤操作）
         if (vm.HasSelection) vm.ClearSelectionCommand.Execute(null);
 
-        vm.OpenEntryCardCommand.Execute(entry);
+        // 一般點擊（無待處理觸控操作）→ 跳出「交換／移動／刪除」選單，取代直接開卡片
+        // （原「檢視/編輯」需求仍可由右鍵選單的「編輯排班」達成）
+        if (sender is FrameworkElement fe) ShowEntryTouchMenu(fe);
+        e.Handled = true;
+    }
+
+    // ── 觸控點選：已排班頭像的「交換／移動／刪除」選單 ─────────────────
+    private void ShowEntryTouchMenu(FrameworkElement fe)
+    {
+        if (fe.FindResource("EntryTouchActionMenu") is not ContextMenu menu) return;
+        menu.PlacementTarget = fe;
+        menu.IsOpen = true;
+    }
+
+    // ── 觸控點選：待處理「移動／新增」時點擊目的班別完成操作 ─────────────
+    private async void ShiftBlock_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (DataContext is not ScheduleViewModel vm) return;
+        if (vm.TouchPendingAction is not (TouchPendingAction.Move or TouchPendingAction.Add)) return;
+        if (sender is not FrameworkElement fe || fe.DataContext is not ShiftBlock block) return;
+
+        await vm.CompleteTouchMoveOrAddAsync(block.Date, block.ShiftSetting);
         e.Handled = true;
     }
 

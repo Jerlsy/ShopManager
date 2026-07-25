@@ -25,11 +25,18 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        // 雙擊到看到第一個視窗之間，DI 建置／資料庫遷移／佈景主題套用都是同步工作，
+        // 舊電腦上這段空白等待特別明顯。先秒開一個啟動畫面墊著，讓使用者知道程式有在動。
+        var splash = new SplashWindow();
+        splash.Show();
+        splash.SetStatus("正在啟動…");
+
         var services = new ServiceCollection();
         ConfigureServices(services);
         Services = services.BuildServiceProvider();
 
         // 確保資料庫已建立，並補齊新增欄位。
+        splash.SetStatus("正在準備資料庫…");
         using (var scope = Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -43,6 +50,7 @@ public partial class App : Application
         ApplyLayoutScale();
 
         // 套用儲存中的主題偏好。
+        splash.SetStatus("正在套用佈景主題…");
         var themeService = Services.GetRequiredService<ThemeService>();
         themeService.ApplyCurrent();
 
@@ -53,7 +61,10 @@ public partial class App : Application
         // 先關閉自動退出，避免店鋪選擇視窗關閉時整個應用程式提早結束。
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
+        splash.SetStatus("正在載入店鋪清單…");
         var selectionWindow = Services.GetRequiredService<ShopSelectionWindow>();
+        splash.Close();
+
         var result = selectionWindow.ShowDialog();
         if (result != true)
         {

@@ -14,15 +14,21 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- 預覽區 -->
-        <Grid Grid.Row="0">
-            <Image x:Name="PreviewImage"
-                   Margin="20"
-                   Stretch="Uniform"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center"
-                   RenderOptions.BitmapScalingMode="HighQuality"/>
-        </Grid>
+        <!-- 預覽區：全體班表拆上半月／下半月兩張，直向堆疊捲動 -->
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled" Padding="20">
+            <StackPanel>
+                <Image x:Name="PreviewTopImage"
+                       Stretch="Uniform" StretchDirection="DownOnly"
+                       HorizontalAlignment="Center"
+                       RenderOptions.BitmapScalingMode="HighQuality"/>
+                <Image x:Name="PreviewBottomImage"
+                       Margin="0,16,0,0"
+                       Stretch="Uniform" StretchDirection="DownOnly"
+                       HorizontalAlignment="Center"
+                       RenderOptions.BitmapScalingMode="HighQuality"/>
+            </StackPanel>
+        </ScrollViewer>
 
         <!-- LINE 推播區（有收件人時顯示）-->
         <Border x:Name="LinePushPanel" Grid.Row="1"
@@ -49,18 +55,12 @@
                         BorderThickness="1" Background="{DynamicResource AppShellBackgroundBrush}"
                         Padding="3" Margin="0,0,0,10" HorizontalAlignment="Left">
                     <StackPanel Orientation="Horizontal">
-                        <RadioButton x:Name="RadioFullSchedule" Content="完整班表（圖片）"
+                        <RadioButton x:Name="RadioFullSchedule" Content="全體班表（圖片）"
                                      GroupName="PushType" IsChecked="True" Margin="2,0"
-                                     Style="{StaticResource MaterialDesignTabRadioButton}"
-                                     Checked="RadioFullSchedule_Checked"/>
+                                     Style="{StaticResource MaterialDesignTabRadioButton}"/>
                         <RadioButton x:Name="RadioPersonalOnly" Content="個人班表（圖片）"
                                      GroupName="PushType" Margin="2,0"
-                                     Style="{StaticResource MaterialDesignTabRadioButton}"
-                                     Checked="RadioPersonalOnly_Checked"/>
-                        <RadioButton x:Name="RadioAllPersonalToOwner" Content="全體個人班表（圖片）"
-                                     GroupName="PushType" Margin="2,0"
-                                     Style="{StaticResource MaterialDesignTabRadioButton}"
-                                     Checked="RadioAllPersonalToOwner_Checked"/>
+                                     Style="{StaticResource MaterialDesignTabRadioButton}"/>
                     </StackPanel>
                 </Border>
 
