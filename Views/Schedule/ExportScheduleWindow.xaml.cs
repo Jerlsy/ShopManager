@@ -283,7 +283,7 @@ public partial class ExportScheduleWindow : Window
     /// 個人班表圖片渲染：只列出該員工本月有排班的日子，逐列直排。
     /// 欄寬依實際文字量測結果撐開（非固定比例），保證班別名稱／時間不被裁切；圖片訊息也可在 LINE 中轉傳。
     /// </summary>
-    private static RenderTargetBitmap RenderPersonalSchedule(ExportScheduleData data, ExportScheduleData.PushRecipient recipient)
+    internal static RenderTargetBitmap RenderPersonalSchedule(ExportScheduleData data, ExportScheduleData.PushRecipient recipient)
     {
         const double dpi   = 96;
         const double scale = 1.5;
@@ -389,7 +389,8 @@ public partial class ExportScheduleWindow : Window
     private void SaveImage_Click(object sender, RoutedEventArgs e)
     {
         if (_bitmapTop is null || _bitmapBottom is null) return;
-        // 使用者選一個基準檔名，實際輸出兩個檔：_上半月 / _下半月
+        // 使用者選一個基準檔名：完整班表輸出 _上半月/_下半月 兩檔，
+        // 另將全部員工的個人班表各存一張（{年}_{月}_{姓名}.png）
         var dlg = new SaveFileDialog
         {
             Filter = "PNG 圖片|*.png",
@@ -403,43 +404,50 @@ public partial class ExportScheduleWindow : Window
         SavePng(_bitmapTop,    Path.Combine(dir, $"{name}_上半月.png"));
         SavePng(_bitmapBottom, Path.Combine(dir, $"{name}_下半月.png"));
 
+        int personal = 0;
+        foreach (var row in _data.Rows)
+        {
+            var rec = new ExportScheduleData.PushRecipient(
+                UserId: string.Empty, DisplayName: row.Name, PictureUrl: null,
+                IsOwner: false, ShiftIds: row.ShiftIds);
+            var safeName = string.Join("_", row.Name.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries));
+            SavePng(RenderPersonalSchedule(_data, rec),
+                Path.Combine(dir, $"{_data.Year}_{_data.Month:D2}_{safeName}.png"));
+            personal++;
+        }
+
         App.Services.GetRequiredService<IAppSnackbarService>()
-            .ShowSuccess($"已儲存兩張圖片：{name}_上半月.png、{name}_下半月.png");
+            .ShowSuccess($"已儲存完整班表 2 張與個人班表 {personal} 張至 {dir}");
     }
 
     private static void SavePng(BitmapSource bmp, string path)
     {
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(bmp));
-        using var fs = File.OpenWrite(path);
+        using var fs = File.Create(path);
         encoder.Save(fs);
     }
 
-    private void CopyToClipboard_Click(object sender, RoutedEventArgs e)
+    private void IbonPrint_Click(object sender, RoutedEventArgs e)
     {
         if (_bitmapTop is null || _bitmapBottom is null) return;
-        // 剪貼簿一次只能放一張，將上下半月直向合併成一張供複製
-        Clipboard.SetImage(StitchVertical(_bitmapTop, _bitmapBottom));
-    }
 
-    /// <summary>將兩張圖直向合併為一張（置中對齊、白底），供複製到剪貼簿使用。</summary>
-    private static RenderTargetBitmap StitchVertical(BitmapSource top, BitmapSource bottom)
-    {
-        const double dpi = 96;
-        const double gap = 16;
-        double w = Math.Max(top.Width, bottom.Width);
-        double h = top.Height + gap + bottom.Height;
-
-        var visual = new DrawingVisual();
-        using (var dc = visual.RenderOpen())
+        // 上傳完成後要把列印碼推播給業主 LINE，因此業主帳號與 LINE 設定為必要條件
+        var snackbar = App.Services.GetRequiredService<IAppSnackbarService>();
+        bool lineConfigured = !string.IsNullOrEmpty(_data.LineChannelAccessToken)
+                           && !string.IsNullOrEmpty(_data.LineWorkerUrl)
+                           && !string.IsNullOrEmpty(_data.LineWorkerApiKey);
+        bool hasOwner = _data.PushRecipients.Any(r => r.IsOwner && !string.IsNullOrEmpty(r.UserId));
+        if (!lineConfigured || !hasOwner)
         {
-            dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, w, h));
-            dc.DrawImage(top,    new Rect((w - top.Width) / 2, 0, top.Width, top.Height));
-            dc.DrawImage(bottom, new Rect((w - bottom.Width) / 2, top.Height + gap, bottom.Width, bottom.Height));
+            snackbar.ShowWarning(!lineConfigured
+                ? "尚未完成 LINE 推播設定（Token / Worker），無法使用 ibon 雲端列印"
+                : "尚未綁定業主 LINE 帳號，請先於系統設定綁定業主帳號");
+            return;
         }
-        var rtb = new RenderTargetBitmap((int)w, (int)h, dpi, dpi, PixelFormats.Pbgra32);
-        rtb.Render(visual);
-        return rtb;
+
+        var win = new IbonPrintWindow(_data, _bitmapTop, _bitmapBottom) { Owner = this };
+        win.ShowDialog();
     }
 
     private void Close_Click(object sender, RoutedEventArgs e) => Close();

@@ -306,6 +306,7 @@ private static void ConfigureServices(ServiceCollection services)
         // 商業邏輯服務。
         services.AddTransient<ShopSettingService>();
         services.AddTransient<LineService>();
+        services.AddTransient<IbonPrintService>();
         services.AddTransient<LineFollowerService>();
         services.AddTransient<LineFollowerDialogViewModel>();
         services.AddTransient<Views.Line.LineFollowerWindow>();

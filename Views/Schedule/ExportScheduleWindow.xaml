@@ -137,10 +137,10 @@
                         </StackPanel>
                     </Button>
                     <Button Style="{StaticResource MaterialDesignOutlinedButton}"
-                            Margin="0,0,10,0" Click="CopyToClipboard_Click">
+                            Margin="0,0,10,0" Click="IbonPrint_Click">
                         <StackPanel Orientation="Horizontal">
-                            <md:PackIcon Kind="ContentCopy" Width="16" Height="16" Margin="0,0,6,0"/>
-                            <TextBlock Text="複製到剪貼簿"/>
+                            <md:PackIcon Kind="CloudPrintOutline" Width="18" Height="18" Margin="0,0,6,0"/>
+                            <TextBlock Text="ibon 雲端列印"/>
                         </StackPanel>
                     </Button>
                     <Button Style="{StaticResource MaterialDesignFlatButton}" Click="Close_Click">
