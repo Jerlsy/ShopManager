@@ -36,6 +36,9 @@ public class ShopSettingService(AppDbContext db, ShopContext shopContext)
             existing.LineWelcomeMessage = setting.LineWelcomeMessage;
             existing.LineResignMessage = setting.LineResignMessage;
             existing.OwnerLineBindings = setting.OwnerLineBindings;
+            existing.GoogleAccountEmail = setting.GoogleAccountEmail;
+            existing.GoogleDriveLastSyncedRemoteModifiedTime = setting.GoogleDriveLastSyncedRemoteModifiedTime;
+            existing.GmailForwardRules = setting.GmailForwardRules;
             existing.Notes = setting.Notes;
         }
         await db.SaveChangesAsync();

@@ -177,8 +177,8 @@ public class PayrollRecordWindowData
     public SalaryRecord Record { get; init; } = null!;
     public List<BankCode> BankCodes { get; init; } = new();
     public Func<int, bool, Task> UpdatePaymentStatus { get; init; } = null!;
-    /// <summary>推送 Flex Message：(userId, altText, flex contents object) → success</summary>
-    public Func<string, string, object, Task<bool>> SendLineFlexMessage { get; init; } = null!;
+    /// <summary>推送薪資單圖片：(userId, PNG bytes) → success</summary>
+    public Func<string, byte[], Task<bool>> SendLineImage { get; init; } = null!;
     public string ShopName { get; init; } = string.Empty;
 }
 
@@ -263,56 +263,4 @@ public partial class PayrollEntryItem : ObservableObject
         finally { IsSending = false; }
     }
 
-    /// <summary>建構薪資單 Flex Message 內容（bubble 結構，未含 altText/外層 push payload）</summary>
-    public static object BuildSalarySlipFlex(SalaryEmployeeRecord r, int year, int month, DateTime? paidAt, string shopName)
-    {
-        var body = new List<object>
-        {
-            Services.LineFlexHelpers.Row("員工", r.Employee.Name),
-            Services.LineFlexHelpers.Row("制度", r.SalaryType == SalaryType.Hourly ? "時薪制" : "月薪制"),
-            Services.LineFlexHelpers.Separator(),
-        };
-
-        if (r.SalaryType == SalaryType.Hourly)
-        {
-            body.Add(Services.LineFlexHelpers.Row("平日工時", $"{r.WeekdayHours:N1} hr"));
-            if (r.HolidayHours > 0) body.Add(Services.LineFlexHelpers.Row("假日工時", $"{r.HolidayHours:N1} hr"));
-            if (r.OT1Hours > 0)     body.Add(Services.LineFlexHelpers.Row("加班一段", $"{r.OT1Hours:N1} hr"));
-            if (r.OT2Hours > 0)     body.Add(Services.LineFlexHelpers.Row("加班二段", $"{r.OT2Hours:N1} hr"));
-            body.Add(Services.LineFlexHelpers.Row("平日薪資", $"${r.WeekdayPay:N0}"));
-            if (r.HolidayPay > 0) body.Add(Services.LineFlexHelpers.Row("假日薪資", $"${r.HolidayPay:N0}"));
-            if (r.OT1Pay + r.OT2Pay > 0) body.Add(Services.LineFlexHelpers.Row("加班費", $"${r.OT1Pay + r.OT2Pay:N0}"));
-        }
-        else
-        {
-            body.Add(Services.LineFlexHelpers.Row("底薪", $"${r.WeekdayPay:N0}"));
-            if (r.HolidayPay > 0)        body.Add(Services.LineFlexHelpers.Row("假日薪資", $"${r.HolidayPay:N0}"));
-            if (r.OT1Pay + r.OT2Pay > 0) body.Add(Services.LineFlexHelpers.Row("加班費",   $"${r.OT1Pay + r.OT2Pay:N0}"));
-        }
-
-        if (r.OverridePay != 0)
-            body.Add(Services.LineFlexHelpers.Row("特殊薪資", $"${r.OverridePay:N0}"));
-
-        if (r.BonusItems.Count > 0)
-        {
-            body.Add(Services.LineFlexHelpers.Separator());
-            foreach (var b in r.BonusItems)
-                body.Add(Services.LineFlexHelpers.Row(b.Label,
-                    $"{(b.Amount >= 0 ? "+" : "")}${b.Amount:N0}",
-                    valueColor: b.Amount >= 0 ? "#222222" : "#E53935"));
-        }
-
-        var grand = r.BaseAmount + r.BonusItems.Sum(b => b.Amount);
-        body.Add(Services.LineFlexHelpers.Separator("lg"));
-        body.Add(Services.LineFlexHelpers.RowEmphasis("應領薪資", $"${grand:N0}"));
-
-        if (paidAt.HasValue)
-        {
-            body.Add(Services.LineFlexHelpers.Separator());
-            body.Add(Services.LineFlexHelpers.Row("支薪日期", paidAt.Value.ToString("yyyy/MM/dd")));
-        }
-
-        var header = Services.LineFlexHelpers.Header(shopName, $"{year}年{month}月 薪資單");
-        return Services.LineFlexHelpers.Bubble(header, body);
-    }
 }

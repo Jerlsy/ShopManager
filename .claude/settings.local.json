@@ -86,7 +86,9 @@
       "PowerShell(git *)",
       "PowerShell(& \"C:\\\\Users\\\\Jerlsy\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Jerlsy-Documents-Developer-ShopManager\\\\7f9d86bb-173b-46e3-83e5-0ce206045cc4\\\\scratchpad\\\\ibon_test.ps1\")",
       "WebFetch(domain:free.com.tw)",
-      "PowerShell(& \"C:\\\\Users\\\\Jerlsy\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Jerlsy-Documents-Developer-ShopManager\\\\7f9d86bb-173b-46e3-83e5-0ce206045cc4\\\\scratchpad\\\\ibon_test_multi.ps1\")"
+      "PowerShell(& \"C:\\\\Users\\\\Jerlsy\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Jerlsy-Documents-Developer-ShopManager\\\\7f9d86bb-173b-46e3-83e5-0ce206045cc4\\\\scratchpad\\\\ibon_test_multi.ps1\")",
+      "Bash(Get-Process -Name ShopManager -ErrorAction SilentlyContinue)",
+      "Bash(Stop-Process -Force -ErrorAction SilentlyContinue)"
     ]
   }
 }

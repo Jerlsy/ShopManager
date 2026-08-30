@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace ShopManager.Models;
 
@@ -21,25 +22,26 @@ public class Employee
     public List<int> PreferredShiftIds { get; set; } = new();
 
     // 自訂聯絡方式（保留舊資料相容；新增功能請用 ContactInfos）
-    public List<CustomContact> CustomContacts { get; set; } = new();
+    // 備份/還原時這些子表當獨立清單處理（見 ShopDataPortabilityService），這裡的巢狀集合忽略序列化避免混淆
+    [JsonIgnore] public List<CustomContact> CustomContacts { get; set; } = new();
 
     // 預設班別（FK）
     public int? DefaultShiftId { get; set; }
-    public ShiftSetting? DefaultShift { get; set; }
+    [JsonIgnore] public ShiftSetting? DefaultShift { get; set; }
 
     // 排班規則
-    public List<ScheduleRule> ScheduleRules { get; set; } = new();
+    [JsonIgnore] public List<ScheduleRule> ScheduleRules { get; set; } = new();
 
     // 薪資類型（FK）
     public int? DefaultSalaryId { get; set; }
-    public SalarySetting? DefaultSalary { get; set; }
+    [JsonIgnore] public SalarySetting? DefaultSalary { get; set; }
 
     // 時薪制假日薪資方案（FK，僅 Hourly 員工使用）
     public int? HolidaySalaryId { get; set; }
-    public SalarySetting? HolidaySalary { get; set; }
+    [JsonIgnore] public SalarySetting? HolidaySalary { get; set; }
 
     // 預設獎金
-    public List<DefaultBonus> DefaultBonuses { get; set; } = new();
+    [JsonIgnore] public List<DefaultBonus> DefaultBonuses { get; set; } = new();
 
     public DateOnly HireDate { get; set; }                               // 到職日
     public DateOnly? ResignDate { get; set; }                            // 離職日（null = 在職）

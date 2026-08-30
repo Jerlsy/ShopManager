@@ -61,6 +61,11 @@ public partial class App : Application
         // 先關閉自動退出，避免店鋪選擇視窗關閉時整個應用程式提早結束。
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
+        // 雲端備份是否較新的檢查，改成進到「店鋪與環境設定」頁時再非同步做（見 ShopSettingPage）：
+        // 每個店鋪各自綁定 Google 帳號、備份範圍也只有該店鋪自己的資料，啟動當下還沒選店鋪、
+        // 根本不知道要查哪一個帳號，硬要在這裡查只能整批撈「有綁過的候選店鋪」逐一嘗試，
+        // 不但邏輯繞、之前也踩過同步等待 async 方法造成的死結。
+
         splash.SetStatus("正在載入店鋪清單…");
         var selectionWindow = Services.GetRequiredService<ShopSelectionWindow>();
         splash.Close();
@@ -245,6 +250,9 @@ public partial class App : Application
                 ("Employees",            "BankAccountName",          "TEXT"),
                 ("SalaryEmployeeRecords", "IsPaid",                  "INTEGER NOT NULL DEFAULT 0"),
                 ("SalaryEmployeeRecords", "PaidAt",                  "TEXT"),
+                ("ShopSettings",         "GoogleAccountEmail",       "TEXT"),
+                ("ShopSettings",         "GoogleDriveLastSyncedRemoteModifiedTime", "TEXT"),
+                ("ShopSettings",         "GmailForwardRules",        "TEXT NOT NULL DEFAULT '[]'"),
             };
             // 每個資料表只查一次現有欄位（PRAGMA table_info），只對真正缺少的欄位下 ALTER TABLE。
             // 舊作法是每個候選欄位都直接 ALTER、失敗（欄位已存在）就吃例外——在全新安裝或已升級過的資料庫上，
@@ -305,6 +313,8 @@ private static void ConfigureServices(ServiceCollection services)
 
         // 商業邏輯服務。
         services.AddTransient<ShopSettingService>();
+        services.AddTransient<ShopDataPortabilityService>();
+        services.AddTransient<GoogleDriveSyncService>();
         services.AddTransient<LineService>();
         services.AddTransient<IbonPrintService>();
         services.AddTransient<LineFollowerService>();

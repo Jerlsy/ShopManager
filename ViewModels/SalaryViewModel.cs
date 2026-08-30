@@ -417,11 +417,24 @@ public partial class SalaryViewModel : ObservableObject
             BankCodes = banks,
             ShopName = shopSetting?.Name ?? string.Empty,
             UpdatePaymentStatus = (id, paid) => _salaryService.SetPaymentStatusAsync(id, paid),
-            SendLineFlexMessage = async (userId, altText, contents) =>
+            SendLineImage = async (userId, pngBytes) =>
             {
-                var token = shopSetting?.LineChannelAccessToken;
-                if (string.IsNullOrEmpty(token)) return false;
-                return await _lineService.PushFlexMessageAsync(token, userId, altText, contents);
+                var token     = shopSetting?.LineChannelAccessToken;
+                var workerUrl = shopSetting?.LineWorkerUrl;
+                var apiKey    = shopSetting?.LineWorkerApiKey;
+                if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(workerUrl) || string.IsNullOrEmpty(apiKey))
+                    return false;
+
+                var uploaded = await _lineService.UploadScheduleImageAsync(workerUrl, apiKey, pngBytes);
+                if (uploaded is null) return false;
+                var success = await _lineService.PushImageAsync(token, userId, uploaded.Value.Url);
+
+                // 延遲清除暫存圖（比照班表圖片推播的作法）
+                var key = uploaded.Value.Key;
+                _ = Task.Delay(TimeSpan.FromMinutes(5)).ContinueWith(_ =>
+                    _lineService.DeleteScheduleImageAsync(workerUrl, apiKey, key));
+
+                return success;
             },
         };
 

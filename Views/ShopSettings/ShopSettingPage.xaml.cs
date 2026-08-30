@@ -4,6 +4,7 @@ using Microsoft.Win32;
 using ShopManager.Models;
 using ShopManager.Services;
 using ShopManager.ViewModels;
+using ShopManager.Views.Dialogs;
 using ShopManager.Views.Line;
 using System.IO;
 using System.Windows;
@@ -30,8 +31,19 @@ public partial class ShopSettingPage : UserControl
             await Dispatcher.BeginInvoke(
                 new Func<Task>(InitNotesPreviewAsync),
                 System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+
+            // 雲端備份新舊比對：不 await，背景查完才視需要跳提示，不擋這個頁面的載入渲染。
+            _ = CheckCloudBackupFreshnessAsync();
         };
         viewModel.LineTestSucceeded += OnLineTestSucceeded;
+        viewModel.GoogleBackupRequested  += async (_, _) => await RunGoogleBackupAsync();
+        viewModel.GoogleRestoreRequested += async (_, _) => await ConfirmAndRestoreAsync();
+        viewModel.GoogleAccountLinked    += async (_, _) => await CheckCloudBackupFreshnessAsync();
+        viewModel.ShowDeployGuideRequested += (_, fileId) =>
+        {
+            var win = new GmailDeployGuideWindow(fileId) { Owner = Window.GetWindow(this) };
+            win.ShowDialog();
+        };
     }
 
     private bool _previewReady;
@@ -170,6 +182,124 @@ public partial class ShopSettingPage : UserControl
             _viewModel.LineWorkerUrl,
             _viewModel.LineWorkerApiKey);
         win.ShowDialog();
+    }
+
+    // ── Google 雲端備份／還原 ────────────────────────────────────────────────
+    // 兩者都以 GoogleSyncProgressWindow 鎖住操作並顯示進度；還原完成後重啟程式
+    // （頁面與 ViewModel 仍持有舊 DB 的資料，熱替換會讀到不一致的狀態）。
+
+    /// <summary>
+    /// 進到設定頁時背景比對這個店鋪的雲端備份是否比本機新（多半是在另一台電腦備份過）。
+    /// 非同步、不擋畫面：查詢本身有 10 秒逾時，離線/查詢失敗就靜靜略過，不用手動再按一次
+    /// 「從雲端還原」也能之後自己修正。
+    /// </summary>
+    private async Task CheckCloudBackupFreshnessAsync()
+    {
+        if (!_viewModel.IsGoogleLinked) return;
+        try
+        {
+            var drive = App.Services.GetRequiredService<GoogleDriveSyncService>();
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var remote = await drive.GetRemoteStatusAsync(cts.Token);
+            if (remote is null) return; // 離線、授權失效或雲端沒有備份
+
+            var lastSynced = _viewModel.GoogleDriveLastSyncedRemoteModifiedTime;
+            if (lastSynced is not null && remote <= lastSynced) return;
+
+            var dialog = App.Services.GetRequiredService<IAppDialogService>();
+            var confirmed = await dialog.ShowConfirmAsync(
+                "發現較新的雲端備份",
+                $"Google 雲端硬碟上有較新的資料備份（{remote.Value.ToLocalTime():yyyy/MM/dd HH:mm}）。\n\n" +
+                "要用雲端資料覆蓋這個店鋪目前的資料嗎？\n" +
+                "（覆蓋前會自動保留一份目前資料，完成後程式會重新啟動）",
+                "立即還原", "稍後再說");
+            if (!confirmed) return;
+
+            // 使用者已經在上面那個對話框確認過了，這裡不再問第二次
+            await RunGoogleRestoreAsync();
+        }
+        catch
+        {
+            // 背景檢查失敗不用打擾使用者，之後手動按「從雲端還原」一樣可以用
+        }
+    }
+
+    private async Task RunGoogleBackupAsync()
+    {
+        var snackbar = App.Services.GetRequiredService<IAppSnackbarService>();
+        var drive = App.Services.GetRequiredService<GoogleDriveSyncService>();
+
+        var progress = new GoogleSyncProgressWindow("正在備份到 Google 雲端硬碟…")
+        {
+            Owner = Window.GetWindow(this),
+        };
+        progress.Show();
+        _viewModel.IsGoogleBusy = true;
+        try
+        {
+            var modifiedTime = await drive.BackupAsync(progress.SetStatus);
+            await _viewModel.OnGoogleBackupCompletedAsync(modifiedTime);
+            snackbar.ShowSuccess("已備份到 Google 雲端硬碟");
+        }
+        catch (Exception ex)
+        {
+            snackbar.ShowError($"備份失敗：{ex.Message}");
+        }
+        finally
+        {
+            _viewModel.IsGoogleBusy = false;
+            progress.ForceClose();
+        }
+    }
+
+    /// <summary>使用者主動按「從雲端還原」的入口：先確認，再執行</summary>
+    private async Task ConfirmAndRestoreAsync()
+    {
+        var dialog = App.Services.GetRequiredService<IAppDialogService>();
+        var confirmed = await dialog.ShowConfirmAsync(
+            "從雲端還原",
+            "將用雲端備份覆蓋這個店鋪目前的所有資料（員工、排班、薪資等）。\n\n" +
+            "覆蓋前會自動保留一份目前資料的備份，還原後程式會重新啟動。\n\n" +
+            "確定要繼續嗎？",
+            "確定還原", "取消");
+        if (!confirmed) return;
+
+        await RunGoogleRestoreAsync();
+    }
+
+    /// <summary>實際執行還原（呼叫端負責先取得使用者確認）</summary>
+    private async Task RunGoogleRestoreAsync()
+    {
+        var snackbar = App.Services.GetRequiredService<IAppSnackbarService>();
+        var drive = App.Services.GetRequiredService<GoogleDriveSyncService>();
+
+        var progress = new GoogleSyncProgressWindow("正在從 Google 雲端硬碟還原…")
+        {
+            Owner = Window.GetWindow(this),
+        };
+        progress.Show();
+        _viewModel.IsGoogleBusy = true;
+        try
+        {
+            await drive.RestoreAsync(progress.SetStatus);
+            progress.ForceClose();
+            RestartApp();
+        }
+        catch (Exception ex)
+        {
+            _viewModel.IsGoogleBusy = false;
+            progress.ForceClose();
+            snackbar.ShowError($"還原失敗：{ex.Message}");
+        }
+    }
+
+    /// <summary>重啟程式（沿用軟體更新完成後的做法）</summary>
+    private static void RestartApp()
+    {
+        var exePath = Environment.ProcessPath;
+        if (exePath is not null)
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exePath) { UseShellExecute = true });
+        Application.Current.Shutdown();
     }
 
     private void OnLineTestSucceeded(object? sender, string token)

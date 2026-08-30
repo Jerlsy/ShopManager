@@ -1,4 +1,5 @@
 using ShopManager.Models;
+using ShopManager.Services;
 using ShopManager.ViewModels;
 using System.Windows;
 
@@ -49,20 +50,31 @@ public partial class PayrollRecordWindow : Window
 
         entry.SetInitialStatus(r.IsPaid, r.PaidAt);
 
-        entry.OnIsPaidToggled = paid => data.UpdatePaymentStatus(r.Id, paid);
-
-        entry.OnSendLine = async () =>
+        async Task SendSalarySlipAsync(DateTime? paidAt)
         {
-            var flexContents = PayrollEntryItem.BuildSalarySlipFlex(
-                r, data.Record.Year, data.Record.Month,
-                entry.IsPaid ? entry.PaidAt : null,
-                data.ShopName);
-            var altText = $"{data.Record.Year}年{data.Record.Month}月 薪資單";
-            var success = await data.SendLineFlexMessage(r.Employee.LineUserId!, altText, flexContents);
+            var png = SalarySlipImageRenderer.RenderPng(r, data.Record.Year, data.Record.Month, paidAt, data.ShopName);
+            var success = await data.SendLineImage(r.Employee.LineUserId!, png);
             if (!success)
-                MessageBox.Show("LINE 推播失敗，請確認 Channel Access Token 設定。", "推播失敗",
+                MessageBox.Show("LINE 推播失敗，請確認 Channel Access Token 與 Worker 設定。", "推播失敗",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+
+        entry.OnIsPaidToggled = async paid =>
+        {
+            await data.UpdatePaymentStatus(r.Id, paid);
+
+            // 只有「勾選為已支薪」且該員工有綁定 LINE 時才詢問，取消勾選不觸發
+            if (paid && entry.HasLineBinding)
+            {
+                var ask = MessageBox.Show(
+                    $"「{r.Employee.Name}」已標記為已支薪，是否要推播 LINE 通知薪資已入帳？",
+                    "推播入帳通知", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                if (ask == MessageBoxResult.Yes)
+                    await SendSalarySlipAsync(DateTime.Now);
+            }
         };
+
+        entry.OnSendLine = () => SendSalarySlipAsync(entry.IsPaid ? entry.PaidAt : null);
 
         return entry;
     }

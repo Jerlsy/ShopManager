@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace ShopManager.Models;
 
@@ -8,15 +9,15 @@ public class ScheduleEntry
     [Key] public int Id { get; set; }
 
     public int MonthlyScheduleId { get; set; }
-    public MonthlySchedule? MonthlySchedule { get; set; }
+    [JsonIgnore] public MonthlySchedule? MonthlySchedule { get; set; }
 
     public int EmployeeId { get; set; }
-    public Employee? Employee { get; set; }
+    [JsonIgnore] public Employee? Employee { get; set; }
 
     public DateOnly Date { get; set; }
 
     public int ShiftSettingId { get; set; }
-    public ShiftSetting? ShiftSetting { get; set; }
+    [JsonIgnore] public ShiftSetting? ShiftSetting { get; set; }
 
     public string Note { get; set; } = string.Empty;
 }

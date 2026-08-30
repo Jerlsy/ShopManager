@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace ShopManager.Models;
 
@@ -12,7 +13,8 @@ public class SalaryRecord
     public int Month { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.Now;
     public DateTime UpdatedAt { get; set; } = DateTime.Now;
-    public List<SalaryEmployeeRecord> EmployeeRecords { get; set; } = new();
+    // 備份/還原時當獨立清單處理（見 ShopDataPortabilityService），這裡忽略序列化避免混淆
+    [JsonIgnore] public List<SalaryEmployeeRecord> EmployeeRecords { get; set; } = new();
 }
 
 /// <summary>每位員工的薪資明細快照</summary>
@@ -21,7 +23,7 @@ public class SalaryEmployeeRecord
     [Key] public int Id { get; set; }
     public int SalaryRecordId { get; set; }
     public int EmployeeId { get; set; }
-    public Employee Employee { get; set; } = null!;
+    [JsonIgnore] public Employee Employee { get; set; } = null!;
 
     // 計算當下的薪資設定快照
     public SalaryType SalaryType { get; set; }
@@ -43,7 +45,7 @@ public class SalaryEmployeeRecord
     public decimal OverridePay { get; set; }     // 額外設定金額合計
     public decimal BaseAmount { get; set; }      // 薪資小計（不含 BonusItems）
 
-    public List<SalaryBonusItem> BonusItems { get; set; } = new();
+    [JsonIgnore] public List<SalaryBonusItem> BonusItems { get; set; } = new();
 
     // 支薪狀態
     public bool IsPaid { get; set; }

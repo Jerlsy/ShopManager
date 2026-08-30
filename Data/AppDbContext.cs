@@ -51,6 +51,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<ShopSetting>().Property(e => e.ContactInfos)      .HasConversion(JsonConv<ContactInfo>());
         modelBuilder.Entity<ShopSetting>().Property(e => e.ClosedDaysOfWeek) .HasConversion(JsonConv<int>());
         modelBuilder.Entity<ShopSetting>().Property(e => e.OwnerLineBindings).HasConversion(JsonConv<OwnerLineBinding>());
+        modelBuilder.Entity<ShopSetting>().Property(e => e.GmailForwardRules).HasConversion(JsonConv<GmailForwardRule>());
 
         // ScheduleRule
         modelBuilder.Entity<ScheduleRule>().Property(e => e.FixedOffDays)         .HasConversion(JsonConv<int>());
@@ -163,12 +164,26 @@ public class AppDbContext : DbContext
     }
 
     // ──────────────────────────────────────────────────────────────────────────
-    // 關閉店鋪：刪除指定店鋪的所有資料
+    // 關閉店鋪：刪除指定店鋪的所有資料（含 Shop 本體）
+    // ──────────────────────────────────────────────────────────────────────────
+    public async Task DeleteShopDataAsync(Guid shopId)
+    {
+        await DeleteShopContentAsync(shopId);
+
+        // Shop 本體（最後刪除）
+        await Shops.Where(s => s.Id == shopId).ExecuteDeleteAsync();
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // 清空指定店鋪的所有內容資料，但「保留 Shop 本體那一列」。
+    //
+    // 雲端還原用這個而不是 DeleteShopDataAsync：還原是把同一個店鋪的內容換掉，
+    // 店鋪本身必須留著——連 Shop 一起刪掉的話，還原完店鋪會整個從清單上消失。
     //
     // ⚠️  新增任何與 ShopId 相關的資料表時，請在此方法補上對應的刪除邏輯。
     //     刪除順序須遵守 FK 相依性（子資料先於父資料）。
     // ──────────────────────────────────────────────────────────────────────────
-    public async Task DeleteShopDataAsync(Guid shopId)
+    public async Task DeleteShopContentAsync(Guid shopId)
     {
         // 1. ScheduleEntry / ScheduleConflict / SalaryRecord（子）→ MonthlySchedule（父）
         var monthlyIds = await MonthlySchedules
@@ -209,9 +224,6 @@ public class AppDbContext : DbContext
         await ShiftSettings.Where(s => s.ShopId == shopId).ExecuteDeleteAsync();
         await SalarySettings.Where(s => s.ShopId == shopId).ExecuteDeleteAsync();
         await ShopSettings.Where(s => s.ShopId == shopId).ExecuteDeleteAsync();
-
-        // 4. Shop 本體（最後刪除）
-        await Shops.Where(s => s.Id == shopId).ExecuteDeleteAsync();
     }
 
     private static ValueConverter<List<T>, string> JsonConv<T>() => new(

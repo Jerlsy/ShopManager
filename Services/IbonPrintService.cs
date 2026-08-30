@@ -34,9 +34,16 @@ public class IbonPrintService
     private const string T1           = "1-5-p--gJBTZ";
     private const string Ua           = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36";
 
+    // SelectType 代表列印規格：F + 紙張(A4/A3/4X6) + 色彩(B單色/C彩色) + 紙質(N一般/S特殊) + 單雙面(1/2)，
+    // 例如 A4 單色一般紙雙面 = FA4BN2。逆向自 print.ibon.com.tw 網頁版。這裡固定用預設值，
+    // 不指定色彩/單雙面，讓使用者到機台上依實際文件內容自己選——尤其班表色塊是彩色的，
+    // 若程式端宣告單色會跟實際內容矛盾。
+    private const string DefaultSelectType = "FNOMAL";
+
     /// <summary>上傳單一檔案，成功回傳（取件碼, 期限文字），失敗擲出例外（訊息可直接顯示給使用者）。</summary>
     public async Task<(string Pincode, string Deadline)> UploadAsync(
-        byte[] fileBytes, string fileName, Action<string>? progress = null, CancellationToken ct = default)
+        byte[] fileBytes, string fileName, Action<string>? progress = null,
+        string selectType = DefaultSelectType, CancellationToken ct = default)
     {
         if (fileBytes.Length > MaxFileSizeBytes)
             throw new InvalidOperationException($"檔案「{fileName}」超過 ibon 上限 15 MB");
@@ -45,7 +52,7 @@ public class IbonPrintService
         var token = await FetchEntryTokenAsync(ct);
 
         progress?.Invoke("取得取件編號…");
-        var (pincode, deadline) = await FetchPincodeAsync(token, ct);
+        var (pincode, deadline) = await FetchPincodeAsync(token, selectType, ct);
 
         var chunkSize = await FetchChunkSizeAsync(ct);
 
@@ -106,9 +113,9 @@ public class IbonPrintService
             ?? throw new InvalidOperationException("ibon 連線失敗：未取得授權");
     }
 
-    private async Task<(string Pincode, string Deadline)> FetchPincodeAsync(string token, CancellationToken ct)
+    private async Task<(string Pincode, string Deadline)> FetchPincodeAsync(string token, string selectType, CancellationToken ct)
     {
-        var body = new { Data = new { User = "guest", Email = "guest@qware.com.tw", SelectType = "FNOMAL" } };
+        var body = new { Data = new { User = "guest", Email = "guest@qware.com.tw", SelectType = selectType } };
         using var req = NewRequest(HttpMethod.Post, PincodeUrl);
         req.Headers.TryAddWithoutValidation("Authorization", token);
         req.Headers.TryAddWithoutValidation("key", DisposableId);

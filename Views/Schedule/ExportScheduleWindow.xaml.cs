@@ -41,16 +41,17 @@ public partial class ExportScheduleWindow : Window
         Closing += Window_Closing;
     }
 
-    private async void Window_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
+    private void Window_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
         if (!_isPushing) return; // 沒有進行中的推播，正常關閉
 
         e.Cancel = true; // 先攔下，問清楚意圖後再決定是否真的關閉
-        var confirmed = await App.Services.GetRequiredService<IAppDialogService>().ShowConfirmAsync(
-            "推播尚未完成",
+        // 這裡用 MessageBox 而非 IAppDialogService：本視窗以 ShowDialog 開啟，
+        // MaterialDesign 的 RootDialog 只掛在 MainWindow 上，會被壓在本視窗底下看不到（見開發紀錄）。
+        var result = MessageBox.Show(
             "目前還有排隊中的推播尚未送出，確定要中止並關閉視窗嗎？已送出的訊息不會被收回。",
-            "中止並關閉", "繼續等待");
-        if (!confirmed) return;
+            "推播尚未完成", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (result != MessageBoxResult.Yes) return;
 
         _pushCts?.Cancel();
         _isPushing = false;
@@ -96,9 +97,9 @@ public partial class ExportScheduleWindow : Window
         string confirmMsg = isPersonal
             ? $"確定要推播個人班表給 {selected.Count} 位收件人？（業主會收到全部員工的個人班表，員工只收到自己的）"
             : $"確定要將本月完整班表圖片推播給 {selected.Count} 位收件人？";
-        bool confirmed = await App.Services.GetRequiredService<IAppDialogService>()
-            .ShowConfirmAsync("確定推播", confirmMsg, "確定推播", "取消");
-        if (!confirmed) return;
+        // 用 MessageBox：本視窗以 ShowDialog 開啟，MaterialDesign 的 RootDialog 掛在 MainWindow 會被壓在底下看不到
+        var confirmResult = MessageBox.Show(confirmMsg, "確定推播", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        if (confirmResult != MessageBoxResult.Yes) return;
 
         var pushBtn = (System.Windows.Controls.Button)sender;
         pushBtn.IsEnabled = false;

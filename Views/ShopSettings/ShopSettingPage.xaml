@@ -203,6 +203,115 @@
                 </StackPanel>
             </Border>
 
+            <!-- Google 雲端備份 -->
+            <Border Style="{StaticResource SectionCardStyle}" Margin="0,0,0,20">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                        <md:PackIcon Kind="GoogleDrive" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0"
+                                     Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                        <TextBlock Text="Google 雲端備份" Style="{StaticResource SectionTitleStyle}" Margin="0"/>
+                    </StackPanel>
+                    <TextBlock Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" Margin="0,0,0,16"
+                               Text="將整個資料庫備份到 Google 雲端硬碟，換電腦時可還原取回。備份檔存放在應用程式專屬空間，不會出現在你的雲端硬碟檔案清單中。"/>
+
+                    <!-- 未連結 -->
+                    <StackPanel Visibility="{Binding GoogleAccountEmail, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}">
+                        <Button Style="{StaticResource MaterialDesignRaisedButton}"
+                                HorizontalAlignment="Left"
+                                Command="{Binding LinkGoogleAccountCommand}"
+                                IsEnabled="{Binding IsGoogleBusy, Converter={StaticResource BoolInverseConverter}}">
+                            <StackPanel Orientation="Horizontal">
+                                <md:PackIcon Kind="Google" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="連結 Google 帳號"/>
+                            </StackPanel>
+                        </Button>
+                        <TextBlock Margin="0,10,0,0" FontSize="11" Opacity="0.6" TextWrapping="Wrap"
+                                   Text="點擊後會開啟瀏覽器，請登入要用來存放備份的 Google 帳號並同意授權。"/>
+                    </StackPanel>
+
+                    <!-- 已連結 -->
+                    <StackPanel Visibility="{Binding GoogleAccountEmail, Converter={StaticResource NullToVisibilityConverter}}">
+                        <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,14">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <md:PackIcon Grid.Column="0" Kind="AccountCircleOutline" Width="30" Height="30"
+                                             Margin="0,0,12,0" VerticalAlignment="Center" Opacity="0.5"/>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding GoogleAccountEmail}" FontWeight="Medium"/>
+                                    <TextBlock Text="{Binding GoogleLastSyncedLabel}"
+                                               Style="{StaticResource CaptionTextStyle}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- 需重新授權（換電腦／換 Windows 使用者時本機憑證不存在）-->
+                        <Border CornerRadius="8" Padding="12,10" Margin="0,0,0,14"
+                                Background="{DynamicResource AppInfoBrush}"
+                                BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
+                                Visibility="{Binding NeedsGoogleReauthorize, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <md:PackIcon Kind="AlertOutline" Width="16" Height="16" Margin="0,0,6,0"
+                                                 VerticalAlignment="Center"
+                                                 Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                                    <TextBlock Text="這台電腦尚未授權" FontWeight="Medium" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock TextWrapping="Wrap" FontSize="12" Margin="0,0,0,10"
+                                           Foreground="{DynamicResource AppInfoForegroundBrush}"
+                                           Text="為了安全，授權憑證只存在原本那台電腦上，不會隨資料庫同步。請重新授權以在這台電腦使用備份功能。"/>
+                                <Button Style="{StaticResource MaterialDesignRaisedButton}"
+                                        HorizontalAlignment="Left" Height="32" Padding="12,0"
+                                        Command="{Binding LinkGoogleAccountCommand}"
+                                        IsEnabled="{Binding IsGoogleBusy, Converter={StaticResource BoolInverseConverter}}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <md:PackIcon Kind="Google" Width="15" Height="15" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="重新授權"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 備份／還原 -->
+                        <StackPanel Visibility="{Binding IsGoogleLinked, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <StackPanel Orientation="Horizontal">
+                                <Button Style="{StaticResource MaterialDesignRaisedButton}"
+                                        Command="{Binding BackupToGoogleDriveCommand}"
+                                        IsEnabled="{Binding IsGoogleBusy, Converter={StaticResource BoolInverseConverter}}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <md:PackIcon Kind="CloudUploadOutline" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="立即備份到雲端"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Style="{StaticResource MaterialDesignOutlinedButton}" Margin="8,0,0,0"
+                                        Command="{Binding RestoreFromGoogleDriveCommand}"
+                                        IsEnabled="{Binding IsGoogleBusy, Converter={StaticResource BoolInverseConverter}}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <md:PackIcon Kind="CloudDownloadOutline" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="從雲端還原"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                            <TextBlock Margin="0,10,0,0" FontSize="11" Opacity="0.6" TextWrapping="Wrap"
+                                       Text="換電腦操作前請先按「立即備份到雲端」。還原會用雲端資料覆蓋這台電腦目前的資料，並自動重新啟動程式。"/>
+                        </StackPanel>
+
+                        <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                HorizontalAlignment="Left" Margin="0,14,0,0" Height="30" Padding="10,0"
+                                Foreground="{DynamicResource MaterialDesign.Brush.ValidationError}"
+                                Command="{Binding UnlinkGoogleAccountCommand}"
+                                IsEnabled="{Binding IsGoogleBusy, Converter={StaticResource BoolInverseConverter}}">
+                            <StackPanel Orientation="Horizontal">
+                                <md:PackIcon Kind="LinkVariantOff" Width="15" Height="15" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="解除連結" FontSize="12"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
             <!-- LINE 推播設定 -->
             <Border Style="{StaticResource SectionCardStyle}" Margin="0,0,0,20">
                 <StackPanel>
@@ -396,6 +505,213 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Gmail轉Line推播 -->
+            <Border Style="{StaticResource SectionCardStyle}" Margin="0,0,0,20">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                        <md:PackIcon Kind="EmailFastOutline" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0"
+                                     Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                        <TextBlock Text="Gmail轉Line推播" Style="{StaticResource SectionTitleStyle}" Margin="0"/>
+                    </StackPanel>
+                    <TextBlock Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" Margin="0,0,0,16"
+                               Text="符合條件的 Gmail 信件會透過部署在 Google Apps Script 的機制，轉推播給指定業主的 LINE。"/>
+
+                    <!-- 前置條件未滿足 -->
+                    <Border CornerRadius="8" Padding="12,10"
+                            Background="{DynamicResource AppInfoBrush}"
+                            BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
+                            Visibility="{Binding CanConfigureMailForward, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
+                        <TextBlock TextWrapping="Wrap" FontSize="12"
+                                   Foreground="{DynamicResource AppInfoForegroundBrush}"
+                                   Text="請先完成上方「Google 雲端備份」帳號連結，以及「LINE 推播設定」的連線測試，才能設定Gmail轉Line推播規則。"/>
+                    </Border>
+
+                    <StackPanel Visibility="{Binding CanConfigureMailForward, Converter={StaticResource BoolToVisibilityConverter}}">
+
+                        <!-- ── 規則編輯區（新增／編輯共用，確定後收合）───────────────── -->
+                        <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,16"
+                                Visibility="{Binding IsRuleEditorOpen, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <StackPanel>
+                                <TextBlock Text="{Binding RuleEditorTitle}" Style="{StaticResource FormSectionStyle}" Margin="0,0,0,12"/>
+
+                                <TextBlock Text="寄件者關鍵字（選填）" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding EditorSenderContains, UpdateSourceTrigger=PropertyChanged}"
+                                         md:HintAssist.Hint="例：service@example.com" Margin="0,0,0,10"/>
+
+                                <TextBlock Text="主旨關鍵字（選填）" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding EditorSubjectContains, UpdateSourceTrigger=PropertyChanged}"
+                                         md:HintAssist.Hint="例：成交回報" Margin="0,0,0,10"/>
+
+                                <TextBlock Text="內容擷取欄位（選填）" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding EditorContentFields, UpdateSourceTrigger=PropertyChanged}"
+                                         AcceptsReturn="True" TextWrapping="NoWrap" MinLines="4" MaxLines="10"
+                                         VerticalScrollBarVisibility="Auto" FontFamily="Consolas" FontSize="12"
+                                         md:HintAssist.Hint="一行一個欄位名稱，[文字] 為固定標題" Margin="0,0,0,4"/>
+                                <TextBlock FontSize="11" Opacity="0.6" TextWrapping="Wrap" Margin="0,0,0,10"
+                                           Text="一行一項，順序就是卡片上的顯示順序。一般文字＝欄位名稱，會去信中找它後面的值；用中括號包起來的 [存款入帳通知] ＝固定標題，不比對、原樣顯示。留空則推播自動清理後的全文。按「測試」會用最新一封符合的信實際跑一次，直接看到抓出來的結果。"/>
+
+                                <TextBlock Text="推播給（可複選）" Style="{StaticResource FieldLabelStyle}"/>
+                                <Border BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6"
+                                        Padding="10,8" Margin="0,4,0,12">
+                                    <StackPanel>
+                                        <TextBlock Text="尚未綁定任何業主 LINE 帳號，請先到上方「業主 LINE 帳號」新增綁定"
+                                                   Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap"
+                                                   Visibility="{Binding EditorOwnerOptions.Count, Converter={StaticResource ZeroToVisibilityConverter}}"/>
+                                        <ItemsControl ItemsSource="{Binding EditorOwnerOptions}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox Content="{Binding DisplayName}" IsChecked="{Binding IsSelected}"
+                                                              Margin="0,0,16,4"/>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- 測試（純輔助，不影響能否按確定）＋ 確定／取消 -->
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Style="{StaticResource MaterialDesignOutlinedButton}" Height="32" Padding="12,0"
+                                            Command="{Binding TestGmailForwardRuleCommand}"
+                                            IsEnabled="{Binding IsEditorTesting, Converter={StaticResource BoolInverseConverter}}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <md:PackIcon Kind="TestTube" Width="15" Height="15" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="測試"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Style="{StaticResource MaterialDesignRaisedButton}" Height="32" Padding="16,0" Margin="8,0,0,0"
+                                            Command="{Binding ConfirmGmailForwardRuleCommand}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <md:PackIcon Kind="Check" Width="15" Height="15" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="確定"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Style="{StaticResource MaterialDesignFlatButton}" Height="32" Padding="12,0" Margin="4,0,0,0"
+                                            Content="取消" Command="{Binding CancelGmailForwardRuleEditCommand}"/>
+                                </StackPanel>
+
+                                <!-- 測試結果訊息可能很長（Google API 錯誤敘述），限制寬度才會真的換行 -->
+                                <TextBlock Text="{Binding EditorTestResultMessage}" FontSize="11" TextWrapping="Wrap"
+                                           Margin="0,10,0,0" Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                           Visibility="{Binding EditorTestResultMessage, Converter={StaticResource NullToVisibilityConverter}}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- ── 規則清單 ───────────────────────────────────────────── -->
+                        <Border BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="8"
+                                Margin="0,0,0,12"
+                                Visibility="{Binding GmailForwardRuleItems.Count, Converter={StaticResource ZeroToVisibilityConverter}, ConverterParameter=Inverse}">
+                            <StackPanel>
+                                <!-- 表頭 -->
+                                <Grid Background="{DynamicResource AppPanelAltBrush}" Height="34">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="56"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="1.2*"/>
+                                        <ColumnDefinition Width="48"/>
+                                        <ColumnDefinition Width="48"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="啟用" FontSize="12" FontWeight="Medium"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="條件" FontSize="12" FontWeight="Medium"
+                                               VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                    <TextBlock Grid.Column="2" Text="推播對象" FontSize="12" FontWeight="Medium"
+                                               VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                    <TextBlock Grid.Column="3" Text="編輯" FontSize="12" FontWeight="Medium"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="4" Text="刪除" FontSize="12" FontWeight="Medium"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <ItemsControl ItemsSource="{Binding GmailForwardRuleItems}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,1,0,0">
+                                                <Grid MinHeight="44">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="56"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="1.2*"/>
+                                                        <ColumnDefinition Width="48"/>
+                                                        <ColumnDefinition Width="48"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <CheckBox Grid.Column="0" IsChecked="{Binding IsEnabled}"
+                                                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding ConditionSummary}" FontSize="12"
+                                                               TextWrapping="Wrap" VerticalAlignment="Center" Margin="8,6"/>
+                                                    <TextBlock Grid.Column="2" Text="{Binding OwnerSummary}" FontSize="12"
+                                                               TextWrapping="Wrap" VerticalAlignment="Center" Margin="8,6"/>
+                                                    <Button Grid.Column="3" Style="{StaticResource MaterialDesignIconButton}"
+                                                            Width="32" Height="32" VerticalAlignment="Center" ToolTip="編輯"
+                                                            Command="{Binding DataContext.EditGmailForwardRuleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}">
+                                                        <md:PackIcon Kind="PencilOutline" Width="17" Height="17"/>
+                                                    </Button>
+                                                    <Button Grid.Column="4" Style="{StaticResource MaterialDesignIconButton}"
+                                                            Width="32" Height="32" VerticalAlignment="Center" ToolTip="刪除"
+                                                            Foreground="{DynamicResource MaterialDesign.Brush.ValidationError}"
+                                                            Command="{Binding DataContext.RemoveGmailForwardRuleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}">
+                                                        <md:PackIcon Kind="DeleteOutline" Width="17" Height="17"/>
+                                                    </Button>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="尚未新增任何規則" Style="{StaticResource CaptionTextStyle}"
+                                   HorizontalAlignment="Center" Margin="0,8,0,12"
+                                   Visibility="{Binding GmailForwardRuleItems.Count, Converter={StaticResource ZeroToVisibilityConverter}}"/>
+
+                        <Button Style="{StaticResource MaterialDesignFlatButton}" HorizontalAlignment="Left"
+                                Command="{Binding AddGmailForwardRuleCommand}" Height="32" Padding="12,0" Margin="0,0,0,16">
+                            <StackPanel Orientation="Horizontal">
+                                <md:PackIcon Kind="Plus" Width="16" Height="16" Margin="0,0,4,0"/>
+                                <TextBlock Text="新增規則"/>
+                            </StackPanel>
+                        </Button>
+
+                        <StackPanel Orientation="Horizontal">
+                            <Button Style="{StaticResource MaterialDesignRaisedButton}"
+                                    Command="{Binding UploadGmailForwardRulesCommand}">
+                                <StackPanel Orientation="Horizontal">
+                                    <md:PackIcon Kind="CloudUploadOutline" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="更新上傳到雲端"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource MaterialDesignOutlinedButton}" Margin="8,0,0,0"
+                                    Command="{Binding CheckGmailDeployStatusCommand}"
+                                    IsEnabled="{Binding IsGmailForwardBusy, Converter={StaticResource BoolInverseConverter}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <md:PackIcon Kind="RefreshCircle" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="檢查部署狀態"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                        <TextBlock Margin="0,8,0,0" FontSize="11" Opacity="0.6" TextWrapping="Wrap"
+                                   Text="規則改完要按「更新上傳到雲端」才會生效——Apps Script 讀的是雲端那份規則。沒有任何啟用中的規則時上傳，等同讓 Apps Script 停止推播。"/>
+
+                        <!-- 部署狀態 -->
+                        <Border BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,1,0,0"
+                                Margin="0,16,0,0" Padding="0,14,0,0"
+                                Visibility="{Binding IsDeployStatusChecked, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <StackPanel>
+                                <TextBlock Text="部署狀態" Style="{StaticResource FormSectionStyle}" Margin="0,0,0,10"/>
+                                <TextBlock Text="{Binding ForwardHealthLabel}" FontSize="12" FontWeight="Medium"
+                                           TextWrapping="Wrap" Margin="0,0,0,4"/>
+                                <TextBlock Text="{Binding ForwardLastRunSummary}" FontSize="11" Opacity="0.7"
+                                           TextWrapping="Wrap"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>

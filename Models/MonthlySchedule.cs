@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace ShopManager.Models;
 
@@ -42,7 +43,8 @@ public class MonthlySchedule
     public List<int> ExcludeFromAutoAssignIds { get; set; } = new();
 
     /// <summary>該月的排班記錄</summary>
-    public List<ScheduleEntry> Entries { get; set; } = new();
+    // 備份/還原時當獨立清單處理（見 ShopDataPortabilityService），這裡忽略序列化避免混淆
+    [JsonIgnore] public List<ScheduleEntry> Entries { get; set; } = new();
 }
 
 /// <summary>班別-星期對應設定（建立班表時指定）</summary>

@@ -60,11 +60,11 @@ public partial class IbonPrintWindow : Window
         }
 
         var owners = _data.PushRecipients.Where(r => r.IsOwner && !string.IsNullOrEmpty(r.UserId)).ToList();
-        bool confirmed = await App.Services.GetRequiredService<IAppDialogService>().ShowConfirmAsync(
-            "上傳 ibon 雲端列印",
+        // 用 MessageBox：本視窗以 ShowDialog 開啟，MaterialDesign 的 RootDialog 掛在 MainWindow 會被壓在底下看不到
+        var confirmResult = MessageBox.Show(
             $"確定要上傳所選班表？完成後列印碼與 QR Code 將推播給 {owners.Count} 位業主。",
-            "上傳", "取消");
-        if (!confirmed) return;
+            "上傳 ibon 雲端列印", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        if (confirmResult != MessageBoxResult.Yes) return;
 
         _isBusy = true;
         UploadButton.IsEnabled = false;
@@ -88,6 +88,8 @@ public partial class IbonPrintWindow : Window
                     new() { _bitmapTop },
                     new() { _bitmapBottom },
                 }, slotsPerPage: 1, centerVertically: true);
+                // 不指定 selectType（單色/彩色、單雙面）：完整班表的班別色塊是彩色的，
+                // 若在這裡宣告單色會跟實際內容矛盾，交給使用者在機台上自己選擇列印規格。
                 var r = await ibon.UploadAsync(pdf, $"{_data.Year}{_data.Month:D2}_全體班表.pdf", Progress);
                 results.Add(("完整班表", r.Pincode, r.Deadline));
             }
