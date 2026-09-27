@@ -81,27 +81,6 @@ public partial class BonusLineItem : ObservableObject
 
 public record BonusPresetOption(BonusPresetType Type, string Label);
 
-/// <summary>每日排班工時明細（顯示用）</summary>
-public class SalaryDailyEntry
-{
-    public DateOnly Date    { get; init; }
-    public double   Hours   { get; init; }
-    public string   TypeTag { get; init; } = string.Empty;   // 平日 / 假日 / 替代
-    public string DayLabel => Date.DayOfWeek switch
-    {
-        DayOfWeek.Monday    => "一",
-        DayOfWeek.Tuesday   => "二",
-        DayOfWeek.Wednesday => "三",
-        DayOfWeek.Thursday  => "四",
-        DayOfWeek.Friday    => "五",
-        DayOfWeek.Saturday  => "六",
-        DayOfWeek.Sunday    => "日",
-        _ => ""
-    };
-    public string Label => $"{Date.Month:D2}/{Date.Day:D2}（{DayLabel}）";
-    public decimal? OverrideAmount { get; init; }
-}
-
 /// <summary>員工薪資卡片 VM</summary>
 public partial class EmployeeSalaryItem : ObservableObject
 {
@@ -115,10 +94,24 @@ public partial class EmployeeSalaryItem : ObservableObject
     public double OT2Hours     { get; set; }
     public double TotalHours   => WeekdayHours + HolidayHours;
 
-    // 打卡對照（ClockedHours 為 null＝未匯入打卡資料）
+    // 打卡對照，全月合計（ClockedHours 為 null＝未匯入打卡資料）
     public double  ScheduledHours { get; init; }
     public double? ClockedHours   { get; init; }
     public bool    HasAttendance  => ClockedHours.HasValue;
+
+    // 打卡對照，依平日／假日拆分——供卡片並排顯示「排班工時」vs「打卡紀錄」
+    public double  WeekdayScheduledHours { get; init; }
+    public double  HolidayScheduledHours { get; init; }
+    public double? WeekdayClockedHours   { get; init; }
+    public double? HolidayClockedHours   { get; init; }
+    public bool    HasWeekdayAttendance  => WeekdayClockedHours.HasValue;
+    public bool    HasHolidayAttendance  => HolidayClockedHours.HasValue;
+
+    // 排班工時 vs 打卡紀錄差超過 0.05hr（3 分鐘，抵消四捨五入誤差）才算「不同步」，卡片上要標色提醒
+    public bool HasWeekdayHoursMismatch =>
+        HasWeekdayAttendance && Math.Abs(WeekdayScheduledHours - WeekdayClockedHours!.Value) > 0.05;
+    public bool HasHolidayHoursMismatch =>
+        HasHolidayAttendance && Math.Abs(HolidayScheduledHours - HolidayClockedHours!.Value) > 0.05;
 
     // 薪資明細
     public decimal WeekdayPay  { get; set; }
@@ -132,11 +125,34 @@ public partial class EmployeeSalaryItem : ObservableObject
     public decimal HourlyRate        { get; init; }
     public decimal HolidayHourlyRate { get; init; }
     public decimal MonthlyBase       { get; init; }
+    public decimal OT1Rate           { get; init; }   // 加班倍率（第2小時起），來自勞基法設定或員工個別設定
+    public decimal OT2Rate           { get; init; }   // 加班倍率（第3小時起）
+
+    /// <summary>
+    /// 時薪制：加班時薪其實已經按倍率算進 WeekdayPay 裡（見 SalaryCalculationService.ComputeDay），
+    /// 所以這裡照實拆成「平日基本＋加班一段＋加班二段」幾項相加，不是隨便湊的近似值。
+    /// 月薪制底薪固定，不隨工時變動，沒有算式可拆，直接顯示金額。
+    /// </summary>
+    public string WeekdayCalcLabel => IsHourly ? "薪資計算" : "底薪";
+    public string WeekdayCalcText
+    {
+        get
+        {
+            if (!IsHourly) return $"{WeekdayPay:N0} 元";
+            if (!HasOT) return $"{HourlyRate:0.##} × {WeekdayHours:0.#} ＝ {WeekdayPay:N0} 元";
+
+            var normalHours = Math.Max(WeekdayHours - OT1Hours - OT2Hours, 0);
+            var terms = new List<string> { $"{HourlyRate:0.##}×{normalHours:0.#}" };
+            if (OT1Hours > 0) terms.Add($"{HourlyRate:0.##}×{OT1Rate:0.##}×{OT1Hours:0.#}");
+            if (OT2Hours > 0) terms.Add($"{HourlyRate:0.##}×{OT2Rate:0.##}×{OT2Hours:0.#}");
+            return $"{string.Join(" + ", terms)} ＝ {WeekdayPay:N0} 元";
+        }
+    }
+    public string HolidayCalcText => IsHourly
+        ? $"{HolidayHourlyRate:0.##} × {HolidayHours:0.#} ＝ {HolidayPay:N0} 元"
+        : $"{HolidayPay:N0} 元";
 
     public List<SalaryDailyEntry> DailyEntries { get; } = new();
-
-    [ObservableProperty] private bool _isScheduleDetailOpen;
-    [RelayCommand] private void ToggleScheduleDetail() => IsScheduleDetailOpen = !IsScheduleDetailOpen;
 
     public ObservableCollection<BonusLineItem> BonusItems { get; } = new();
     public decimal BonusTotal => BonusItems.Sum(b => b.Amount);
@@ -148,6 +164,11 @@ public partial class EmployeeSalaryItem : ObservableObject
     public bool HasOT      => OT1Hours > 0 || OT2Hours > 0;
     public bool HasHoliday => HolidayHours > 0;
     public bool HasOverride => OverridePay != 0;
+
+    // 時薪制的加班薪資已經按倍率折算進 WeekdayCalcText 裡了（見上方），這裡不重複顯示金額，
+    // 只有月薪制的加班津貼是額外加在底薪上的獨立項目，才需要單獨一欄
+    public bool ShowOT1Pay => HasOT && IsMonthly;
+    public bool ShowOT2Pay => OT2Hours > 0 && IsMonthly;
 
     [ObservableProperty] private bool _isExpanded = true;
 

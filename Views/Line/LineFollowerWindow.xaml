@@ -10,7 +10,7 @@
         SizeToContent="Height"
         TextElement.Foreground="{DynamicResource MaterialDesign.Brush.Foreground}"
         TextElement.FontFamily="{DynamicResource AppFontFamily}"
-        FontSize="{DynamicResource AppFontSize}"
+        FontSize="{DynamicResource FontSizeBody}"
         Background="{DynamicResource AppSurfaceBrush}">
 
     <Border BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
@@ -57,7 +57,7 @@
         </Border>
 
         <!-- 主體 -->
-        <Border Grid.Row="1" Background="{DynamicResource AppBackgroundBrush}">
+        <Border Grid.Row="1" Background="{DynamicResource AppShellBackgroundBrush}">
             <Grid>
                 <!-- 載入中 -->
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
