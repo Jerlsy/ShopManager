@@ -136,13 +136,20 @@ public partial class SalaryViewModel : ObservableObject
                     HourlyRate        = empRec.HourlyRate,
                     HolidayHourlyRate = empRec.HolidayHourlyRate,
                     MonthlyBase       = empRec.MonthlyBase,
+                    OT1Rate           = empRec.OT1Rate,
+                    OT2Rate           = empRec.OT2Rate,
                     ScheduledHours    = empRec.ScheduledHours,
                     ClockedHours      = empRec.ClockedHours,
+                    WeekdayScheduledHours = empRec.WeekdayScheduledHours,
+                    HolidayScheduledHours = empRec.HolidayScheduledHours,
+                    WeekdayClockedHours   = empRec.WeekdayClockedHours,
+                    HolidayClockedHours   = empRec.HolidayClockedHours,
                 };
 
                 item.OnGlobalChanged      = () => { RefreshTotalCost(); ScheduleAutoSave(); };
                 item.OnAttendanceAccepted = OnAttendanceAccepted;
                 item.AddIssues(empRec.AttendanceIssues);
+                foreach (var e in empRec.DailyEntries) item.DailyEntries.Add(e);
 
                 foreach (var b in empRec.BonusItems)
                 {
@@ -181,7 +188,8 @@ public partial class SalaryViewModel : ObservableObject
 
         // NoTracking：避免長壽 DbContext 回傳舊的員工薪資（時薪/加給），導致薪資計算用到過期金額
         var employees = await _employeeService.GetAllWithDetailsNoTrackingAsync();
-        var activeEmps = employees.Where(e => !e.IsResigned).ToList();
+        // 以班表月份判斷在職：月中或之後才離職的人仍要算當月薪資（不能用以「今天」判斷的 IsResigned）
+        var activeEmps = employees.Where(e => e.IsEmployedDuring(schedule.Year, schedule.Month)).ToList();
         var scheduledEmpIds = schedule.Entries.Select(e => e.EmployeeId).ToHashSet();
         var eligibleEmps = activeEmps
             .Where(e => e.DefaultSalary is not null && scheduledEmpIds.Contains(e.Id))
@@ -241,33 +249,6 @@ public partial class SalaryViewModel : ObservableObject
             empRec.IsUnderMinWage = IsUnderMinWage(empRec.SalaryType,
                 empRec.WeekdayPay, empRec.HolidayPay, empRec.WeekdayHours, empRec.HolidayHours, empRec.BaseAmount);
 
-        // 每日明細標籤
-        var dailyByEmp = schedule.Entries
-            .Where(e => e.ShiftSetting is not null)
-            .GroupBy(e => e.EmployeeId)
-            .ToDictionary(
-                g => g.Key,
-                g => g.GroupBy(e => e.Date)
-                       .Select(dg =>
-                       {
-                           var date    = dg.Key;
-                           var hours   = dg.Sum(e => e.ShiftSetting!.WorkHours);
-                           var over    = config.DailyOverrides
-                               .FirstOrDefault(o => o.EmployeeId == g.Key && o.Date == date);
-                           var tag     = over is not null
-                               ? "替代"
-                               : config.IsHoliday(date, nationalHolidays) ? "假日" : "平日";
-                           return new SalaryDailyEntry
-                           {
-                               Date           = date,
-                               Hours          = hours,
-                               TypeTag        = tag,
-                               OverrideAmount = over?.Amount,
-                           };
-                       })
-                       .OrderBy(x => x.Date)
-                       .ToList());
-
         // 保留既有 BonusItems（出勤差異產生的項目除外：這次計算會重新列出差異，避免重複扣加）
         var existingBonus = EmployeeItems.ToDictionary(
             i => i.Employee.Id,
@@ -293,9 +274,15 @@ public partial class SalaryViewModel : ObservableObject
                 HourlyRate       = empRec.HourlyRate,
                 HolidayHourlyRate = empRec.HolidayHourlyRate,
                 MonthlyBase      = empRec.MonthlyBase,
+                OT1Rate          = empRec.OT1Rate,
+                OT2Rate          = empRec.OT2Rate,
                 IsUnderMinWage   = empRec.IsUnderMinWage,
                 ScheduledHours   = empRec.ScheduledHours,
                 ClockedHours     = empRec.ClockedHours,
+                WeekdayScheduledHours = empRec.WeekdayScheduledHours,
+                HolidayScheduledHours = empRec.HolidayScheduledHours,
+                WeekdayClockedHours   = empRec.WeekdayClockedHours,
+                HolidayClockedHours   = empRec.HolidayClockedHours,
             };
 
             var sourceBonuses = existingBonus.TryGetValue(empRec.Employee.Id, out var prev)
@@ -318,8 +305,7 @@ public partial class SalaryViewModel : ObservableObject
                 item.BonusItems.Add(bonus);
             }
 
-            if (dailyByEmp.TryGetValue(empRec.Employee.Id, out var entries))
-                foreach (var e in entries) item.DailyEntries.Add(e);
+            foreach (var e in empRec.DailyEntries) item.DailyEntries.Add(e);
 
             EmployeeItems.Add(item);
         }
@@ -413,6 +399,8 @@ public partial class SalaryViewModel : ObservableObject
                     HourlyRate        = ui.HourlyRate,
                     HolidayHourlyRate = ui.HolidayHourlyRate,
                     MonthlyBase       = ui.MonthlyBase,
+                    OT1Rate           = ui.OT1Rate,
+                    OT2Rate           = ui.OT2Rate,
                     WeekdayHours      = ui.WeekdayHours,
                     HolidayHours      = ui.HolidayHours,
                     OT1Hours          = ui.OT1Hours,
@@ -425,6 +413,11 @@ public partial class SalaryViewModel : ObservableObject
                     BaseAmount        = ui.BaseAmount,
                     ScheduledHours    = ui.ScheduledHours,
                     ClockedHours      = ui.ClockedHours,
+                    WeekdayScheduledHours = ui.WeekdayScheduledHours,
+                    HolidayScheduledHours = ui.HolidayScheduledHours,
+                    WeekdayClockedHours   = ui.WeekdayClockedHours,
+                    HolidayClockedHours   = ui.HolidayClockedHours,
+                    DailyEntries      = ui.DailyEntries,
                     AttendanceIssues  = ui.AttendanceIssues.Select(i => i.Issue).ToList(),
                     BonusItems        = ui.BonusItems.Select(b => b.ToModel()).ToList(),
                 });

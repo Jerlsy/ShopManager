@@ -105,6 +105,16 @@ public class LineFollowerService(AppDbContext db, ShopContext shopContext, LineS
         await db.SaveChangesAsync();
     }
 
+    /// <summary>復職時恢復綁定</summary>
+    public async Task EnableBindingAsync(int employeeId)
+    {
+        var follower = await db.LineFollowers
+            .FirstOrDefaultAsync(f => f.ShopId == shopContext.ShopId && f.BoundEmployeeId == employeeId);
+        if (follower != null)
+            follower.IsBindingDisabled = false;
+        await db.SaveChangesAsync();
+    }
+
     /// <summary>員工離職時停用綁定（保留連結記錄，不再推播）</summary>
     public async Task DisableBindingAsync(int employeeId)
     {

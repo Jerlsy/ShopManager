@@ -106,6 +106,7 @@ public interface IShiftRule
 ///
 /// ── 規則優先序 ──────────────────────────────────────────────
 ///  群組 A  個人設定（優先封鎖，不需看其他人）
+///    #0  ResignedRule             — 離職日之後不可排班（移動、複製模式都檢查）
 ///    #1  FixedOffRule             — 員工固定休假日（週幾不排班）
 ///    #2  ExcludeShiftRule         — 員工排除的班別類型
 ///
@@ -126,6 +127,7 @@ public static class ShiftRuleEngine
     private static readonly IReadOnlyList<IShiftRule> Rules =
     [
         // 群組 A：個人設定
+        new ResignedRule(),           // #0 已離職
         new FixedOffRule(),           // #1 固定休假日
         new ExcludeShiftRule(),       // #2 排除班別
         // 群組 B：互動設定
@@ -143,6 +145,7 @@ public static class ShiftRuleEngine
     // 複製模式：只檢查群組 C（不限共事人，只限本人排班衝突）
     private static readonly IReadOnlyList<IShiftRule> CopyRules =
     [
+        new ResignedRule(),              // #0 已離職
         new TimeOverlapRule(),           // #7 時間重疊
         new DailyMaxHoursRule(),         // #8 每日工時上限
         new ConsecutiveDaysRule(),       // #9 最長連續上班日數
@@ -181,6 +184,15 @@ public static class ShiftRuleEngine
 }
 
 // ── Concrete rules ────────────────────────────────────────────────────────
+
+/// <summary>離職日之後不可排班（離職當天仍可排）</summary>
+public sealed class ResignedRule : IShiftRule
+{
+    public ShiftValidationResult Evaluate(ShiftValidationContext ctx) =>
+        ctx.Employee.ResignDate is { } resign && ctx.Date > resign
+            ? ShiftValidationResult.Block($"已離職（{resign:yyyy/MM/dd}）")
+            : ShiftValidationResult.Allow;
+}
 
 /// <summary>員工設定的固定休假日（ScheduleRuleType.FixedOff）</summary>
 public sealed class FixedOffRule : IShiftRule

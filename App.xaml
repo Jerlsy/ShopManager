@@ -69,7 +69,7 @@
                 <Setter Property="TextWrapping"            Value="Wrap"/>
                 <Setter Property="VerticalContentAlignment" Value="Top"/>
                 <Setter Property="FontFamily"              Value="{DynamicResource AppFontFamily}"/>
-                <Setter Property="FontSize"                Value="{DynamicResource AppFontSize}"/>
+                <Setter Property="FontSize"                Value="{DynamicResource FontSizeBody}"/>
                 <Setter Property="Foreground"              Value="{DynamicResource MaterialDesign.Brush.Foreground}"/>
                 <Setter Property="Template">
                     <Setter.Value>

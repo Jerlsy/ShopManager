@@ -8,8 +8,8 @@
         ResizeMode="NoResize"
         TextElement.Foreground="{DynamicResource MaterialDesign.Brush.Foreground}"
         TextElement.FontFamily="{DynamicResource AppFontFamily}"
-        FontSize="{DynamicResource AppFontSize}"
-        Background="{DynamicResource AppBackgroundBrush}">
+        FontSize="{DynamicResource FontSizeBody}"
+        Background="{DynamicResource AppShellBackgroundBrush}">
 
     <Border BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
         <Grid>
@@ -91,7 +91,7 @@
                                          Foreground="{DynamicResource AppSubtleForegroundBrush}"
                                          Text="左側選單點「Workers &amp; Pages」→「Create」→「Create Worker」，自訂名稱後按「Deploy」完成建立。"/>
                                 <Border Margin="0,8,0,0" CornerRadius="4" Padding="10,8"
-                                        Background="{DynamicResource AppBackgroundBrush}"
+                                        Background="{DynamicResource AppShellBackgroundBrush}"
                                         BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
                                     <StackPanel>
                                         <TextBlock Text="頁面路徑" FontSize="10" Opacity="0.5" Margin="0,0,0,3"/>
@@ -129,7 +129,7 @@
 
                                 <!-- 路徑提示 -->
                                 <Border Margin="0,8,0,6" CornerRadius="4" Padding="10,6"
-                                        Background="{DynamicResource AppBackgroundBrush}"
+                                        Background="{DynamicResource AppShellBackgroundBrush}"
                                         BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
                                     <TextBlock FontSize="12" FontFamily="Consolas">
                                         <Run Text="[你的 Worker]" Foreground="{DynamicResource AppSubtleForegroundBrush}"/>
@@ -142,7 +142,7 @@
 
                                 <!-- 程式碼區 -->
                                 <Border CornerRadius="4"
-                                        Background="{DynamicResource AppBackgroundBrush}"
+                                        Background="{DynamicResource AppShellBackgroundBrush}"
                                         BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
                                     <StackPanel>
                                         <Grid Margin="8,5,4,0">
@@ -197,7 +197,7 @@
                                          Foreground="{DynamicResource AppSubtleForegroundBrush}"
                                          Text="KV 存好友／群組資料；R2 暫存班表/薪資單圖片（LINE 圖片訊息需要一個公開網址）。兩個都要建立並繫結。"/>
                                 <Border Margin="0,8,0,0" CornerRadius="4" Padding="10,8"
-                                        Background="{DynamicResource AppBackgroundBrush}"
+                                        Background="{DynamicResource AppShellBackgroundBrush}"
                                         BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
                                     <StackPanel>
                                         <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
@@ -265,7 +265,7 @@
                                          Foreground="{DynamicResource AppSubtleForegroundBrush}"
                                          Text="Worker › 設定 › 變數和祕密，新增以下三個 Secret："/>
                                 <Border Margin="0,8,0,0" CornerRadius="4" Padding="10,8"
-                                        Background="{DynamicResource AppBackgroundBrush}"
+                                        Background="{DynamicResource AppShellBackgroundBrush}"
                                         BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
                                     <StackPanel>
                                         <Grid Margin="0,0,0,6">
@@ -335,7 +335,7 @@
                                          Foreground="{DynamicResource AppSubtleForegroundBrush}"
                                          Text="到 LINE OA Manager 或 LINE Developers Console 填入 Webhook URL，開啟 Use webhook 並點「Verify」確認連線成功。"/>
                                 <Border Margin="0,8,0,0" CornerRadius="4" Padding="8,6"
-                                        Background="{DynamicResource AppBackgroundBrush}"
+                                        Background="{DynamicResource AppShellBackgroundBrush}"
                                         BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
                                     <StackPanel>
                                         <TextBlock Text="Webhook URL 格式" FontSize="10" Opacity="0.5" Margin="0,0,0,3"/>
@@ -368,7 +368,7 @@
                                          Foreground="{DynamicResource AppSubtleForegroundBrush}"
                                          Text="LINE 偶爾會在追蹤當下查詢個人資料失敗，程式碼裡的 scheduled 排程會每天自動補查。不設定也不影響好友/群組同步或推播，只是失敗的顯示名稱不會自動修好。"/>
                                 <Border Margin="0,8,0,0" CornerRadius="4" Padding="10,8"
-                                        Background="{DynamicResource AppBackgroundBrush}"
+                                        Background="{DynamicResource AppShellBackgroundBrush}"
                                         BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
                                     <TextBlock FontSize="12" FontFamily="Consolas">
                                         <Run Text="Worker" Foreground="{DynamicResource AppSubtleForegroundBrush}"/>
@@ -406,7 +406,7 @@
                                          Foreground="{DynamicResource AppSubtleForegroundBrush}"
                                          Text="回到 ShopManager 店鋪設定，填入 Worker URL（不含 /webhook）與 API Key，儲存即完成。員工追蹤官方帳號、或把官方帳號邀進群組/多人聊天室後，清單就會自動更新。"/>
                                 <Border Margin="0,8,0,0" CornerRadius="4" Padding="8,6"
-                                        Background="{DynamicResource AppBackgroundBrush}"
+                                        Background="{DynamicResource AppShellBackgroundBrush}"
                                         BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
                                     <StackPanel>
                                         <TextBlock Text="Worker URL（填這個）" FontSize="10" Opacity="0.5" Margin="0,0,0,3"/>

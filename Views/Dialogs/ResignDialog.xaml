@@ -1,0 +1,59 @@
+<UserControl x:Class="ShopManager.Views.Dialogs.ResignDialog"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+             Width="440">
+    <Border Background="{DynamicResource AppSurfaceBrush}"
+            BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
+            CornerRadius="20" Padding="28,24,28,16">
+        <StackPanel>
+            <TextBlock x:Name="TitleText"
+                       FontSize="{DynamicResource FontSizeDialogTitle}" FontWeight="SemiBold"
+                       Margin="0,0,0,16"/>
+
+            <TextBlock Text="離職日期 *" Style="{StaticResource FieldLabelStyle}"/>
+            <DatePicker x:Name="ResignDatePicker"
+                        md:HintAssist.Hint="選擇離職日期"
+                        Margin="0,0,0,4"/>
+            <TextBlock x:Name="DateError"
+                       Text="請選擇離職日期" Foreground="#C62828" FontSize="11"
+                       Visibility="Collapsed" Margin="0,2,0,0"/>
+
+            <Border CornerRadius="8" Padding="12,10" Margin="0,14,0,0"
+                    Background="{DynamicResource AppPanelAltBrush}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap"
+                               Text="• 所有排班與薪資紀錄都會保留，之後仍可查詢"/>
+                    <TextBlock Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" Margin="0,2,0,0"
+                               Text="• 離職當月仍會出現在排班與薪資計算；之後的月份不再出現"/>
+                    <TextBlock Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" Margin="0,2,0,0"
+                               Text="• 離職日之後不能再排班；已排的班會列為排班衝突，請到排班頁調整"/>
+                    <TextBlock Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" Margin="0,2,0,0"
+                               Text="• 之後可按「復職」取消離職"/>
+                </StackPanel>
+            </Border>
+
+            <StackPanel x:Name="LinePanel" Margin="0,14,0,0" Visibility="Collapsed">
+                <CheckBox x:Name="SendLineCheckBox" Content="傳送 LINE 解除綁定訊息給員工" IsChecked="True"/>
+                <Border CornerRadius="8" Padding="10,8" Margin="26,6,0,0"
+                        BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+                    <TextBlock x:Name="LinePreviewText" TextWrapping="Wrap"
+                               Style="{StaticResource CaptionTextStyle}"/>
+                </Border>
+                <TextBlock Text="訊息內容可在「店鋪設定 → LINE → 解除綁定訊息」修改"
+                           Style="{StaticResource CaptionTextStyle}" Opacity="0.7" Margin="26,4,0,0"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                <Button Content="取消"
+                        Style="{StaticResource MaterialDesignFlatButton}"
+                        Command="{x:Static md:DialogHost.CloseDialogCommand}"
+                        CommandParameter="{x:Null}"
+                        Margin="0,0,8,0"/>
+                <Button Content="確定離職"
+                        Style="{StaticResource MaterialDesignRaisedButton}"
+                        Click="OkButton_Click"/>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

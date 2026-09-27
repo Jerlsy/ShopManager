@@ -95,18 +95,26 @@
                                             <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
 
-                                        <!-- 刪除按鈕（右上角） -->
-                                        <Button Style="{StaticResource MaterialDesignIconButton}"
-                                                Width="30" Height="30"
-                                                HorizontalAlignment="Right" VerticalAlignment="Top"
-                                                Margin="0,8,8,0"
-                                                Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                CommandParameter="{Binding}" ToolTip="刪除員工">
-                                            <md:PackIcon Kind="DeleteOutline" Width="15" Height="15" Opacity="0.45"/>
-                                        </Button>
+                                        <!-- 右上角：離職／復職（明顯）+ 刪除（淡） -->
+                                        <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,6,0">
+                                            <Button Content="{Binding ResignActionLabel}"
+                                                    ToolTip="{Binding ResignActionTooltip}"
+                                                    Command="{Binding DataContext.ToggleResignCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    Style="{StaticResource MaterialDesignRaisedButton}"
+                                                    Background="#F2FFFFFF" Foreground="#C62828" BorderBrush="#C62828"
+                                                    md:ButtonAssist.CornerRadius="11"
+                                                    Height="22" Padding="8,0" FontSize="11"/>
+                                            <Button Style="{StaticResource MaterialDesignIconButton}"
+                                                    Width="30" Height="30" HorizontalAlignment="Right" Margin="0,2,0,0"
+                                                    Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}" ToolTip="刪除員工">
+                                                <md:PackIcon Kind="DeleteOutline" Width="15" Height="15" Opacity="0.45"/>
+                                            </Button>
+                                        </StackPanel>
 
                                         <!-- 上半：大頭貼 + 姓名區塊 -->
-                                        <Grid Margin="10,10,36,10" VerticalAlignment="Top">
+                                        <Grid Margin="10,10,56,10" VerticalAlignment="Top">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="*"/>
@@ -268,14 +276,23 @@
                                                 <TextBlock Text="已離職" FontSize="10" Foreground="#C62828"/>
                                             </Border>
                                         </StackPanel>
-                                        <Button Grid.Column="1"
-                                                Style="{StaticResource MaterialDesignIconButton}"
-                                                Width="32" Height="32" VerticalAlignment="Center"
-                                                Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                                CommandParameter="{Binding}"
-                                                ToolTip="刪除員工">
-                                            <md:PackIcon Kind="DeleteOutline" Width="15" Height="15" Opacity="0.5"/>
-                                        </Button>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Button Content="{Binding ResignActionLabel}"
+                                                    ToolTip="{Binding ResignActionTooltip}"
+                                                    Command="{Binding DataContext.ToggleResignCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                    CommandParameter="{Binding}"
+                                                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                                                    Foreground="#C62828" BorderBrush="#C62828"
+                                                    md:ButtonAssist.CornerRadius="11"
+                                                    Height="22" Padding="8,0" FontSize="11" Margin="0,0,2,0"/>
+                                            <Button Style="{StaticResource MaterialDesignIconButton}"
+                                                    Width="32" Height="32"
+                                                    Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip="刪除員工">
+                                                <md:PackIcon Kind="DeleteOutline" Width="15" Height="15" Opacity="0.5"/>
+                                            </Button>
+                                        </StackPanel>
                                     </Grid>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>

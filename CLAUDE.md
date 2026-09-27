@@ -24,6 +24,7 @@ Cloud sessions building here: this is a WPF project (`net10.0-windows`), so `dot
 1. `git fetch origin main`，比對 main 有沒有更新。
    - 有更新 → 先確認本機（工作目錄）乾淨，`git merge origin/main` 合併回目前的開發分支。**不能用 `rebase` 或 force push 改寫已推送的歷史。**
    - 沒更新 → 直接在開發分支繼續。
+   - 本機併回 main 時會 `git rm` 掉 `CloudTest/`，所以合併（常是 fast-forward）後開發分支的 `CloudTest/` 也會消失 → 用 `git checkout <合併前的分支 commit> -- CloudTest/` 還原，並單獨 commit（該 commit 同樣不併回 main）。
 2. 雲端**不可推 main**——雲端沒辦法建置測試（WPF 應用無法在 Linux 上實際執行/驗證 UI），併回 main 一律交給本機處理。
 
 **本機這邊（每次作業前）**
@@ -93,6 +94,12 @@ The 計算薪資 panel can import a POS-exported punch xlsx (`AttendanceImportSe
 - Pay basis when both schedule and a complete punch exist is the **schedule's** hours (early arrival / late leaving never add pay). Late/early beyond the per-run grace minutes, scheduled-but-no-punch, punch-but-no-schedule, and half punches become `AttendanceIssue`s that the owner must decide one by one before 接受. Until accepted, scheduled days without a complete punch are **not** paid.
 - Pending issues live as a JSON column on `SalaryEmployeeRecords` (with the pre-computed `IfCounted` day pay), so accepting needs no salary-setting lookup and backup/restore needs no ID remapping. Fixed-amount decisions become `BonusPresetType.AttendanceAdjust` bonus lines, which are **dropped on recalculation** (the issues are regenerated) to avoid double counting.
 - Name matching uses `Employee.ClockName` (falls back to `Name`); owner-picked mappings are written back from the salary page, so the employee page reads `ClockName` with `AsNoTracking` at edit start to avoid overwriting it with a stale tracked value.
+
+### Resignation vs. deletion
+
+`Employee.IsResigned` compares against **today** and is only for the "已離職" badge. Anything month-scoped (salary eligibility, the schedule page's `ActiveEmployees`) must use `IsEmployedDuring(year, month)` — otherwise someone resigning mid-September vanishes from August payroll computed in late September. `ShiftRuleEngine`'s `ResignedRule` (#0, in both move and copy rule sets) blocks shifts after `ResignDate`, which also surfaces existing post-resignation shifts as conflicts.
+- Resign/reinstate side effects live in one place (`EmployeeViewModel.ApplyResignChangeAsync`), shared by the card's 離職/復職 chip, the 到職設定 form, and the delete dialog's "改為設定離職": disable/enable the LINE binding, optionally push `ShopSetting.LineResignMessage`, recheck conflicts. The edit-form save calls `LineFollowerService.BindAsync` (which re-enables the binding), so it re-disables it for resigned employees.
+- Deleting an employee DB-cascades their schedule entries **and all historical payroll rows** (past months' totals shrink), so delete first shows `EmployeeService.GetHistoryAsync` and steers to resignation. `EmployeeService.DeleteAsync` also clears the no-FK leftovers (`ScheduleConflicts`, `LineFollowers.BoundEmployeeId`) in the same transaction.
 
 ### Drag-and-drop scheduling is optimistic, not batched
 

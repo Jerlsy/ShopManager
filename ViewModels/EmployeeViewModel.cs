@@ -553,7 +553,8 @@ public partial class EmployeeViewModel : ObservableObject
 
     private async Task DoSaveAsync()
     {
-        var oldLineUserId = SelectedEmployee?.LineUserId;
+        var oldLineUserId  = SelectedEmployee?.LineUserId;
+        var oldResignDate  = SelectedEmployee?.ResignDate;
         var emp = SelectedEmployee ?? new Employee();
         emp.Name         = EditName;
         emp.EnglishName  = string.IsNullOrWhiteSpace(EditEnglishName) ? null : EditEnglishName.Trim();
@@ -591,6 +592,10 @@ public partial class EmployeeViewModel : ObservableObject
         else if (!string.IsNullOrEmpty(oldLineUserId))
             await _lineFollowerService.UnbindAsync(emp.Id);
 
+        // BindAsync 會把綁定恢復成啟用；已離職的員工要維持停用
+        if (emp.ResignDate is not null && !string.IsNullOrEmpty(emp.LineUserId))
+            await _lineFollowerService.DisableBindingAsync(emp.Id);
+
         // 新綁定時發送歡迎訊息
         bool isNewBinding = !string.IsNullOrEmpty(emp.LineUserId) && emp.LineUserId != oldLineUserId;
         if (isNewBinding)
@@ -611,20 +616,133 @@ public partial class EmployeeViewModel : ObservableObject
         await LoadAsync();
         _snackbarService.ShowSuccess("員工資料已儲存");
 
-        // 員工規則/離職日變更 → 重新檢查所有含此員工的班表
-        if (isUpdate)
+        if (!isUpdate) return;
+
+        // 從「到職設定」新填離職日：詢問是否傳送 LINE 解除綁定訊息（與離職按鈕共用後續連動）
+        if (oldResignDate != emp.ResignDate)
         {
-            var conflictCount = await _conflictService.RecheckByEmployeeAsync(emp.Id);
-            if (conflictCount > 0)
+            var sendLine = false;
+            if (oldResignDate is null && await BuildResignLinePreviewAsync(emp) is { } preview)
+                sendLine = await _dialogService.ShowConfirmAsync(
+                    "傳送離職訊息",
+                    $"要傳送 LINE 解除綁定訊息給「{emp.Name}」嗎？\n\n{preview}",
+                    "傳送", "不傳送");
+            await ApplyResignChangeAsync(emp, oldResignDate, emp.ResignDate, sendLine);
+        }
+        else
+        {
+            // 員工規則變更 → 重新檢查所有含此員工的班表
+            await RecheckConflictsAndPromptAsync(emp.Id);
+        }
+    }
+
+    // ══════════════════════════════════════════════════════
+    // 離職／復職（離職按鈕、到職設定、刪除提示共用）
+    // ══════════════════════════════════════════════════════
+    [RelayCommand]
+    private async Task ToggleResignAsync(Employee emp)
+    {
+        if (emp.ResignDate is { } current)
+        {
+            var ok = await _dialogService.ShowConfirmAsync(
+                "取消離職",
+                $"確定要取消「{emp.Name}」的離職（{current:yyyy/MM/dd}）嗎？\n取消後會恢復 LINE 綁定，並重新出現在排班與薪資計算。",
+                "復職", "取消");
+            if (!ok) return;
+
+            await _employeeService.SetResignDateAsync(emp.Id, null);
+            SyncEditingResignDate(emp);
+            await LoadAsync();
+            _snackbarService.ShowSuccess($"{emp.Name} 已復職");
+            await ApplyResignChangeAsync(emp, current, null, sendLineMessage: false);
+            return;
+        }
+
+        await ResignAsync(emp);
+    }
+
+    private async Task ResignAsync(Employee emp)
+    {
+        var preview = await BuildResignLinePreviewAsync(emp);
+        if (await DialogHost.Show(new ResignDialog(emp.Name, preview), "RootDialog") is not ResignDialogResult r)
+            return;
+
+        var months = await _employeeService.CheckScheduleAfterResignAsync(emp.Id, r.ResignDate);
+        if (months.Count > 0)
+        {
+            var go = await _dialogService.ShowConfirmAsync(
+                "離職日之後還有排班",
+                $"「{emp.Name}」在 {r.ResignDate:yyyy/MM/dd} 之後仍有排班（{string.Join("、", months)}）。\n" +
+                "這些班不會自動刪除，設定後會列為排班衝突，需到排班頁調整。仍要設定離職嗎？",
+                "仍要設定", "取消");
+            if (!go) return;
+        }
+
+        await _employeeService.SetResignDateAsync(emp.Id, r.ResignDate);
+        SyncEditingResignDate(emp);
+        await LoadAsync();
+        _snackbarService.ShowSuccess($"已設定 {emp.Name} 於 {r.ResignDate:yyyy/MM/dd} 離職");
+        await ApplyResignChangeAsync(emp, null, r.ResignDate, r.SendLineMessage);
+    }
+
+    /// <summary>離職日異動後的連動：LINE 綁定停用／恢復、（選擇性）傳送解除綁定訊息、重新檢查排班衝突</summary>
+    private async Task ApplyResignChangeAsync(Employee emp, DateOnly? oldDate, DateOnly? newDate, bool sendLineMessage)
+    {
+        if (oldDate is null && newDate is not null)
+        {
+            await _lineFollowerService.DisableBindingAsync(emp.Id);
+
+            if (sendLineMessage && !string.IsNullOrEmpty(emp.LineUserId))
             {
-                var goNow = await _dialogService.ShowConfirmAsync(
-                    "發現排班衝突",
-                    $"儲存後發現 {conflictCount} 條排班衝突（既有排班不會被自動移除）。是否前往排班頁面調整？",
-                    "前往排班", "稍後");
-                if (goNow)
-                    WeakReferenceMessenger.Default.Send(new NavigateToScheduleMessage());
+                var shop  = await _shopSettingService.GetAsync();
+                var token = shop?.LineChannelAccessToken;
+                if (shop is not null && !string.IsNullOrWhiteSpace(token)
+                    && !await _lineService.PushMessageAsync(token, emp.LineUserId, ResignMessage(shop, emp)))
+                    _snackbarService.ShowWarning("LINE 解除綁定訊息傳送失敗");
             }
         }
+        else if (oldDate is not null && newDate is null)
+        {
+            await _lineFollowerService.EnableBindingAsync(emp.Id);
+        }
+
+        await RecheckConflictsAndPromptAsync(emp.Id);
+    }
+
+    /// <summary>可傳 LINE 時回傳訊息預覽；員工未綁定或店鋪未設定 LINE 則回傳 null</summary>
+    private async Task<string?> BuildResignLinePreviewAsync(Employee emp)
+    {
+        if (string.IsNullOrEmpty(emp.LineUserId)) return null;
+        var shop = await _shopSettingService.GetAsync();
+        return shop is null || string.IsNullOrWhiteSpace(shop.LineChannelAccessToken)
+            ? null
+            : ResignMessage(shop, emp);
+    }
+
+    private static string ResignMessage(ShopSetting shop, Employee emp) =>
+        string.IsNullOrWhiteSpace(shop.LineResignMessage)
+            ? "感謝您的付出，您的 LINE 已與排班系統解除連結！"
+            : shop.LineResignMessage.Replace("{name}", emp.Name);
+
+    // 從清單按鈕改離職日時，若右側正在編輯同一人，同步表單避免之後儲存蓋回舊值
+    private void SyncEditingResignDate(Employee emp)
+    {
+        if (SelectedEmployee?.Id != emp.Id) return;
+        EditResignDate = emp.ResignDate;
+        OnPropertyChanged(nameof(EmploymentSummary));
+    }
+
+    private async Task RecheckConflictsAndPromptAsync(int employeeId)
+    {
+        var conflictCount = await _conflictService.RecheckByEmployeeAsync(employeeId);
+        if (conflictCount == 0) return;
+
+        var goNow = await _dialogService.ShowConfirmAsync(
+            "發現排班衝突",
+            $"發現 {conflictCount} 條排班衝突（既有排班不會被自動移除）。是否前往排班頁面調整？",
+            "前往排班", "稍後");
+        if (goNow)
+            WeakReferenceMessenger.Default.Send(new NavigateToScheduleMessage());
     }
 
     // ══════════════════════════════════════════════════════
@@ -633,14 +751,51 @@ public partial class EmployeeViewModel : ObservableObject
     [RelayCommand]
     public async Task DeleteAsync(Employee emp)
     {
-        var confirmed = await _dialogService.ShowConfirmAsync(
-            "確認刪除",
-            $"確定要刪除員工「{emp.Name}」嗎？此操作無法復原。",
-            "刪除", "取消");
-        if (!confirmed) return;
+        var history = await _employeeService.GetHistoryAsync(emp.Id);
+
+        if (history.IsEmpty)
+        {
+            var confirmed = await _dialogService.ShowConfirmAsync(
+                "確認刪除",
+                $"確定要刪除員工「{emp.Name}」嗎？此操作無法復原。",
+                "刪除", "取消");
+            if (!confirmed) return;
+        }
+        else
+        {
+            var lines = new List<string>();
+            if (history.ScheduleMonths.Count > 0) lines.Add($"• 排班：{MonthsText(history.ScheduleMonths)}");
+            if (history.SalaryMonths.Count > 0)   lines.Add($"• 薪資與發薪紀錄：{MonthsText(history.SalaryMonths)}");
+
+            var alreadyResigned = emp.ResignDate is not null;
+            var choice = await _dialogService.ShowChoiceAsync(
+                $"刪除員工「{emp.Name}」",
+                "這位員工有以下紀錄，刪除後會一併永久刪除、無法復原，過去月份的人事費用合計也會跟著變少：\n"
+                + string.Join("\n", lines)
+                + (alreadyResigned
+                    ? "\n\n這位員工已設定離職，紀錄保留著不影響之後的排班與薪資計算，建議不要刪除。"
+                    : "\n\n建議改為「設定離職」：保留所有紀錄，之後的月份不再出現在排班與薪資計算。"),
+                alreadyResigned ? "保留，不刪除" : "改為設定離職",
+                "仍要刪除");
+
+            if (choice is null) return;
+            if (choice == true)
+            {
+                if (!alreadyResigned) await ResignAsync(emp);
+                return;
+            }
+        }
+
         await _employeeService.DeleteAsync(emp.Id);
+        if (SelectedEmployee?.Id == emp.Id) Cancel();
         await LoadAsync();
+        _snackbarService.ShowSuccess($"已刪除員工「{emp.Name}」");
     }
+
+    private static string MonthsText(List<string> months) =>
+        months.Count <= 6
+            ? string.Join("、", months)
+            : $"{months[0]} ～ {months[^1]}（共 {months.Count} 個月）";
 
     [RelayCommand]
     public void Cancel()
