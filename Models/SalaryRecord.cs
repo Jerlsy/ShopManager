@@ -45,6 +45,11 @@ public class SalaryEmployeeRecord
     public decimal OverridePay { get; set; }     // 額外設定金額合計
     public decimal BaseAmount { get; set; }      // 薪資小計（不含 BonusItems）
 
+    // 打卡對照（ClockedHours 為 null＝該次計算未匯入打卡資料）
+    public double  ScheduledHours { get; set; }
+    public double? ClockedHours   { get; set; }
+    public List<AttendanceIssue> AttendanceIssues { get; set; } = new();
+
     [JsonIgnore] public List<SalaryBonusItem> BonusItems { get; set; } = new();
 
     // 支薪狀態
@@ -79,4 +84,5 @@ public enum BonusPresetType
     Holiday           = 6,
     YearEnd           = 7,
     Deduction         = 8,
+    AttendanceAdjust  = 9,   // 出勤差異接受後自動產生；重新計算薪資時會被移除重建
 }

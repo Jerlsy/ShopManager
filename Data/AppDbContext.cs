@@ -123,6 +123,7 @@ public class AppDbContext : DbContext
             .OnDelete(DeleteBehavior.Cascade);
 
         // SalaryRecord（無額外 JSON 欄位）
+        modelBuilder.Entity<SalaryEmployeeRecord>().Property(e => e.AttendanceIssues).HasConversion(JsonConv<AttendanceIssue>());
 
         // SalaryRecord 關聯（Cascade：班表刪除時一併移除薪資紀錄）
         modelBuilder.Entity<SalaryRecord>()
