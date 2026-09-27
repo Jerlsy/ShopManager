@@ -1,3 +1,4 @@
+using ShopManager.Models;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -38,7 +39,13 @@ public class LineService
         }
     }
 
-    public async Task<List<(string UserId, string DisplayName, string? PictureUrl)>> GetFollowersFromWorkerAsync(string workerUrl, string apiKey)
+    /// <summary>
+    /// 讀取 Worker KV 裡的推播對象清單：個人好友、群組、多人聊天室都在同一份清單裡，
+    /// 用 <c>type</c> 欄位區分（'user'／'group'／'room'）。Worker 尚未更新到會回報 type 的版本時，
+    /// 舊資料沒有這個欄位，一律視為 'user' 以維持相容。
+    /// </summary>
+    public async Task<List<(string UserId, string DisplayName, string? PictureUrl, LineTargetType TargetType)>>
+        GetFollowersFromWorkerAsync(string workerUrl, string apiKey)
     {
         var url = workerUrl.TrimEnd('/') + "/followers";
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
@@ -50,15 +57,22 @@ public class LineService
             throw new HttpRequestException($"取得好友清單失敗（HTTP {(int)res.StatusCode}）：{body}");
         }
         var items = await res.Content.ReadFromJsonAsync<JsonElement[]>();
-        var result = new List<(string, string, string?)>();
+        var result = new List<(string, string, string?, LineTargetType)>();
         if (items == null) return result;
         foreach (var item in items)
         {
             var userId      = item.TryGetProperty("userId",      out var u)  ? u.GetString()  ?? string.Empty : string.Empty;
             var displayName = item.TryGetProperty("displayName", out var dn) ? dn.GetString() ?? "未知"        : "未知";
             var pictureUrl  = item.TryGetProperty("pictureUrl",  out var pu) ? pu.GetString() : null;
+            var typeStr     = item.TryGetProperty("type", out var t) ? t.GetString() : null;
+            var targetType  = typeStr switch
+            {
+                "group" => LineTargetType.Group,
+                "room"  => LineTargetType.Room,
+                _       => LineTargetType.User,
+            };
             if (!string.IsNullOrEmpty(userId))
-                result.Add((userId, displayName, pictureUrl));
+                result.Add((userId, displayName, pictureUrl, targetType));
         }
         return result;
     }

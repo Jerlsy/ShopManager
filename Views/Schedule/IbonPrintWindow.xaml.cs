@@ -59,7 +59,9 @@ public partial class IbonPrintWindow : Window
             return;
         }
 
-        var owners = _data.PushRecipients.Where(r => r.IsOwner && !string.IsNullOrEmpty(r.UserId)).ToList();
+        var owners = _data.PushRecipients
+            .Where(r => r.Kind == ExportScheduleData.PushRecipientKind.Owner && !string.IsNullOrEmpty(r.UserId))
+            .ToList();
         // 用 MessageBox：本視窗以 ShowDialog 開啟，MaterialDesign 的 RootDialog 掛在 MainWindow 會被壓在底下看不到
         var confirmResult = MessageBox.Show(
             $"確定要上傳所選班表？完成後列印碼與 QR Code 將推播給 {owners.Count} 位業主。",
@@ -105,7 +107,7 @@ public partial class IbonPrintWindow : Window
                     {
                         var rec = new ExportScheduleData.PushRecipient(
                             UserId: string.Empty, DisplayName: row.Name, PictureUrl: null,
-                            IsOwner: false, ShiftIds: row.ShiftIds);
+                            Kind: ExportScheduleData.PushRecipientKind.Employee, ShiftIds: row.ShiftIds);
                         page.Add(ExportScheduleWindow.RenderPersonalSchedule(_data, rec));
                     }
                     pages.Add(page);

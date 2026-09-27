@@ -55,20 +55,28 @@ public partial class ScheduleViewModel
                 $"{s.StartTime:HH\\:mm}–{s.EndTime:HH\\:mm}"))
             .ToList();
 
-        // 推播收件人：AsNoTracking 繞過 EF Core identity cache，確保拿到最新 LineUserId
+        // 推播收件人：AsNoTracking 繞過 EF Core identity cache，確保拿到最新 LineUserId。
+        // 順序＝業主 → 群組/多人聊天室 → 員工（畫面排序需求）。群組來自使用者在設定頁明確綁定的
+        // GroupLineBindings，不是 LineFollowers 同步到的全部群組——邀機器人進群組只是「候選名單」，
+        // 要跟業主綁定一樣手動選過才會出現在推播清單，避免機器人被亂拉進的群組也收到班表。
         var freshEmployees = await _employeeService.GetAllNoTrackingAsync();
-        var pushRecipients = freshEmployees
-            .Where(e => !e.IsResigned && !string.IsNullOrEmpty(e.LineUserId))
-            .Select(e =>
-            {
-                var dayMap = entryByEmp.GetValueOrDefault(e.Id, new());
-                IReadOnlyList<int?> shiftIds = Enumerable.Range(1, daysInMonth)
-                    .Select(d => dayMap.TryGetValue(d, out var sid) ? (int?)sid : null)
-                    .ToList();
-                return new ExportScheduleData.PushRecipient(e.LineUserId!, e.Name, null, false, shiftIds);
-            })
-            .Concat((setting?.OwnerLineBindings ?? new())
-                .Select(o => new ExportScheduleData.PushRecipient(o.UserId, o.DisplayName, o.PictureUrl, true)))
+        var pushRecipients = (setting?.OwnerLineBindings ?? new())
+            .Select(o => new ExportScheduleData.PushRecipient(
+                o.UserId, o.DisplayName, o.PictureUrl, ExportScheduleData.PushRecipientKind.Owner))
+            .Concat((setting?.GroupLineBindings ?? new())
+                .Select(g => new ExportScheduleData.PushRecipient(
+                    g.UserId, g.DisplayName, g.PictureUrl, ExportScheduleData.PushRecipientKind.Group)))
+            .Concat(freshEmployees
+                .Where(e => !e.IsResigned && !string.IsNullOrEmpty(e.LineUserId))
+                .Select(e =>
+                {
+                    var dayMap = entryByEmp.GetValueOrDefault(e.Id, new());
+                    IReadOnlyList<int?> shiftIds = Enumerable.Range(1, daysInMonth)
+                        .Select(d => dayMap.TryGetValue(d, out var sid) ? (int?)sid : null)
+                        .ToList();
+                    return new ExportScheduleData.PushRecipient(
+                        e.LineUserId!, e.Name, null, ExportScheduleData.PushRecipientKind.Employee, shiftIds);
+                }))
             .ToList();
 
         return new ExportScheduleData

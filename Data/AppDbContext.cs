@@ -51,6 +51,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<ShopSetting>().Property(e => e.ContactInfos)      .HasConversion(JsonConv<ContactInfo>());
         modelBuilder.Entity<ShopSetting>().Property(e => e.ClosedDaysOfWeek) .HasConversion(JsonConv<int>());
         modelBuilder.Entity<ShopSetting>().Property(e => e.OwnerLineBindings).HasConversion(JsonConv<OwnerLineBinding>());
+        modelBuilder.Entity<ShopSetting>().Property(e => e.GroupLineBindings).HasConversion(JsonConv<OwnerLineBinding>());
         modelBuilder.Entity<ShopSetting>().Property(e => e.GmailForwardRules).HasConversion(JsonConv<GmailForwardRule>());
 
         // ScheduleRule

@@ -59,6 +59,9 @@ public partial class SystemSettingViewModel(
     {
         foreach (var item in GmailForwardRuleItems) item.RefreshOwnerNames(value);
     }
+
+    /// <summary>明確綁定要推播的群組／多人聊天室，形狀沿用 OwnerLineBinding（見 ShopSetting.GroupLineBindings）</summary>
+    [ObservableProperty] private List<OwnerLineBinding> _groupLineBindings = new();
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanConfigureMailForward))]
     private bool _isLineConfigUnlocked;
@@ -287,6 +290,7 @@ public partial class SystemSettingViewModel(
                 LineResignMessage = setting.LineResignMessage ?? string.Empty;
                 IsLineConfigUnlocked = !string.IsNullOrWhiteSpace(setting.LineChannelAccessToken);
                 OwnerLineBindings = new List<OwnerLineBinding>(setting.OwnerLineBindings);
+                GroupLineBindings = new List<OwnerLineBinding>(setting.GroupLineBindings);
 
                 GoogleAccountEmail = setting.GoogleAccountEmail;
                 GoogleDriveLastSyncedRemoteModifiedTime = setting.GoogleDriveLastSyncedRemoteModifiedTime;
@@ -351,6 +355,7 @@ public partial class SystemSettingViewModel(
             LineWelcomeMessage = string.IsNullOrWhiteSpace(LineWelcomeMessage) ? null : LineWelcomeMessage,
             LineResignMessage = string.IsNullOrWhiteSpace(LineResignMessage) ? null : LineResignMessage,
             OwnerLineBindings = OwnerLineBindings,
+            GroupLineBindings = GroupLineBindings,
             GoogleAccountEmail = string.IsNullOrWhiteSpace(GoogleAccountEmail) ? null : GoogleAccountEmail,
             GoogleDriveLastSyncedRemoteModifiedTime = GoogleDriveLastSyncedRemoteModifiedTime,
             GmailForwardRules = GmailForwardRuleItems.Select(r => r.ToModel()).ToList(),
@@ -788,6 +793,22 @@ public partial class SystemSettingViewModel(
         var list = new List<OwnerLineBinding>(OwnerLineBindings);
         list.Remove(item);
         OwnerLineBindings = list;
+    }
+
+    /// <summary>新增群組/多人聊天室綁定。回傳 false 表示該 Id 已存在（不重複加入）</summary>
+    public bool AddGroupBinding(OwnerLineBinding item)
+    {
+        if (GroupLineBindings.Any(b => b.UserId == item.UserId)) return false;
+        GroupLineBindings = new List<OwnerLineBinding>(GroupLineBindings) { item };
+        return true;
+    }
+
+    [RelayCommand]
+    public void RemoveGroupBinding(OwnerLineBinding item)
+    {
+        var list = new List<OwnerLineBinding>(GroupLineBindings);
+        list.Remove(item);
+        GroupLineBindings = list;
     }
 
     [RelayCommand]

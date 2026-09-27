@@ -33,6 +33,13 @@ public class ShopSetting
     public string? LineResignMessage { get; set; }
     public List<OwnerLineBinding> OwnerLineBindings { get; set; } = new();
 
+    /// <summary>
+    /// 明確綁定要推播的群組／多人聊天室（沿用 OwnerLineBinding 形狀：UserId 存 groupId/roomId）。
+    /// 機器人被邀進群組只是「候選名單」（見 LineFollower.TargetType），這裡才是真的會收到推播的清單，
+    /// 邏輯與 OwnerLineBindings 一致——不是同步到的都推，要手動選過。
+    /// </summary>
+    public List<OwnerLineBinding> GroupLineBindings { get; set; } = new();
+
     // ── Google Drive 備份設定 ────────────────────
     // 注意：OAuth refresh token 不存在這裡（DPAPI 加密後存本機檔案），
     // 因為 DPAPI 綁定「本機＋本 Windows 使用者」，跟著 DB 同步到別台機器也解不開。
