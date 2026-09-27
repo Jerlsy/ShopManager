@@ -1,0 +1,122 @@
+<Window x:Class="ShopManager.Views.Salary.SalaryDailyDetailWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:models="clr-namespace:ShopManager.Models"
+        Title="每日出勤明細"
+        Width="520" Height="680"
+        WindowStartupLocation="CenterOwner"
+        TextElement.Foreground="{DynamicResource MaterialDesign.Brush.Foreground}"
+        TextElement.FontFamily="{DynamicResource AppFontFamily}"
+        FontSize="{DynamicResource AppFontSize}"
+        Background="{DynamicResource AppBackgroundBrush}">
+
+    <Border BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- 標頭 -->
+            <Border Grid.Row="0" Padding="20,14" Background="{DynamicResource AppSurfaceBrush}"
+                    BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1">
+                <StackPanel Orientation="Horizontal">
+                    <md:PackIcon Kind="CalendarSearch" Width="20" Height="20"
+                                 Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                 VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <StackPanel>
+                        <TextBlock Text="{Binding HeaderTitle}" FontWeight="SemiBold" FontSize="15"/>
+                        <TextBlock Text="每一天的排班 vs 打卡對照，來自匯入的 POS 打卡紀錄" FontSize="11"
+                                   Foreground="{DynamicResource AppSubtleForegroundBrush}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- 明細清單 -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="16,12">
+                <StackPanel>
+                    <Grid Margin="10,0,10,6" Visibility="{Binding HasEntries, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="86"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="日期" Style="{StaticResource SubtleTextStyle}" FontWeight="SemiBold" FontSize="11"/>
+                        <TextBlock Grid.Column="1" Text="排班" Style="{StaticResource SubtleTextStyle}" FontWeight="SemiBold" FontSize="11"/>
+                        <TextBlock Grid.Column="2" Text="打卡" Style="{StaticResource SubtleTextStyle}" FontWeight="SemiBold" FontSize="11"/>
+                    </Grid>
+
+                    <ItemsControl ItemsSource="{Binding Entries}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type models:SalaryDailyEntry}">
+                                <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,6" Padding="10,8">
+                                    <StackPanel>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="86"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Label}" FontWeight="Medium" FontSize="12"/>
+                                                <Border CornerRadius="3" Padding="4,0" Margin="0,3,0,0"
+                                                        HorizontalAlignment="Left"
+                                                        Background="{DynamicResource PrimaryHueLightBrush}">
+                                                    <TextBlock Text="{Binding TypeTag}" FontSize="10" Style="{StaticResource SubtleTextStyle}"/>
+                                                </Border>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Hours, StringFormat={}{0:N1} hr}"
+                                                           Style="{StaticResource BodyTextStyle}" FontSize="12"/>
+                                                <TextBlock Text="{Binding OverrideAmount, StringFormat={}指定 {0:N0} 元}"
+                                                           Style="{StaticResource SubtleTextStyle}" FontSize="11"
+                                                           Visibility="{Binding OverrideAmount, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding ClockRangeText}"
+                                                           Style="{StaticResource BodyTextStyle}" FontSize="12"
+                                                           Visibility="{Binding HasClock, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                <TextBlock Text="無打卡紀錄"
+                                                           Style="{StaticResource SubtleTextStyle}" FontSize="12"
+                                                           Visibility="{Binding HasClock, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                                                <TextBlock Text="{Binding ClockedHours, StringFormat={}{0:N1} hr}"
+                                                           Style="{StaticResource SubtleTextStyle}" FontSize="11"
+                                                           Visibility="{Binding ClockedHours, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <Border Margin="0,6,0,0" CornerRadius="4" Padding="6,3" HorizontalAlignment="Left"
+                                                Background="{DynamicResource AppInfoBrush}"
+                                                Visibility="{Binding IssueLabel, Converter={StaticResource NullToVisibilityConverter}}">
+                                            <TextBlock Text="{Binding IssueLabel}" FontSize="11"
+                                                       Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Text="尚無每日明細（此月份尚未計算薪資，或計算時沒有排班紀錄）"
+                               Style="{StaticResource SubtleTextStyle}" HorizontalAlignment="Center"
+                               TextWrapping="Wrap" Margin="0,24"
+                               Visibility="{Binding HasEntries, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- 底部 -->
+            <Border Grid.Row="2" Padding="20,12" Background="{DynamicResource AppSurfaceBrush}"
+                    BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,1,0,0">
+                <Button Style="{StaticResource MaterialDesignFlatButton}"
+                        HorizontalAlignment="Right" IsCancel="True" Click="Close_Click">
+                    <TextBlock Text="關閉"/>
+                </Button>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

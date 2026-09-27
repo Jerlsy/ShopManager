@@ -218,192 +218,152 @@
                                             Margin="0,12,0,0">
                                     <Separator Margin="0,0,0,12"/>
 
-                                    <!-- 薪資明細 -->
-                                    <Grid>
+                                    <!-- 區塊標頭：每日出勤明細改成彈出獨立視窗（整月天數塞在卡片內展開會被兩欄擠壓） -->
+                                    <Grid Margin="0,0,0,10">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-
-                                        <!-- 左：工時 -->
-                                        <StackPanel Grid.Column="0" Margin="0,0,16,0">
-                                            <Grid Margin="0,0,0,6">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Text="工時明細" Style="{StaticResource SectionHeaderStyle}" VerticalAlignment="Center"/>
-                                                <Button Grid.Column="1"
-                                                        Command="{Binding ToggleScheduleDetailCommand}"
-                                                        Style="{StaticResource MaterialDesignIconForegroundButton}"
-                                                        Width="24" Height="24" Padding="0" ToolTip="查看每日出勤明細">
-                                                    <md:PackIcon Kind="CalendarSearch" Width="14" Height="14"/>
-                                                </Button>
-                                            </Grid>
-
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                </Grid.RowDefinitions>
-
-                                                <TextBlock Grid.Row="0" Grid.Column="0" Text="平日工時" Style="{StaticResource SubtleTextStyle}"/>
-                                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding WeekdayHours, StringFormat={}{0:N1} hr}" Style="{StaticResource BodyTextStyle}"/>
-
-                                                <TextBlock Grid.Row="1" Grid.Column="0" Text="假日工時" Style="{StaticResource SubtleTextStyle}"
-                                                           Visibility="{Binding HasHoliday, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding HolidayHours, StringFormat={}{0:N1} hr}" Style="{StaticResource BodyTextStyle}"
-                                                           Visibility="{Binding HasHoliday, Converter={StaticResource BoolToVisibilityConverter}}"/>
-
-                                                <TextBlock Grid.Row="2" Grid.Column="0" Text="加班一段（≤2hr）" Style="{StaticResource SubtleTextStyle}"
-                                                           Visibility="{Binding HasOT, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding OT1Hours, StringFormat={}{0:N1} hr}" Style="{StaticResource BodyTextStyle}"
-                                                           Visibility="{Binding HasOT, Converter={StaticResource BoolToVisibilityConverter}}"/>
-
-                                                <TextBlock Grid.Row="3" Grid.Column="0" Text="加班二段（>2hr）" Style="{StaticResource SubtleTextStyle}"
-                                                           Visibility="{Binding OT2Hours, Converter={StaticResource NonZeroToVisibilityConverter}}"/>
-                                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding OT2Hours, StringFormat={}{0:N1} hr}" Style="{StaticResource BodyTextStyle}"
-                                                           Visibility="{Binding OT2Hours, Converter={StaticResource NonZeroToVisibilityConverter}}"/>
-
-                                                <Separator Grid.Row="4" Grid.ColumnSpan="2" Margin="0,6,0,6"/>
-                                            </Grid>
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Text="總工時" Style="{StaticResource SubtleTextStyle}" FontWeight="SemiBold"/>
-                                                <TextBlock Grid.Column="1" Text="{Binding TotalHours, StringFormat={}{0:N1} hr}" Style="{StaticResource BodyTextStyle}" FontWeight="SemiBold"/>
-                                            </Grid>
-
-                                            <!-- 打卡對照：預計排班 vs 實際打卡 -->
-                                            <Grid Margin="0,6,0,0"
-                                                  Visibility="{Binding HasAttendance, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                </Grid.RowDefinitions>
-                                                <TextBlock Grid.Row="0" Grid.Column="0" Text="預計排班工時" Style="{StaticResource SubtleTextStyle}"/>
-                                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ScheduledHours, StringFormat={}{0:N1} hr}" Style="{StaticResource BodyTextStyle}"/>
-                                                <TextBlock Grid.Row="1" Grid.Column="0" Text="實際打卡工時" Style="{StaticResource SubtleTextStyle}"/>
-                                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ClockedHours, StringFormat={}{0:N1} hr}" Style="{StaticResource BodyTextStyle}"/>
-                                            </Grid>
-
-                                            <!-- 每日出勤明細（折疊區） -->
-                                            <Border Margin="0,8,0,0" CornerRadius="8"
-                                                    Background="{DynamicResource AppPanelAltBrush}"
-                                                    Padding="10,8"
-                                                    Visibility="{Binding IsScheduleDetailOpen, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                <StackPanel>
-                                                    <TextBlock Text="每日出勤明細" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,6"/>
-                                                    <ItemsControl ItemsSource="{Binding DailyEntries}">
-                                                        <ItemsControl.ItemTemplate>
-                                                            <DataTemplate DataType="{x:Type vm:SalaryDailyEntry}">
-                                                                <Grid Margin="0,2,0,2">
-                                                                    <Grid.ColumnDefinitions>
-                                                                        <ColumnDefinition Width="*"/>
-                                                                        <ColumnDefinition Width="Auto"/>
-                                                                        <ColumnDefinition Width="72"/>
-                                                                    </Grid.ColumnDefinitions>
-                                                                    <TextBlock Grid.Column="0" Text="{Binding Label}"
-                                                                               Style="{StaticResource SubtleTextStyle}" FontSize="12"/>
-                                                                    <Border Grid.Column="1" CornerRadius="3" Padding="4,0" Margin="6,0"
-                                                                            Background="{DynamicResource PrimaryHueLightBrush}">
-                                                                        <TextBlock Text="{Binding TypeTag}" FontSize="11"
-                                                                                   Style="{StaticResource SubtleTextStyle}"/>
-                                                                    </Border>
-                                                                    <TextBlock Grid.Column="2"
-                                                                               Text="{Binding OverrideAmount, StringFormat={}{0:N0} 元}"
-                                                                               Style="{StaticResource SubtleTextStyle}" FontSize="12"
-                                                                               HorizontalAlignment="Right"
-                                                                               Visibility="{Binding OverrideAmount, Converter={StaticResource NullToVisibilityConverter}}"/>
-                                                                    <TextBlock Grid.Column="2"
-                                                                               Text="{Binding Hours, StringFormat={}{0:N1} hr}"
-                                                                               Style="{StaticResource SubtleTextStyle}" FontSize="12"
-                                                                               HorizontalAlignment="Right"
-                                                                               Visibility="{Binding OverrideAmount, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"/>
-                                                                </Grid>
-                                                            </DataTemplate>
-                                                        </ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
-                                                </StackPanel>
-                                            </Border>
-                                        </StackPanel>
-
-                                        <!-- 右：薪資 -->
-                                        <StackPanel Grid.Column="1">
-                                            <TextBlock Text="薪資明細" Style="{StaticResource SectionHeaderStyle}" Margin="0,0,0,6"/>
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                </Grid.RowDefinitions>
-
-                                                <!-- 平日薪資（時薪制）或底薪（月薪制）-->
-                                                <TextBlock Grid.Row="0" Grid.Column="0">
+                                        <TextBlock Grid.Column="0" Text="工時與薪資明細" Style="{StaticResource SectionHeaderStyle}" VerticalAlignment="Center"/>
+                                        <Button Grid.Column="1"
+                                                Click="ShowDailyDetail_Click"
+                                                IsEnabled="{Binding HasAttendance}"
+                                                Style="{StaticResource MaterialDesignIconForegroundButton}"
+                                                Width="28" Height="28" Padding="0">
+                                            <Button.ToolTip>
+                                                <TextBlock>
                                                     <TextBlock.Style>
-                                                        <Style TargetType="TextBlock" BasedOn="{StaticResource SubtleTextStyle}">
-                                                            <Setter Property="Text" Value="底薪"/>
+                                                        <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                                            <Setter Property="Text" Value="查看每日出勤明細（排班 vs 打卡）"/>
                                                             <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsHourly}" Value="True">
-                                                                    <Setter Property="Text" Value="平日薪資"/>
+                                                                <DataTrigger Binding="{Binding HasAttendance}" Value="False">
+                                                                    <Setter Property="Text" Value="本次計算沒有匯入打卡資料，沒有每日對照可看"/>
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
                                                     </TextBlock.Style>
                                                 </TextBlock>
-                                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding WeekdayPay, StringFormat={}{0:N0} 元}" Style="{StaticResource BodyTextStyle}"/>
+                                            </Button.ToolTip>
+                                            <md:PackIcon Kind="CalendarSearch" Width="15" Height="15"/>
+                                        </Button>
+                                    </Grid>
 
-                                                <TextBlock Grid.Row="1" Grid.Column="0" Text="假日薪資" Style="{StaticResource SubtleTextStyle}"
-                                                           Visibility="{Binding HasHoliday, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding HolidayPay, StringFormat={}{0:N0} 元}" Style="{StaticResource BodyTextStyle}"
-                                                           Visibility="{Binding HasHoliday, Converter={StaticResource BoolToVisibilityConverter}}"/>
-
-                                                <TextBlock Grid.Row="2" Grid.Column="0" Text="加班一段薪資" Style="{StaticResource SubtleTextStyle}"
-                                                           Visibility="{Binding HasOT, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding OT1Pay, StringFormat={}{0:N0} 元}" Style="{StaticResource BodyTextStyle}"
-                                                           Visibility="{Binding HasOT, Converter={StaticResource BoolToVisibilityConverter}}"/>
-
-                                                <TextBlock Grid.Row="3" Grid.Column="0" Text="加班二段薪資" Style="{StaticResource SubtleTextStyle}"
-                                                           Visibility="{Binding OT2Hours, Converter={StaticResource NonZeroToVisibilityConverter}}"/>
-                                                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding OT2Pay, StringFormat={}{0:N0} 元}" Style="{StaticResource BodyTextStyle}"
-                                                           Visibility="{Binding OT2Hours, Converter={StaticResource NonZeroToVisibilityConverter}}"/>
-
-                                                <TextBlock Grid.Row="4" Grid.Column="0" Text="替代設定金額" Style="{StaticResource SubtleTextStyle}"
-                                                           Visibility="{Binding HasOverride, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding OverridePay, StringFormat={}{0:N0} 元}" Style="{StaticResource BodyTextStyle}"
-                                                           Visibility="{Binding HasOverride, Converter={StaticResource BoolToVisibilityConverter}}"/>
-
-                                                <Separator Grid.Row="5" Grid.ColumnSpan="2" Margin="0,6,0,6"/>
-                                            </Grid>
+                                    <!-- 平日工時／薪資：排班、打卡、計薪工時與對應薪資並排，方便對照 -->
+                                    <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,8">
+                                        <StackPanel>
+                                            <TextBlock Text="平日工時／薪資" Style="{StaticResource SubtleTextStyle}" FontWeight="SemiBold" Margin="0,0,0,6"/>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Text="薪資小計" Style="{StaticResource SubtleTextStyle}" FontWeight="SemiBold"/>
-                                                <TextBlock Grid.Column="1" Text="{Binding BaseAmount, StringFormat={}{0:N0} 元}" Style="{StaticResource BodyTextStyle}" FontWeight="SemiBold"/>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+
+                                                <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,6">
+                                                    <TextBlock Text="排班工時" Style="{StaticResource SubtleTextStyle}" FontSize="11"/>
+                                                    <TextBlock Text="{Binding WeekdayScheduledHours, StringFormat={}{0:N1} hr}" Style="{StaticResource BodyTextStyle}"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,6">
+                                                    <TextBlock Text="計薪工時" Style="{StaticResource SubtleTextStyle}" FontSize="11"/>
+                                                    <TextBlock Text="{Binding WeekdayHours, StringFormat={}{0:N1} hr}" Style="{StaticResource BodyTextStyle}"/>
+                                                </StackPanel>
+
+                                                <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,0"
+                                                            Visibility="{Binding HasWeekdayAttendance, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                    <TextBlock Text="打卡紀錄" Style="{StaticResource SubtleTextStyle}" FontSize="11"/>
+                                                    <TextBlock Text="{Binding WeekdayClockedHours, StringFormat={}{0:N1} hr}" Style="{StaticResource BodyTextStyle}"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Row="1" Grid.Column="1">
+                                                    <TextBlock Text="{Binding WeekdayCalcLabel}" Style="{StaticResource SubtleTextStyle}" FontSize="11"/>
+                                                    <TextBlock Text="{Binding WeekdayCalcText}" Style="{StaticResource BodyTextStyle}"/>
+                                                </StackPanel>
+
+                                                <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,8,10,0"
+                                                            Visibility="{Binding HasOT, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                    <TextBlock Text="加班一段（≤2hr）" Style="{StaticResource SubtleTextStyle}" FontSize="11"/>
+                                                    <TextBlock Text="{Binding OT1Hours, StringFormat={}{0:N1} hr}" Style="{StaticResource BodyTextStyle}"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,8,0,0"
+                                                            Visibility="{Binding ShowOT1Pay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                    <TextBlock Text="加班一段薪資" Style="{StaticResource SubtleTextStyle}" FontSize="11"/>
+                                                    <TextBlock Text="{Binding OT1Pay, StringFormat={}{0:N0} 元}" Style="{StaticResource BodyTextStyle}"/>
+                                                </StackPanel>
+
+                                                <StackPanel Grid.Row="3" Grid.Column="0" Margin="0,8,10,0"
+                                                            Visibility="{Binding OT2Hours, Converter={StaticResource NonZeroToVisibilityConverter}}">
+                                                    <TextBlock Text="加班二段（&gt;2hr）" Style="{StaticResource SubtleTextStyle}" FontSize="11"/>
+                                                    <TextBlock Text="{Binding OT2Hours, StringFormat={}{0:N1} hr}" Style="{StaticResource BodyTextStyle}"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Row="3" Grid.Column="1" Margin="0,8,0,0"
+                                                            Visibility="{Binding ShowOT2Pay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                    <TextBlock Text="加班二段薪資" Style="{StaticResource SubtleTextStyle}" FontSize="11"/>
+                                                    <TextBlock Text="{Binding OT2Pay, StringFormat={}{0:N0} 元}" Style="{StaticResource BodyTextStyle}"/>
+                                                </StackPanel>
                                             </Grid>
                                         </StackPanel>
+                                    </Border>
+
+                                    <!-- 假日工時／薪資：只有本月有假日班才顯示 -->
+                                    <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,8"
+                                            Visibility="{Binding HasHoliday, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <StackPanel>
+                                            <TextBlock Text="假日工時／薪資" Style="{StaticResource SubtleTextStyle}" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+
+                                                <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,6">
+                                                    <TextBlock Text="排班工時" Style="{StaticResource SubtleTextStyle}" FontSize="11"/>
+                                                    <TextBlock Text="{Binding HolidayScheduledHours, StringFormat={}{0:N1} hr}" Style="{StaticResource BodyTextStyle}"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,6">
+                                                    <TextBlock Text="計薪工時" Style="{StaticResource SubtleTextStyle}" FontSize="11"/>
+                                                    <TextBlock Text="{Binding HolidayHours, StringFormat={}{0:N1} hr}" Style="{StaticResource BodyTextStyle}"/>
+                                                </StackPanel>
+
+                                                <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,0"
+                                                            Visibility="{Binding HasHolidayAttendance, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                    <TextBlock Text="打卡紀錄" Style="{StaticResource SubtleTextStyle}" FontSize="11"/>
+                                                    <TextBlock Text="{Binding HolidayClockedHours, StringFormat={}{0:N1} hr}" Style="{StaticResource BodyTextStyle}"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Row="1" Grid.Column="1">
+                                                    <TextBlock Text="薪資計算" Style="{StaticResource SubtleTextStyle}" FontSize="11"/>
+                                                    <TextBlock Text="{Binding HolidayCalcText}" Style="{StaticResource BodyTextStyle}"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- 替代設定金額（如有）-->
+                                    <Grid Margin="4,0,4,8" Visibility="{Binding HasOverride, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="替代設定金額" Style="{StaticResource SubtleTextStyle}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding OverridePay, StringFormat={}{0:N0} 元}" Style="{StaticResource BodyTextStyle}"/>
+                                    </Grid>
+
+                                    <!-- 薪資小計 -->
+                                    <Separator Margin="0,0,0,8"/>
+                                    <Grid Margin="4,0,4,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="薪資小計" Style="{StaticResource SubtleTextStyle}" FontWeight="SemiBold"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding BaseAmount, StringFormat={}{0:N0} 元}" Style="{StaticResource BodyTextStyle}" FontWeight="SemiBold"/>
                                     </Grid>
 
                                     <!-- ── 額外項目（獎金 / 扣款） ────────── -->
@@ -426,8 +386,8 @@
                                                 <Grid Margin="0,3,0,3">
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="140"/>
-                                                        <ColumnDefinition Width="120"/>
                                                         <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="140"/>
                                                         <ColumnDefinition Width="Auto"/>
                                                         <ColumnDefinition Width="Auto"/>
                                                     </Grid.ColumnDefinitions>

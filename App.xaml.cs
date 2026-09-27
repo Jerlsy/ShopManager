@@ -259,6 +259,13 @@ public partial class App : Application
                 ("SalaryEmployeeRecords", "ScheduledHours",          "REAL NOT NULL DEFAULT 0"),
                 ("SalaryEmployeeRecords", "ClockedHours",            "REAL"),
                 ("SalaryEmployeeRecords", "AttendanceIssues",        "TEXT NOT NULL DEFAULT '[]'"),
+                ("SalaryEmployeeRecords", "WeekdayScheduledHours",   "REAL NOT NULL DEFAULT 0"),
+                ("SalaryEmployeeRecords", "HolidayScheduledHours",   "REAL NOT NULL DEFAULT 0"),
+                ("SalaryEmployeeRecords", "WeekdayClockedHours",     "REAL"),
+                ("SalaryEmployeeRecords", "HolidayClockedHours",     "REAL"),
+                ("SalaryEmployeeRecords", "DailyEntries",            "TEXT NOT NULL DEFAULT '[]'"),
+                ("SalaryEmployeeRecords", "OT1Rate",                 "TEXT NOT NULL DEFAULT '1.34'"),
+                ("SalaryEmployeeRecords", "OT2Rate",                 "TEXT NOT NULL DEFAULT '1.67'"),
             };
             // 每個資料表只查一次現有欄位（PRAGMA table_info），只對真正缺少的欄位下 ALTER TABLE。
             // 舊作法是每個候選欄位都直接 ALTER、失敗（欄位已存在）就吃例外——在全新安裝或已升級過的資料庫上，

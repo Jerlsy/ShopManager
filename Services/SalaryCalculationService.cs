@@ -52,6 +52,11 @@ public class SalaryCalculationService(AppDbContext db)
                 .GroupBy(e => e.Date)
                 .ToDictionary(g => g.Key, g => g.Select(e => e.ShiftSetting!).ToList());
 
+            // 加班倍率快照（時薪制、月薪制各自的預設值不同；員工個別設定優先）
+            var (ot1Rate, ot2Rate) = salary.Type == SalaryType.Hourly
+                ? (salary.OT1Rate ?? laborLaw.HourlyOT1Rate,  salary.OT2Rate ?? laborLaw.HourlyOT2Rate)
+                : (salary.OT1Rate ?? laborLaw.MonthlyOT1Rate, salary.OT2Rate ?? laborLaw.MonthlyOT2Rate);
+
             // 有匯入打卡資料時，這位員工沒有任何打卡也要比對（每個排班日都會列為「有排班沒打卡」）
             Dictionary<DateOnly, DayPunch>? punches = null;
             if (config.Attendance is not null)
@@ -62,14 +67,20 @@ public class SalaryCalculationService(AppDbContext db)
 
             var total  = new DayPay();
             var issues = new List<AttendanceIssue>();
+            var daily  = new List<SalaryDailyEntry>();
             decimal overridePay    = 0;
             double  scheduledHours = 0;
+            double  weekdayScheduledHours = 0, holidayScheduledHours = 0;
+            double? weekdayClockedHours = punches is not null ? 0 : null;
+            double? holidayClockedHours = punches is not null ? 0 : null;
 
             foreach (var (date, shifts) in shiftsByDate.OrderBy(kv => kv.Key))
             {
                 var hours = shifts.Sum(s => s.WorkHours);
                 if (hours <= 0) continue;
                 scheduledHours += hours;
+                bool isHoliday = config.IsHoliday(date, nationalHolidays);
+                if (isHoliday) holidayScheduledHours += hours; else weekdayScheduledHours += hours;
 
                 // 額外設定優先：強制以指定金額取代當日薪資（業主已明確指定，不再比對打卡）
                 var over = config.DailyOverrides
@@ -77,14 +88,17 @@ public class SalaryCalculationService(AppDbContext db)
                 if (over is not null)
                 {
                     overridePay += over.Amount;
+                    daily.Add(new SalaryDailyEntry { Date = date, Hours = hours, TypeTag = "替代", OverrideAmount = over.Amount });
                     continue;
                 }
 
-                var dayPay = ComputeDay(emp, salary, laborLaw, hours, config.IsHoliday(date, nationalHolidays));
+                var dayPay = ComputeDay(emp, salary, laborLaw, hours, isHoliday);
+                var typeTag = isHoliday ? "假日" : "平日";
 
                 if (punches is null)
                 {
                     Accumulate(total, dayPay);
+                    daily.Add(new SalaryDailyEntry { Date = date, Hours = hours, TypeTag = typeTag });
                     continue;
                 }
 
@@ -93,6 +107,9 @@ public class SalaryCalculationService(AppDbContext db)
                                      ? date.ToDateTime(s.EndTime)
                                      : date.AddDays(1).ToDateTime(s.EndTime));
                 var shiftLabel = $"{start:HH:mm}–{end:HH:mm}";
+                string? issueLabel = null;
+                DateTime? clockIn = null, clockOut = null;
+                double? dayClockedHours = null;
 
                 if (!punches.TryGetValue(date, out var p))
                 {
@@ -102,6 +119,7 @@ public class SalaryCalculationService(AppDbContext db)
                         Description = $"有排班 {shiftLabel}，沒有打卡紀錄",
                         ShortLabel  = "有排班未打卡",
                     });
+                    issueLabel = "有排班未打卡";
                 }
                 else if (!p.IsComplete)
                 {
@@ -111,10 +129,15 @@ public class SalaryCalculationService(AppDbContext db)
                         Description = $"有排班 {shiftLabel}，{HalfPunchText(p)}",
                         ShortLabel  = "打卡不完整",
                     });
+                    issueLabel = "打卡不完整";
+                    clockIn = p.In; clockOut = p.Out;
                 }
                 else
                 {
                     Accumulate(total, dayPay);
+                    clockIn = p.In; clockOut = p.Out;
+                    dayClockedHours = Math.Round(p.Hours, 2);
+                    if (isHoliday) holidayClockedHours += dayClockedHours.Value; else weekdayClockedHours += dayClockedHours.Value;
 
                     // 早到、晚走不另計；只有遲到或早退超過寬限才列出
                     var late  = (int)(p.In!.Value  - start).TotalMinutes;
@@ -123,13 +146,23 @@ public class SalaryCalculationService(AppDbContext db)
                     if (late  > config.LateGraceMinutes)       parts.Add($"遲到 {late} 分");
                     if (early > config.EarlyLeaveGraceMinutes) parts.Add($"早退 {early} 分");
                     if (parts.Count > 0)
+                    {
                         issues.Add(new AttendanceIssue
                         {
                             Date = date, Type = AttendanceIssueType.LateOrEarly,
                             Description = $"排班 {shiftLabel}，打卡 {p.In:HH:mm}–{p.Out:HH:mm}（{string.Join("、", parts)}）",
                             ShortLabel  = string.Join("、", parts),
                         });
+                        issueLabel = string.Join("、", parts);
+                    }
                 }
+
+                daily.Add(new SalaryDailyEntry
+                {
+                    Date = date, Hours = hours, TypeTag = typeTag,
+                    ClockIn = clockIn, ClockOut = clockOut, ClockedHours = dayClockedHours,
+                    IssueLabel = issueLabel,
+                });
             }
 
             double? clockedHours = null;
@@ -137,15 +170,22 @@ public class SalaryCalculationService(AppDbContext db)
             {
                 foreach (var (date, p) in punches.Where(kv => !shiftsByDate.ContainsKey(kv.Key)))
                 {
+                    bool isHoliday = config.IsHoliday(date, nationalHolidays);
                     if (p.IsComplete)
                     {
                         var hrs = Math.Round(p.Hours, 2);
                         issues.Add(new AttendanceIssue
                         {
                             Date = date, Type = AttendanceIssueType.Unscheduled,
-                            IfCounted   = ComputeDay(emp, salary, laborLaw, hrs, config.IsHoliday(date, nationalHolidays)),
+                            IfCounted   = ComputeDay(emp, salary, laborLaw, hrs, isHoliday),
                             Description = $"沒有排班，打卡 {p.In:HH:mm}–{p.Out:HH:mm}（{hrs:0.##} 小時）",
                             ShortLabel  = "未排班出勤",
+                        });
+                        if (isHoliday) holidayClockedHours += hrs; else weekdayClockedHours += hrs;
+                        daily.Add(new SalaryDailyEntry
+                        {
+                            Date = date, Hours = 0, TypeTag = isHoliday ? "假日" : "平日",
+                            ClockIn = p.In, ClockOut = p.Out, ClockedHours = hrs, IssueLabel = "未排班出勤",
                         });
                     }
                     else
@@ -155,6 +195,11 @@ public class SalaryCalculationService(AppDbContext db)
                             Date = date, Type = AttendanceIssueType.HalfPunch,
                             Description = $"沒有排班，{HalfPunchText(p)}",
                             ShortLabel  = "未排班打卡",
+                        });
+                        daily.Add(new SalaryDailyEntry
+                        {
+                            Date = date, Hours = 0, TypeTag = isHoliday ? "假日" : "平日",
+                            ClockIn = p.In, ClockOut = p.Out, IssueLabel = "未排班打卡",
                         });
                     }
                 }
@@ -175,6 +220,8 @@ public class SalaryCalculationService(AppDbContext db)
                 HourlyRate       = salary.HourlyRate        ?? 0,
                 HolidayHourlyRate = emp.HolidaySalary?.HourlyRate ?? salary.HourlyRate ?? 0,
                 MonthlyBase      = salary.MonthlyBase       ?? 0,
+                OT1Rate          = ot1Rate,
+                OT2Rate          = ot2Rate,
                 WeekdayHours     = Math.Round(total.WeekdayHours, 2),
                 HolidayHours     = Math.Round(total.HolidayHours, 2),
                 OT1Hours         = Math.Round(total.OT1Hours,     2),
@@ -187,7 +234,12 @@ public class SalaryCalculationService(AppDbContext db)
                 BaseAmount       = Math.Round(baseAmount,         0),
                 ScheduledHours   = Math.Round(scheduledHours,     2),
                 ClockedHours     = clockedHours,
+                WeekdayScheduledHours = Math.Round(weekdayScheduledHours, 2),
+                HolidayScheduledHours = Math.Round(holidayScheduledHours, 2),
+                WeekdayClockedHours   = weekdayClockedHours.HasValue ? Math.Round(weekdayClockedHours.Value, 2) : null,
+                HolidayClockedHours   = holidayClockedHours.HasValue ? Math.Round(holidayClockedHours.Value, 2) : null,
                 AttendanceIssues = issues.OrderBy(i => i.Date).ToList(),
+                DailyEntries     = daily.OrderBy(d => d.Date).ToList(),
             };
 
             // 帶入員工預設獎金

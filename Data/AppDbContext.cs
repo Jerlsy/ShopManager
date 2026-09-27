@@ -123,8 +123,9 @@ public class AppDbContext : DbContext
             .HasForeignKey(e => e.ShiftSettingId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // SalaryRecord（無額外 JSON 欄位）
+        // SalaryRecord
         modelBuilder.Entity<SalaryEmployeeRecord>().Property(e => e.AttendanceIssues).HasConversion(JsonConv<AttendanceIssue>());
+        modelBuilder.Entity<SalaryEmployeeRecord>().Property(e => e.DailyEntries).HasConversion(JsonConv<SalaryDailyEntry>());
 
         // SalaryRecord 關聯（Cascade：班表刪除時一併移除薪資紀錄）
         modelBuilder.Entity<SalaryRecord>()

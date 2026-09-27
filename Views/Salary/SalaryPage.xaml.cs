@@ -28,6 +28,14 @@ public partial class SalaryPage : UserControl
         await _vm.LoadAsync();
     }
 
+    /// <summary>每日出勤明細改成彈出獨立視窗（見 SalaryDailyDetailWindow），不是卡片內展開</summary>
+    private void ShowDailyDetail_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not EmployeeSalaryItem item) return;
+        var win = new SalaryDailyDetailWindow(item.Employee.Name, item.DailyEntries) { Owner = Window.GetWindow(this) };
+        win.ShowDialog();
+    }
+
     // 問題根源：員工卡片內的 ComboBox、TextBox 等子元素攔截 MouseWheel 事件，
     // 導致事件無法冒泡到 PageScrollViewer（背景捲動正常的原因）。
     // 修法：在員工卡片 Border 的 PreviewMouseWheel（隧道事件）最先觸發時，
