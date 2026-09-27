@@ -14,6 +14,29 @@ There is no test project and no lint config (no `.editorconfig`, no Cursor/Copil
 
 If the app is already running, `dotnet build` fails to copy the exe (file lock) even though compilation succeeded — check for `error CS`/`error MSB3027` specifically rather than treating any build failure as a compile error.
 
+Cloud sessions building here: this is a WPF project (`net10.0-windows`), so `dotnet build` on Linux needs `-p:EnableWindowsTargeting=true` (compiles fine; the app still can't actually run/show UI on Linux — no Windows Desktop runtime).
+
+## Git 分支作業標準（雲端／本機協作、與 main 同步）
+
+先判斷自己在哪一端：有 `CLAUDE_CODE_REMOTE_SESSION_ID` 環境變數 → 雲端；能跑 Windows 上的 VS/dotnet（實際建置+跑）→ 本機。兩端對「跟 main 同步」的職責不同，不要互相代勞。
+
+**雲端這邊（每次作業前）**
+1. `git fetch origin main`，比對 main 有沒有更新。
+   - 有更新 → 先確認本機（工作目錄）乾淨，`git merge origin/main` 合併回目前的開發分支。**不能用 `rebase` 或 force push 改寫已推送的歷史。**
+   - 沒更新 → 直接在開發分支繼續。
+2. 雲端**不可推 main**——雲端沒辦法建置測試（WPF 應用無法在 Linux 上實際執行/驗證 UI），併回 main 一律交給本機處理。
+
+**本機這邊（每次作業前）**
+1. 確認本機乾淨，`git fetch origin`。
+2. 看有沒有還沒併進 main 的開發分支：`git branch -r --no-merged origin/main`。
+3. 有的話：切過去、建置、跑測試。
+   - 失敗 → 在該開發分支上修，**不能併**。
+   - 通過 → 併入 main 前要先取得使用者明確同意，用 `git merge --no-ff --no-commit` 合併，且要 `git rm` 掉 `CloudTest/results/`（那是一次性測試結果，不併進 main）。
+
+**共通規則**
+- 大型二進位檔（例如給雲端編譯用的 .NET SDK tar 包）固定放在 `CloudTest/` 內，透過 Git LFS 追蹤（雲端環境需先 `apt-get install -y git-lfs && git lfs install && git lfs pull` 才能取得實際內容，否則只會拉到指標檔）。
+- 開發分支上任何動到 `CloudTest/` 的 commit，**一律不併回 main**（合併時用 `--no-ff --no-commit`，再手動 `git rm -r CloudTest/` 或至少 `CloudTest/results/` 後才 commit）。
+
 ## Architecture
 
 WPF (.NET 10) MVVM app: `CommunityToolkit.Mvvm` for ViewModels/commands, `Microsoft.Extensions.DependencyInjection` for DI (wired in `App.ConfigureServices`), EF Core + SQLite for storage. `NavigationService` caches pages by `Type`; `Loaded` fires again each time a cached page is reattached to the visual tree — this is deliberate (keeps cross-page edits fresh), not a bug to "fix" by adding a guard.
