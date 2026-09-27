@@ -90,6 +90,24 @@ public class SalaryDailyEntry
     public DateTime? ClockOut      { get; init; }
     public double?   ClockedHours  { get; init; }
     public string?   IssueLabel    { get; init; }
+    /// <summary>搭配 IssueLabel 決定標籤顏色（遲到早退／缺打卡／未排班各自一色，一眼分辨嚴重程度）</summary>
+    public AttendanceIssueType? IssueType { get; init; }
+    /// <summary>
+    /// 標籤顏色用（XAML DataTrigger 綁這個字串，不直接綁 nullable enum）。
+    /// IssueType 是後來才加的欄位：之前版本存進 DB 的每日明細只有 IssueLabel 文字、沒有 IssueType，
+    /// 薪資頁載入已存月份時直接讀 DB，不會重算——所以缺值時要從文字反推，否則舊資料永遠是預設色。
+    /// </summary>
+    public string IssueTypeName => (IssueType ?? InferIssueType(IssueLabel))?.ToString() ?? string.Empty;
+
+    private static AttendanceIssueType? InferIssueType(string? label) => label switch
+    {
+        null or ""                                      => null,
+        _ when label.Contains("遲到") || label.Contains("早退") => AttendanceIssueType.LateOrEarly,
+        "有排班未打卡"                                   => AttendanceIssueType.NoPunch,
+        "未排班出勤"                                     => AttendanceIssueType.Unscheduled,
+        "打卡不完整" or "未排班打卡"                      => AttendanceIssueType.HalfPunch,
+        _                                               => null,
+    };
 
     public string DayLabel => Date.DayOfWeek switch
     {
@@ -109,6 +127,19 @@ public class SalaryDailyEntry
         : ClockIn.HasValue ? $"{ClockIn:HH:mm}–？"
         : ClockOut.HasValue ? $"？–{ClockOut:HH:mm}"
         : "—";
+
+    /// <summary>
+    /// 「打卡」欄一行顯示用：時段＋工時併成一句（例如「13:27–19:21（5.9 hr）」），
+    /// 不再跟「排班」欄一樣分兩行——分兩行時兩欄行數不一致，卡片看起來像沒對齊。
+    /// </summary>
+    public string ClockSummaryText => !HasClock
+        ? "無打卡紀錄"
+        : ClockedHours.HasValue ? $"{ClockRangeText}（{ClockedHours:0.#} hr）" : ClockRangeText;
+
+    /// <summary>「排班」欄一行顯示用：工時＋指定金額（如有）併成一句，跟整列改一行的排版一致</summary>
+    public string HoursSummaryText => OverrideAmount.HasValue
+        ? $"{Hours:0.#} hr（指定 {OverrideAmount:N0} 元）"
+        : $"{Hours:0.#} hr";
 }
 
 /// <summary>額外薪資項目（獎金或扣款）</summary>

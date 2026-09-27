@@ -265,43 +265,77 @@
                                                 </Grid.RowDefinitions>
 
                                                 <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,6">
-                                                    <TextBlock Text="排班工時" Style="{StaticResource SubtleTextStyle}" FontSize="11"/>
-                                                    <TextBlock Text="{Binding WeekdayScheduledHours, StringFormat={}{0:N1} hr}" Style="{StaticResource BodyTextStyle}"/>
+                                                    <TextBlock FontSize="{DynamicResource FontSizeCaption}">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock" BasedOn="{StaticResource SubtleTextStyle}">
+                                                                <Setter Property="Text" Value="排班工時"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding HasWeekdayHoursMismatch}" Value="True">
+                                                                        <Setter Property="Text" Value="排班工時（與打卡不同步）"/>
+                                                                        <Setter Property="Foreground" Value="#E65100"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                    <TextBlock Text="{Binding WeekdayScheduledHours, StringFormat={}{0:N1} hr}">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock" BasedOn="{StaticResource BodyTextStyle}">
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding HasWeekdayHoursMismatch}" Value="True">
+                                                                        <Setter Property="Foreground" Value="#E65100"/>
+                                                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
                                                 </StackPanel>
                                                 <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,6">
-                                                    <TextBlock Text="計薪工時" Style="{StaticResource SubtleTextStyle}" FontSize="11"/>
+                                                    <TextBlock Text="計薪工時" Style="{StaticResource SubtleTextStyle}" FontSize="{DynamicResource FontSizeCaption}"/>
                                                     <TextBlock Text="{Binding WeekdayHours, StringFormat={}{0:N1} hr}" Style="{StaticResource BodyTextStyle}"/>
                                                 </StackPanel>
 
                                                 <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,0"
                                                             Visibility="{Binding HasWeekdayAttendance, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                    <TextBlock Text="打卡紀錄" Style="{StaticResource SubtleTextStyle}" FontSize="11"/>
-                                                    <TextBlock Text="{Binding WeekdayClockedHours, StringFormat={}{0:N1} hr}" Style="{StaticResource BodyTextStyle}"/>
+                                                    <TextBlock Text="打卡紀錄" Style="{StaticResource SubtleTextStyle}" FontSize="{DynamicResource FontSizeCaption}"/>
+                                                    <TextBlock Text="{Binding WeekdayClockedHours, StringFormat={}{0:N1} hr}">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock" BasedOn="{StaticResource BodyTextStyle}">
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding HasWeekdayHoursMismatch}" Value="True">
+                                                                        <Setter Property="Foreground" Value="#E65100"/>
+                                                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
                                                 </StackPanel>
                                                 <StackPanel Grid.Row="1" Grid.Column="1">
-                                                    <TextBlock Text="{Binding WeekdayCalcLabel}" Style="{StaticResource SubtleTextStyle}" FontSize="11"/>
+                                                    <TextBlock Text="{Binding WeekdayCalcLabel}" Style="{StaticResource SubtleTextStyle}" FontSize="{DynamicResource FontSizeCaption}"/>
                                                     <TextBlock Text="{Binding WeekdayCalcText}" Style="{StaticResource BodyTextStyle}"/>
                                                 </StackPanel>
 
                                                 <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,8,10,0"
                                                             Visibility="{Binding HasOT, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                    <TextBlock Text="加班一段（≤2hr）" Style="{StaticResource SubtleTextStyle}" FontSize="11"/>
+                                                    <TextBlock Text="加班一段（≤2hr）" Style="{StaticResource SubtleTextStyle}" FontSize="{DynamicResource FontSizeCaption}"/>
                                                     <TextBlock Text="{Binding OT1Hours, StringFormat={}{0:N1} hr}" Style="{StaticResource BodyTextStyle}"/>
                                                 </StackPanel>
                                                 <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,8,0,0"
                                                             Visibility="{Binding ShowOT1Pay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                    <TextBlock Text="加班一段薪資" Style="{StaticResource SubtleTextStyle}" FontSize="11"/>
+                                                    <TextBlock Text="加班一段薪資" Style="{StaticResource SubtleTextStyle}" FontSize="{DynamicResource FontSizeCaption}"/>
                                                     <TextBlock Text="{Binding OT1Pay, StringFormat={}{0:N0} 元}" Style="{StaticResource BodyTextStyle}"/>
                                                 </StackPanel>
 
                                                 <StackPanel Grid.Row="3" Grid.Column="0" Margin="0,8,10,0"
                                                             Visibility="{Binding OT2Hours, Converter={StaticResource NonZeroToVisibilityConverter}}">
-                                                    <TextBlock Text="加班二段（&gt;2hr）" Style="{StaticResource SubtleTextStyle}" FontSize="11"/>
+                                                    <TextBlock Text="加班二段（&gt;2hr）" Style="{StaticResource SubtleTextStyle}" FontSize="{DynamicResource FontSizeCaption}"/>
                                                     <TextBlock Text="{Binding OT2Hours, StringFormat={}{0:N1} hr}" Style="{StaticResource BodyTextStyle}"/>
                                                 </StackPanel>
                                                 <StackPanel Grid.Row="3" Grid.Column="1" Margin="0,8,0,0"
                                                             Visibility="{Binding ShowOT2Pay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                    <TextBlock Text="加班二段薪資" Style="{StaticResource SubtleTextStyle}" FontSize="11"/>
+                                                    <TextBlock Text="加班二段薪資" Style="{StaticResource SubtleTextStyle}" FontSize="{DynamicResource FontSizeCaption}"/>
                                                     <TextBlock Text="{Binding OT2Pay, StringFormat={}{0:N0} 元}" Style="{StaticResource BodyTextStyle}"/>
                                                 </StackPanel>
                                             </Grid>
@@ -324,21 +358,55 @@
                                                 </Grid.RowDefinitions>
 
                                                 <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,6">
-                                                    <TextBlock Text="排班工時" Style="{StaticResource SubtleTextStyle}" FontSize="11"/>
-                                                    <TextBlock Text="{Binding HolidayScheduledHours, StringFormat={}{0:N1} hr}" Style="{StaticResource BodyTextStyle}"/>
+                                                    <TextBlock FontSize="{DynamicResource FontSizeCaption}">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock" BasedOn="{StaticResource SubtleTextStyle}">
+                                                                <Setter Property="Text" Value="排班工時"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding HasHolidayHoursMismatch}" Value="True">
+                                                                        <Setter Property="Text" Value="排班工時（與打卡不同步）"/>
+                                                                        <Setter Property="Foreground" Value="#E65100"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                    <TextBlock Text="{Binding HolidayScheduledHours, StringFormat={}{0:N1} hr}">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock" BasedOn="{StaticResource BodyTextStyle}">
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding HasHolidayHoursMismatch}" Value="True">
+                                                                        <Setter Property="Foreground" Value="#E65100"/>
+                                                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
                                                 </StackPanel>
                                                 <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,6">
-                                                    <TextBlock Text="計薪工時" Style="{StaticResource SubtleTextStyle}" FontSize="11"/>
+                                                    <TextBlock Text="計薪工時" Style="{StaticResource SubtleTextStyle}" FontSize="{DynamicResource FontSizeCaption}"/>
                                                     <TextBlock Text="{Binding HolidayHours, StringFormat={}{0:N1} hr}" Style="{StaticResource BodyTextStyle}"/>
                                                 </StackPanel>
 
                                                 <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,0"
                                                             Visibility="{Binding HasHolidayAttendance, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                    <TextBlock Text="打卡紀錄" Style="{StaticResource SubtleTextStyle}" FontSize="11"/>
-                                                    <TextBlock Text="{Binding HolidayClockedHours, StringFormat={}{0:N1} hr}" Style="{StaticResource BodyTextStyle}"/>
+                                                    <TextBlock Text="打卡紀錄" Style="{StaticResource SubtleTextStyle}" FontSize="{DynamicResource FontSizeCaption}"/>
+                                                    <TextBlock Text="{Binding HolidayClockedHours, StringFormat={}{0:N1} hr}">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock" BasedOn="{StaticResource BodyTextStyle}">
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding HasHolidayHoursMismatch}" Value="True">
+                                                                        <Setter Property="Foreground" Value="#E65100"/>
+                                                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
                                                 </StackPanel>
                                                 <StackPanel Grid.Row="1" Grid.Column="1">
-                                                    <TextBlock Text="薪資計算" Style="{StaticResource SubtleTextStyle}" FontSize="11"/>
+                                                    <TextBlock Text="薪資計算" Style="{StaticResource SubtleTextStyle}" FontSize="{DynamicResource FontSizeCaption}"/>
                                                     <TextBlock Text="{Binding HolidayCalcText}" Style="{StaticResource BodyTextStyle}"/>
                                                 </StackPanel>
                                             </Grid>

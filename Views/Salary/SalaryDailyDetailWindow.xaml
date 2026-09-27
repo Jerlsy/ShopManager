@@ -4,12 +4,12 @@
         xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:models="clr-namespace:ShopManager.Models"
         Title="每日出勤明細"
-        Width="520" Height="680"
+        Width="720" Height="680"
         WindowStartupLocation="CenterOwner"
         TextElement.Foreground="{DynamicResource MaterialDesign.Brush.Foreground}"
         TextElement.FontFamily="{DynamicResource AppFontFamily}"
-        FontSize="{DynamicResource AppFontSize}"
-        Background="{DynamicResource AppBackgroundBrush}">
+        FontSize="{DynamicResource FontSizeBody}"
+        Background="{DynamicResource AppShellBackgroundBrush}">
 
     <Border BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
         <Grid>
@@ -20,83 +20,157 @@
             </Grid.RowDefinitions>
 
             <!-- 標頭 -->
-            <Border Grid.Row="0" Padding="20,14" Background="{DynamicResource AppSurfaceBrush}"
+            <Border Grid.Row="0" Padding="20,16" Background="{DynamicResource AppSurfaceBrush}"
                     BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1">
                 <StackPanel Orientation="Horizontal">
-                    <md:PackIcon Kind="CalendarSearch" Width="20" Height="20"
+                    <md:PackIcon Kind="CalendarSearch" Width="24" Height="24"
                                  Foreground="{DynamicResource PrimaryHueMidBrush}"
                                  VerticalAlignment="Center" Margin="0,0,10,0"/>
                     <StackPanel>
-                        <TextBlock Text="{Binding HeaderTitle}" FontWeight="SemiBold" FontSize="15"/>
-                        <TextBlock Text="每一天的排班 vs 打卡對照，來自匯入的 POS 打卡紀錄" FontSize="11"
-                                   Foreground="{DynamicResource AppSubtleForegroundBrush}" Margin="0,2,0,0"/>
+                        <TextBlock Text="{Binding HeaderTitle}" FontWeight="SemiBold"
+                                   FontSize="{DynamicResource FontSizeSubTitle}"/>
+                        <TextBlock Text="每一天的排班 vs 打卡對照，來自匯入的 POS 打卡紀錄"
+                                   FontSize="{DynamicResource FontSizeSmall}"
+                                   Foreground="{DynamicResource AppSubtleForegroundBrush}" Margin="0,3,0,0"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
 
             <!-- 明細清單 -->
-            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="16,12">
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="18,14">
                 <StackPanel>
-                    <Grid Margin="10,0,10,6" Visibility="{Binding HasEntries, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <Grid Margin="12,0,12,8" Visibility="{Binding HasEntries, Converter={StaticResource BoolToVisibilityConverter}}">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="86"/>
+                            <ColumnDefinition Width="Auto" MinWidth="90"/>
+                            <ColumnDefinition Width="Auto" MinWidth="56"/>
+                            <ColumnDefinition Width="Auto" MinWidth="80"/>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto" MinWidth="110"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="日期" Style="{StaticResource SubtleTextStyle}" FontWeight="SemiBold" FontSize="11"/>
-                        <TextBlock Grid.Column="1" Text="排班" Style="{StaticResource SubtleTextStyle}" FontWeight="SemiBold" FontSize="11"/>
-                        <TextBlock Grid.Column="2" Text="打卡" Style="{StaticResource SubtleTextStyle}" FontWeight="SemiBold" FontSize="11"/>
+                        <TextBlock Grid.Column="0" Text="日期" Style="{StaticResource SubtleTextStyle}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="1" Text="類型" Style="{StaticResource SubtleTextStyle}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="2" Text="排班" Style="{StaticResource SubtleTextStyle}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="3" Text="打卡" Style="{StaticResource SubtleTextStyle}" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="4" Text="差異" Style="{StaticResource SubtleTextStyle}" FontWeight="SemiBold"/>
                     </Grid>
 
                     <ItemsControl ItemsSource="{Binding Entries}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type models:SalaryDailyEntry}">
-                                <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,6" Padding="10,8">
-                                    <StackPanel>
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="86"/>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="*"/>
-                                            </Grid.ColumnDefinitions>
+                                <!-- 整列只有一行：日期／類型／排班／打卡／差異橫排，避免兩欄各自分行時高度對不齊 -->
+                                <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,8" Padding="12,10">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" MinWidth="90"/>
+                                            <ColumnDefinition Width="Auto" MinWidth="56"/>
+                                            <ColumnDefinition Width="Auto" MinWidth="80"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto" MinWidth="110"/>
+                                        </Grid.ColumnDefinitions>
 
-                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Label}" FontWeight="Medium" FontSize="12"/>
-                                                <Border CornerRadius="3" Padding="4,0" Margin="0,3,0,0"
-                                                        HorizontalAlignment="Left"
-                                                        Background="{DynamicResource PrimaryHueLightBrush}">
-                                                    <TextBlock Text="{Binding TypeTag}" FontSize="10" Style="{StaticResource SubtleTextStyle}"/>
-                                                </Border>
-                                            </StackPanel>
+                                        <TextBlock Grid.Column="0" Text="{Binding Label}" FontWeight="Medium"
+                                                   Style="{StaticResource BodyTextStyle}" VerticalAlignment="Center"/>
 
-                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Hours, StringFormat={}{0:N1} hr}"
-                                                           Style="{StaticResource BodyTextStyle}" FontSize="12"/>
-                                                <TextBlock Text="{Binding OverrideAmount, StringFormat={}指定 {0:N0} 元}"
-                                                           Style="{StaticResource SubtleTextStyle}" FontSize="11"
-                                                           Visibility="{Binding OverrideAmount, Converter={StaticResource NullToVisibilityConverter}}"/>
-                                            </StackPanel>
-
-                                            <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding ClockRangeText}"
-                                                           Style="{StaticResource BodyTextStyle}" FontSize="12"
-                                                           Visibility="{Binding HasClock, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                                <TextBlock Text="無打卡紀錄"
-                                                           Style="{StaticResource SubtleTextStyle}" FontSize="12"
-                                                           Visibility="{Binding HasClock, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}"/>
-                                                <TextBlock Text="{Binding ClockedHours, StringFormat={}{0:N1} hr}"
-                                                           Style="{StaticResource SubtleTextStyle}" FontSize="11"
-                                                           Visibility="{Binding ClockedHours, Converter={StaticResource NullToVisibilityConverter}}"/>
-                                            </StackPanel>
-                                        </Grid>
-
-                                        <Border Margin="0,6,0,0" CornerRadius="4" Padding="6,3" HorizontalAlignment="Left"
-                                                Background="{DynamicResource AppInfoBrush}"
-                                                Visibility="{Binding IssueLabel, Converter={StaticResource NullToVisibilityConverter}}">
-                                            <TextBlock Text="{Binding IssueLabel}" FontSize="11"
-                                                       Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                                        <!--
+                                            平日／假日／替代分色，比原本統一用一種淡灰色顯眼：
+                                            藍＝平日、橘＝假日、紫＝替代設定金額
+                                        -->
+                                        <Border Grid.Column="1" CornerRadius="4" Padding="7,3" Margin="0,0,10,0"
+                                                HorizontalAlignment="Left" VerticalAlignment="Center">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="#1F4A90D9"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding TypeTag}" Value="假日">
+                                                            <Setter Property="Background" Value="#1FFF9800"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding TypeTag}" Value="替代">
+                                                            <Setter Property="Background" Value="#1F7E57C2"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock Text="{Binding TypeTag}" FontWeight="SemiBold"
+                                                       FontSize="{DynamicResource FontSizeSmallBody}">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="#2E6DA4"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding TypeTag}" Value="假日">
+                                                                <Setter Property="Foreground" Value="#E65100"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding TypeTag}" Value="替代">
+                                                                <Setter Property="Foreground" Value="#5E35B1"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
                                         </Border>
-                                    </StackPanel>
+
+                                        <TextBlock Grid.Column="2" Text="{Binding HoursSummaryText}"
+                                                   Style="{StaticResource BodyTextStyle}" VerticalAlignment="Center"/>
+
+                                        <TextBlock Grid.Column="3" Text="{Binding ClockSummaryText}" VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource BodyTextStyle}">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HasClock}" Value="False">
+                                                            <Setter Property="Foreground" Value="{DynamicResource AppSubtleForegroundBrush}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+
+                                        <!--
+                                            出勤差異標籤依類型上色，一眼分辨嚴重程度：
+                                            紅＝缺打卡紀錄（有排班沒打卡／只打一半卡，資料不完整最需要業主決定）
+                                            橘＝遲到早退（照班表計薪，只是提醒）
+                                            紫＝未排班卻有打卡（單純異常，不一定是問題）
+                                            注意：DataTrigger 綁定 Nullable<enum>（IssueType）比對字串值常常比不中
+                                            （WPF 對 boxed nullable enum 的型別轉換不可靠），改綁 IssueTypeName
+                                            這個字串版本才穩定觸發。
+                                        -->
+                                        <Border Grid.Column="4" CornerRadius="4" Padding="7,4"
+                                                HorizontalAlignment="Right" VerticalAlignment="Center"
+                                                Visibility="{Binding IssueLabel, Converter={StaticResource NullToVisibilityConverter}}">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="#1FFF9800"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IssueTypeName}" Value="NoPunch">
+                                                            <Setter Property="Background" Value="#1FE53935"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IssueTypeName}" Value="HalfPunch">
+                                                            <Setter Property="Background" Value="#1FE53935"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IssueTypeName}" Value="Unscheduled">
+                                                            <Setter Property="Background" Value="#1F7E57C2"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock Text="{Binding IssueLabel}" FontSize="{DynamicResource FontSizeSmall}">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="#E65100"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IssueTypeName}" Value="NoPunch">
+                                                                <Setter Property="Foreground" Value="#C62828"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IssueTypeName}" Value="HalfPunch">
+                                                                <Setter Property="Foreground" Value="#C62828"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IssueTypeName}" Value="Unscheduled">
+                                                                <Setter Property="Foreground" Value="#5E35B1"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Border>
+                                    </Grid>
                                 </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -110,7 +184,7 @@
             </ScrollViewer>
 
             <!-- 底部 -->
-            <Border Grid.Row="2" Padding="20,12" Background="{DynamicResource AppSurfaceBrush}"
+            <Border Grid.Row="2" Padding="20,14" Background="{DynamicResource AppSurfaceBrush}"
                     BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,1,0,0">
                 <Button Style="{StaticResource MaterialDesignFlatButton}"
                         HorizontalAlignment="Right" IsCancel="True" Click="Close_Click">

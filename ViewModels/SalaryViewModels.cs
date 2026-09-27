@@ -107,6 +107,12 @@ public partial class EmployeeSalaryItem : ObservableObject
     public bool    HasWeekdayAttendance  => WeekdayClockedHours.HasValue;
     public bool    HasHolidayAttendance  => HolidayClockedHours.HasValue;
 
+    // 排班工時 vs 打卡紀錄差超過 0.05hr（3 分鐘，抵消四捨五入誤差）才算「不同步」，卡片上要標色提醒
+    public bool HasWeekdayHoursMismatch =>
+        HasWeekdayAttendance && Math.Abs(WeekdayScheduledHours - WeekdayClockedHours!.Value) > 0.05;
+    public bool HasHolidayHoursMismatch =>
+        HasHolidayAttendance && Math.Abs(HolidayScheduledHours - HolidayClockedHours!.Value) > 0.05;
+
     // 薪資明細
     public decimal WeekdayPay  { get; set; }
     public decimal HolidayPay  { get; set; }

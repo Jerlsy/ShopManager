@@ -108,6 +108,7 @@ public class SalaryCalculationService(AppDbContext db)
                                      : date.AddDays(1).ToDateTime(s.EndTime));
                 var shiftLabel = $"{start:HH:mm}–{end:HH:mm}";
                 string? issueLabel = null;
+                AttendanceIssueType? issueType = null;
                 DateTime? clockIn = null, clockOut = null;
                 double? dayClockedHours = null;
 
@@ -120,6 +121,7 @@ public class SalaryCalculationService(AppDbContext db)
                         ShortLabel  = "有排班未打卡",
                     });
                     issueLabel = "有排班未打卡";
+                    issueType  = AttendanceIssueType.NoPunch;
                 }
                 else if (!p.IsComplete)
                 {
@@ -130,6 +132,7 @@ public class SalaryCalculationService(AppDbContext db)
                         ShortLabel  = "打卡不完整",
                     });
                     issueLabel = "打卡不完整";
+                    issueType  = AttendanceIssueType.HalfPunch;
                     clockIn = p.In; clockOut = p.Out;
                 }
                 else
@@ -154,6 +157,7 @@ public class SalaryCalculationService(AppDbContext db)
                             ShortLabel  = string.Join("、", parts),
                         });
                         issueLabel = string.Join("、", parts);
+                        issueType  = AttendanceIssueType.LateOrEarly;
                     }
                 }
 
@@ -161,7 +165,7 @@ public class SalaryCalculationService(AppDbContext db)
                 {
                     Date = date, Hours = hours, TypeTag = typeTag,
                     ClockIn = clockIn, ClockOut = clockOut, ClockedHours = dayClockedHours,
-                    IssueLabel = issueLabel,
+                    IssueLabel = issueLabel, IssueType = issueType,
                 });
             }
 
@@ -185,7 +189,8 @@ public class SalaryCalculationService(AppDbContext db)
                         daily.Add(new SalaryDailyEntry
                         {
                             Date = date, Hours = 0, TypeTag = isHoliday ? "假日" : "平日",
-                            ClockIn = p.In, ClockOut = p.Out, ClockedHours = hrs, IssueLabel = "未排班出勤",
+                            ClockIn = p.In, ClockOut = p.Out, ClockedHours = hrs,
+                            IssueLabel = "未排班出勤", IssueType = AttendanceIssueType.Unscheduled,
                         });
                     }
                     else
@@ -199,7 +204,8 @@ public class SalaryCalculationService(AppDbContext db)
                         daily.Add(new SalaryDailyEntry
                         {
                             Date = date, Hours = 0, TypeTag = isHoliday ? "假日" : "平日",
-                            ClockIn = p.In, ClockOut = p.Out, IssueLabel = "未排班打卡",
+                            ClockIn = p.In, ClockOut = p.Out,
+                            IssueLabel = "未排班打卡", IssueType = AttendanceIssueType.HalfPunch,
                         });
                     }
                 }

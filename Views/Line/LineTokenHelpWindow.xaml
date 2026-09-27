@@ -8,8 +8,8 @@
         ResizeMode="NoResize"
         TextElement.Foreground="{DynamicResource MaterialDesign.Brush.Foreground}"
         TextElement.FontFamily="{DynamicResource AppFontFamily}"
-        FontSize="{DynamicResource AppFontSize}"
-        Background="{DynamicResource AppBackgroundBrush}">
+        FontSize="{DynamicResource FontSizeBody}"
+        Background="{DynamicResource AppShellBackgroundBrush}">
 
     <Border BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
         <Grid>
@@ -91,7 +91,7 @@
                                          Foreground="{DynamicResource AppSubtleForegroundBrush}"
                                          Text="在左側選單選擇你的 Provider，再點選已建立的 Messaging API Channel。若尚未建立，點「Create a new channel」→ 選「Messaging API」。"/>
                                 <Border Margin="0,8,0,0" CornerRadius="4" Padding="8,6"
-                                        Background="{DynamicResource AppBackgroundBrush}"
+                                        Background="{DynamicResource AppShellBackgroundBrush}"
                                         BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
                                     <StackPanel>
                                         <TextBlock Text="頁面位置" FontSize="10" Opacity="0.5" Margin="0,0,0,3"/>
@@ -127,7 +127,7 @@
                                          Foreground="{DynamicResource AppSubtleForegroundBrush}"
                                          Text="進入 Channel 後，點選上方的「Messaging API」頁籤（非預設的 Basic settings）。"/>
                                 <Border Margin="0,8,0,0" CornerRadius="4" Padding="8,6"
-                                        Background="{DynamicResource AppBackgroundBrush}"
+                                        Background="{DynamicResource AppShellBackgroundBrush}"
                                         BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
                                     <StackPanel Orientation="Horizontal">
                                         <Border CornerRadius="3" Padding="6,3" Margin="0,0,6,0"
@@ -163,7 +163,7 @@
                                          Foreground="{DynamicResource AppSubtleForegroundBrush}"
                                          Text="往下滾動到「Channel access token」區段，點「Issue」按鈕產生 Token。若已有 Token 直接複製使用，不需重新產生。"/>
                                 <Border Margin="0,8,0,0" CornerRadius="4" Padding="10,8"
-                                        Background="{DynamicResource AppBackgroundBrush}"
+                                        Background="{DynamicResource AppShellBackgroundBrush}"
                                         BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
                                     <StackPanel>
                                         <TextBlock Text="Channel access token (long-lived)" FontSize="11"
