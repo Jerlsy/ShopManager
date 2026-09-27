@@ -157,6 +157,11 @@
                                                          Foreground="OrangeRed" VerticalAlignment="Center"
                                                          ToolTip="低於最低薪資標準"
                                                          Visibility="{Binding IsUnderMinWage, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                            <Border CornerRadius="4" Padding="6,1" Margin="6,0,0,0" VerticalAlignment="Center"
+                                                    Background="#1FFF9800" BorderBrush="#FF9800" BorderThickness="1"
+                                                    Visibility="{Binding HasPendingIssues, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <TextBlock Text="{Binding PendingIssueLabel}" FontSize="11" Foreground="#E65100"/>
+                                            </Border>
                                         </StackPanel>
                                         <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
                                             <Border Background="{DynamicResource PrimaryHueLightBrush}"
@@ -276,6 +281,23 @@
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Grid.Column="0" Text="總工時" Style="{StaticResource SubtleTextStyle}" FontWeight="SemiBold"/>
                                                 <TextBlock Grid.Column="1" Text="{Binding TotalHours, StringFormat={}{0:N1} hr}" Style="{StaticResource BodyTextStyle}" FontWeight="SemiBold"/>
+                                            </Grid>
+
+                                            <!-- 打卡對照：預計排班 vs 實際打卡 -->
+                                            <Grid Margin="0,6,0,0"
+                                                  Visibility="{Binding HasAttendance, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Grid.Row="0" Grid.Column="0" Text="預計排班工時" Style="{StaticResource SubtleTextStyle}"/>
+                                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ScheduledHours, StringFormat={}{0:N1} hr}" Style="{StaticResource BodyTextStyle}"/>
+                                                <TextBlock Grid.Row="1" Grid.Column="0" Text="實際打卡工時" Style="{StaticResource SubtleTextStyle}"/>
+                                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ClockedHours, StringFormat={}{0:N1} hr}" Style="{StaticResource BodyTextStyle}"/>
                                             </Grid>
 
                                             <!-- 每日出勤明細（折疊區） -->
@@ -468,6 +490,81 @@
                                                    FontSize="16"
                                                    Foreground="{DynamicResource PrimaryHueMidBrush}"/>
                                     </Grid>
+
+                                    <!-- ── 差異處理（打卡 vs 排班）──────── -->
+                                    <StackPanel Visibility="{Binding HasPendingIssues, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <Separator Margin="0,8,0,8"/>
+                                        <Grid Margin="0,0,0,2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                                <md:PackIcon Kind="AlertCircleOutline" Width="16" Height="16" Foreground="#E65100"
+                                                             VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                                <TextBlock Text="差異處理" Style="{StaticResource SectionHeaderStyle}" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <Button Grid.Column="1"
+                                                    Content="{Binding AcceptButtonText}"
+                                                    Command="{Binding AcceptIssuesCommand}"
+                                                    Style="{StaticResource MaterialDesignRaisedButton}"
+                                                    Height="28" Padding="12,0"/>
+                                        </Grid>
+                                        <TextBlock Text="每一筆都要選擇處理方式，全部選完才能按「接受」；選「扣款／加給」的會寫入額外項目"
+                                                   Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" Margin="0,0,0,6"/>
+
+                                        <ItemsControl ItemsSource="{Binding AttendanceIssues}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="{x:Type vm:AttendanceIssueItem}">
+                                                    <Border CornerRadius="8" Padding="10,8" Margin="0,0,0,6"
+                                                            Background="{DynamicResource AppPanelAltBrush}">
+                                                        <StackPanel>
+                                                            <Grid>
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                    <ColumnDefinition Width="Auto"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBlock Grid.Column="0" Text="{Binding DateLabel}" FontWeight="SemiBold"
+                                                                           Style="{StaticResource BodyTextStyle}" VerticalAlignment="Center"/>
+                                                                <Border Grid.Column="1" CornerRadius="3" Padding="4,0" Margin="8,0"
+                                                                        VerticalAlignment="Center"
+                                                                        Background="{DynamicResource PrimaryHueLightBrush}">
+                                                                    <TextBlock Text="{Binding TypeLabel}" FontSize="11"
+                                                                               Style="{StaticResource SubtleTextStyle}"/>
+                                                                </Border>
+                                                                <TextBlock Grid.Column="2" Text="{Binding Description}" TextWrapping="Wrap"
+                                                                           Style="{StaticResource SubtleTextStyle}" VerticalAlignment="Center"/>
+                                                            </Grid>
+                                                            <WrapPanel Margin="0,6,0,0">
+                                                                <RadioButton Content="忽略" IsChecked="{Binding IsIgnore}" Margin="0,0,14,0"
+                                                                             VerticalAlignment="Center"
+                                                                             Visibility="{Binding ShowIgnore, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                                <RadioButton Content="{Binding CountLabel}" IsChecked="{Binding IsCount}" Margin="0,0,14,0"
+                                                                             VerticalAlignment="Center"
+                                                                             Visibility="{Binding ShowCount, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                                <RadioButton Content="不計" IsChecked="{Binding IsExclude}" Margin="0,0,14,0"
+                                                                             VerticalAlignment="Center"
+                                                                             Visibility="{Binding ShowExclude, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                                <RadioButton Content="扣款" IsChecked="{Binding IsDeduct}" Margin="0,0,14,0"
+                                                                             VerticalAlignment="Center"/>
+                                                                <RadioButton Content="加給" IsChecked="{Binding IsAdd}" Margin="0,0,10,0"
+                                                                             VerticalAlignment="Center"/>
+                                                                <TextBox Width="80"
+                                                                         Text="{Binding AmountText, UpdateSourceTrigger=PropertyChanged}"
+                                                                         IsEnabled="{Binding NeedsAmount}"
+                                                                         md:HintAssist.Hint="金額"
+                                                                         HorizontalContentAlignment="Right"
+                                                                         VerticalAlignment="Center"/>
+                                                                <TextBlock Text="元" Margin="4,0,0,0" VerticalAlignment="Center"
+                                                                           Style="{StaticResource SubtleTextStyle}"/>
+                                                            </WrapPanel>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
@@ -486,6 +583,9 @@
                         <TextBlock Text="當月人事費用合計" Style="{StaticResource SectionTitleStyle}" Margin="0"/>
                         <TextBlock Text="{Binding EmployeeItems.Count, StringFormat='共 {0} 位員工'}"
                                    Style="{StaticResource SubtleTextStyle}"/>
+                        <TextBlock Text="{Binding PendingIssueCount, StringFormat='尚有 {0} 筆出勤差異待處理，接受後金額才會更新'}"
+                                   Style="{StaticResource CaptionTextStyle}" Foreground="#E65100"
+                                   Visibility="{Binding PendingIssueCount, Converter={StaticResource NonZeroToVisibilityConverter}}"/>
                     </StackPanel>
                     <TextBlock Grid.Column="1"
                                Text="{Binding TotalPersonnelCost, StringFormat={}{0:N0} 元}"

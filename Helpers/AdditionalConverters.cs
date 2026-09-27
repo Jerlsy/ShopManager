@@ -277,25 +277,25 @@ public class NonZeroToVisibilityConverter : IValueConverter
         throw new NotImplementedException();
 }
 
-/// <summary>BonusPresetType == Custom → Visible（用於自訂名稱欄位顯示）</summary>
+/// <summary>自訂名稱類型（自訂、出勤差異）→ Visible（用於自訂名稱欄位顯示）</summary>
 [ValueConversion(typeof(Models.BonusPresetType), typeof(Visibility))]
 public class BonusTypeToCustomLabelVisibilityConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
-        value is Models.BonusPresetType t && t == Models.BonusPresetType.Custom
+        value is Models.BonusPresetType.Custom or Models.BonusPresetType.AttendanceAdjust
             ? Visibility.Visible : Visibility.Collapsed;
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
         throw new NotImplementedException();
 }
 
-/// <summary>BonusPresetType != Custom → Visible（用於預設名稱文字顯示）</summary>
+/// <summary>非自訂名稱類型 → Visible（用於預設名稱文字顯示）</summary>
 [ValueConversion(typeof(Models.BonusPresetType), typeof(Visibility))]
 public class BonusTypeToPresetLabelVisibilityConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
-        value is Models.BonusPresetType t && t != Models.BonusPresetType.Custom
-            ? Visibility.Visible : Visibility.Collapsed;
+        value is Models.BonusPresetType.Custom or Models.BonusPresetType.AttendanceAdjust
+            ? Visibility.Collapsed : Visibility.Visible;
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
         throw new NotImplementedException();
