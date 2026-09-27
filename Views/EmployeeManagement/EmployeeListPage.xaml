@@ -282,12 +282,16 @@
                                     <Setter Property="Template">
                                         <Setter.Value>
                                             <ControlTemplate TargetType="ListBoxItem">
-                                                <Border x:Name="ItemBorder"
-                                                        Background="{Binding ColorHex, Converter={StaticResource HexToBrushConverter}}"
-                                                        CornerRadius="12"
-                                                        BorderThickness="2" BorderBrush="Transparent">
-                                                    <ContentPresenter/>
-                                                </Border>
+                                                <Grid>
+                                                    <!-- 底色：員工色 40%，與卡片模式一致 -->
+                                                    <Border CornerRadius="12" Opacity="0.4"
+                                                            Background="{Binding ColorHex, Converter={StaticResource HexToBrushConverter}}"/>
+                                                    <Border x:Name="ItemBorder"
+                                                            CornerRadius="12"
+                                                            BorderThickness="2" BorderBrush="Transparent">
+                                                        <ContentPresenter/>
+                                                    </Border>
+                                                </Grid>
                                                 <ControlTemplate.Triggers>
                                                     <Trigger Property="IsSelected" Value="True">
                                                         <Setter TargetName="ItemBorder" Property="BorderBrush" Value="#80000000"/>
