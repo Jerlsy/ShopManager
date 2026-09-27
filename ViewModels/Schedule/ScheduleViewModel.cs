@@ -343,9 +343,8 @@ public partial class ScheduleViewModel : ObservableObject
         foreach (var s in shiftsTask.Result.Where(s => s.IsEnabled))
             EnabledShifts.Add(s);
 
-        ActiveEmployees.Clear();
-        foreach (var e in employeesTask.Result.Where(e => !e.IsResigned))
-            ActiveEmployees.Add(e);
+        _allEmployees = employeesTask.Result;
+        RefreshActiveEmployeesForMonth();
 
         _laborLaw     = laborLawTask.Result;
         _weekStartDay = shopSettingTask.Result?.WeekStartDay ?? 1;
@@ -361,9 +360,20 @@ public partial class ScheduleViewModel : ObservableObject
     // 月份切換（PreviousMonth / NextMonth 等命令呼叫）
     private async Task LoadForMonthChangeAsync()
     {
+        RefreshActiveEmployeesForMonth();
         await LoadScheduleAsync();
         // 跨月時清掉舊月份假日快取，再背景抓新月份
         _ = LoadMonthHolidaysAndRefreshAsync();
+    }
+
+    // 只在載入頁面與切換月份時重建：排班操作後的快速重整不動員工清單，避免面板閃爍、選取狀態遺失
+    private List<Employee> _allEmployees = new();
+
+    private void RefreshActiveEmployeesForMonth()
+    {
+        ActiveEmployees.Clear();
+        foreach (var e in _allEmployees.Where(e => e.IsEmployedDuring(SelectedYear, SelectedMonth)))
+            ActiveEmployees.Add(e);
     }
 
     // 背景抓假日資料；完成後重建 CalendarDay.HolidayName，但不重建整個視圖

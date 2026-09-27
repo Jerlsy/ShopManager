@@ -24,4 +24,17 @@ public class AppDialogService : IAppDialogService
             _         => null,
         };
     }
+
+    public async Task<bool?> ShowChoiceAsync(string title, string content,
+        string primaryText, string secondaryText, string cancelText = "取消")
+    {
+        var view = new ChoiceDialogView(title, content, primaryText, secondaryText, cancelText);
+        var result = await DialogHost.Show(view, "RootDialog");
+        return (result as string) switch
+        {
+            "primary"   => true,
+            "secondary" => false,
+            _           => null,
+        };
+    }
 }

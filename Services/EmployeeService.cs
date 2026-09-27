@@ -4,6 +4,11 @@ using ShopManager.Models;
 
 namespace ShopManager.Services;
 
+public record EmployeeHistory(List<string> ScheduleMonths, List<string> SalaryMonths)
+{
+    public bool IsEmpty => ScheduleMonths.Count == 0 && SalaryMonths.Count == 0;
+}
+
 public class EmployeeService(AppDbContext db, ShopContext shopContext)
 {
     public async Task<List<Employee>> GetAllAsync() =>
@@ -85,10 +90,56 @@ public class EmployeeService(AppDbContext db, ShopContext shopContext)
         await db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// 刪除員工。排班、薪資明細、聯絡方式、排班規則、預設獎金由資料庫連帶刪除；
+    /// 沒有外鍵的 LINE 綁定與排班衝突紀錄在這裡一併清掉，避免留下對不到人的資料。
+    /// </summary>
     public async Task DeleteAsync(int id)
     {
+        await using var tx = await db.Database.BeginTransactionAsync();
+
+        await db.ScheduleConflicts.Where(c => c.EmployeeId == id).ExecuteDeleteAsync();
+        await db.LineFollowers
+            .Where(f => f.ShopId == shopContext.ShopId && f.BoundEmployeeId == id)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(f => f.BoundEmployeeId, (int?)null)
+                .SetProperty(f => f.IsBindingDisabled, false));
+
         var e = await db.Employees.FindAsync(id);
         if (e is not null) { db.Employees.Remove(e); await db.SaveChangesAsync(); }
+
+        await tx.CommitAsync();
+    }
+
+    /// <summary>員工有哪些月份的排班與薪資紀錄（刪除前提示用，格式 yyyy/MM）</summary>
+    public async Task<EmployeeHistory> GetHistoryAsync(int employeeId)
+    {
+        var scheduleMonths = await db.ScheduleEntries
+            .Where(e => e.EmployeeId == employeeId)
+            .Select(e => new { e.MonthlySchedule!.Year, e.MonthlySchedule.Month })
+            .Distinct()
+            .ToListAsync();
+
+        var salaryMonths = await db.SalaryEmployeeRecords
+            .Where(r => r.EmployeeId == employeeId)
+            .Join(db.SalaryRecords, r => r.SalaryRecordId, s => s.Id, (r, s) => new { s.Year, s.Month })
+            .Distinct()
+            .ToListAsync();
+
+        static List<string> Fmt(IEnumerable<(int Year, int Month)> ms) =>
+            ms.OrderBy(m => m.Year).ThenBy(m => m.Month).Select(m => $"{m.Year}/{m.Month:D2}").ToList();
+
+        return new EmployeeHistory(
+            Fmt(scheduleMonths.Select(m => (m.Year, m.Month))),
+            Fmt(salaryMonths.Select(m => (m.Year, m.Month))));
+    }
+
+    public async Task SetResignDateAsync(int employeeId, DateOnly? resignDate)
+    {
+        var emp = await db.Employees.FindAsync(employeeId);
+        if (emp is null) return;
+        emp.ResignDate = resignDate;
+        await db.SaveChangesAsync();
     }
 
     /// <summary>

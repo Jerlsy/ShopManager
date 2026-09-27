@@ -59,6 +59,15 @@ public class Employee
 
     public bool IsResigned => ResignDate.HasValue && ResignDate.Value <= DateOnly.FromDateTime(DateTime.Today);
 
+    /// <summary>該月是否還在職（離職日落在該月或之後都算）。排班、薪資請用這個，不要用以「今天」判斷的 IsResigned</summary>
+    public bool IsEmployedDuring(int year, int month) =>
+        !ResignDate.HasValue || ResignDate.Value >= new DateOnly(year, month, 1);
+
+    public string ResignActionLabel => ResignDate.HasValue ? "復職" : "離職";
+    public string ResignActionTooltip => ResignDate.HasValue
+        ? $"已設定 {ResignDate:yyyy/MM/dd} 離職，點選可取消離職"
+        : "設定離職日（保留所有排班與薪資紀錄）";
+
     public bool IsBirthdayThisMonth =>
         BirthDate.HasValue && BirthDate.Value.Month == DateTime.Today.Month;
 
