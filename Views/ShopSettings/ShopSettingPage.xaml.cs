@@ -164,10 +164,40 @@ public partial class ShopSettingPage : UserControl
     {
         var win = App.Services.GetRequiredService<LineFollowerWindow>();
         win.ViewModel.IsSelectMode = true;
+        win.ViewModel.PickMode = LineFollowerPickMode.User;
         win.Owner = Window.GetWindow(this);
         win.ViewModel.FollowerSelected += (_, item) =>
         {
             var added = _viewModel.AddOwnerBinding(new OwnerLineBinding
+            {
+                UserId = item.UserId,
+                DisplayName = item.DisplayName,
+                PictureUrl = item.PictureUrl
+            });
+            if (!added)
+                App.Services.GetRequiredService<IAppSnackbarService>()
+                    .ShowWarning($"「{item.DisplayName}」已經綁定過了");
+        };
+        win.Loaded += async (_, _) => await win.ViewModel.InitAsync(
+            _viewModel.LineChannelAccessToken,
+            _viewModel.LineWorkerUrl,
+            _viewModel.LineWorkerApiKey);
+        win.ShowDialog();
+    }
+
+    /// <summary>
+    /// 新增群組/多人聊天室綁定：跟業主綁定共用同一個好友清單視窗，只是限制成只挑
+    /// TargetType 為 Group/Room 的項目（PickMode），避免把一般好友誤選成群組。
+    /// </summary>
+    private void AddGroupBinding_Click(object sender, RoutedEventArgs e)
+    {
+        var win = App.Services.GetRequiredService<LineFollowerWindow>();
+        win.ViewModel.IsSelectMode = true;
+        win.ViewModel.PickMode = LineFollowerPickMode.GroupOrRoom;
+        win.Owner = Window.GetWindow(this);
+        win.ViewModel.FollowerSelected += (_, item) =>
+        {
+            var added = _viewModel.AddGroupBinding(new OwnerLineBinding
             {
                 UserId = item.UserId,
                 DisplayName = item.DisplayName,

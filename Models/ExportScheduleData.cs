@@ -23,7 +23,13 @@ public class ExportScheduleData
 
     public record ShiftLegendItem(int Id, string Alias, string ColorHex, string TimeRange);
 
-    /// <summary>ShiftIds[i] 對應 Columns[i]，供個人班表文字訊息使用；業主帳號為 null。</summary>
-    public record PushRecipient(string UserId, string DisplayName, string? PictureUrl, bool IsOwner,
+    /// <summary>
+    /// Employee＝已綁定 LINE 的員工，Owner＝業主帳號，Group＝群組/多人聊天室（見 <see cref="LineTargetType"/>）。
+    /// 個人班表模式下 Group 沒有意義（推播的是特定一個人的班表，不適合丟進共用聊天室），只能收完整班表。
+    /// </summary>
+    public enum PushRecipientKind { Employee, Owner, Group }
+
+    /// <summary>ShiftIds[i] 對應 Columns[i]，供個人班表文字訊息使用；業主/群組帳號為 null。</summary>
+    public record PushRecipient(string UserId, string DisplayName, string? PictureUrl, PushRecipientKind Kind,
         IReadOnlyList<int?>? ShiftIds = null);
 }

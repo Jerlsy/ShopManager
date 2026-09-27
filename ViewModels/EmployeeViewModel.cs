@@ -139,6 +139,14 @@ public partial class EmployeeViewModel : ObservableObject
     private string _editName = string.Empty;
 
     [ObservableProperty] private string _editEnglishName = string.Empty;
+    [ObservableProperty] private string _editClockName = string.Empty;
+
+    // 打卡名稱預設跟著姓名走，直到使用者手動改成不同的值
+    partial void OnEditNameChanged(string? oldValue, string newValue)
+    {
+        if (string.IsNullOrWhiteSpace(EditClockName) || EditClockName == oldValue)
+            EditClockName = newValue;
+    }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IdNumberError))]
@@ -377,8 +385,11 @@ public partial class EmployeeViewModel : ObservableObject
         await LoadScheduleRuleSourcesAsync(emp.Id);
 
         SelectedEmployee = emp;
+        EditClockName = string.Empty;
         EditName = emp.Name;
         EditEnglishName = emp.EnglishName ?? string.Empty;
+        emp.ClockName = await _employeeService.GetClockNameNoTrackingAsync(emp.Id);
+        EditClockName = emp.EffectiveClockName;
         EditIdNumber = emp.IdNumber;
         EditAvatarPhotoData = emp.AvatarPhotoData;
         EditColorHex = emp.ColorHex;
@@ -546,6 +557,7 @@ public partial class EmployeeViewModel : ObservableObject
         var emp = SelectedEmployee ?? new Employee();
         emp.Name         = EditName;
         emp.EnglishName  = string.IsNullOrWhiteSpace(EditEnglishName) ? null : EditEnglishName.Trim();
+        emp.ClockName    = string.IsNullOrWhiteSpace(EditClockName) ? EditName.Trim() : EditClockName.Trim();
         emp.IdNumber     = EditIdNumber;
         emp.AvatarPhotoData = EditAvatarPhotoData;
         emp.BirthDate    = (EditBirthYear.HasValue && EditBirthMonth.HasValue && EditBirthDay.HasValue)
@@ -661,6 +673,7 @@ public partial class EmployeeViewModel : ObservableObject
     // ══════════════════════════════════════════════════════
     private void ClearEditFields()
     {
+        EditClockName      = string.Empty;
         EditName           = string.Empty;
         EditEnglishName    = string.Empty;
         EditIdNumber       = string.Empty;

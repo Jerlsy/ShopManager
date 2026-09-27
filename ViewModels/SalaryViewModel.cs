@@ -65,6 +65,7 @@ public partial class SalaryViewModel : ObservableObject
     [ObservableProperty] private bool _hasSavedRecord;
     [ObservableProperty] private string _savedLabel = string.Empty;
     [ObservableProperty] private decimal _totalPersonnelCost;
+    [ObservableProperty] private int _pendingIssueCount;
 
     public ObservableCollection<SalaryScheduleItem> AvailableSchedules { get; } = new();
     public ObservableCollection<EmployeeSalaryItem> EmployeeItems      { get; } = new();
@@ -135,9 +136,13 @@ public partial class SalaryViewModel : ObservableObject
                     HourlyRate        = empRec.HourlyRate,
                     HolidayHourlyRate = empRec.HolidayHourlyRate,
                     MonthlyBase       = empRec.MonthlyBase,
+                    ScheduledHours    = empRec.ScheduledHours,
+                    ClockedHours      = empRec.ClockedHours,
                 };
 
-                item.OnGlobalChanged = () => { RefreshTotalCost(); ScheduleAutoSave(); };
+                item.OnGlobalChanged      = () => { RefreshTotalCost(); ScheduleAutoSave(); };
+                item.OnAttendanceAccepted = OnAttendanceAccepted;
+                item.AddIssues(empRec.AttendanceIssues);
 
                 foreach (var b in empRec.BonusItems)
                 {
@@ -176,9 +181,10 @@ public partial class SalaryViewModel : ObservableObject
 
         // NoTracking：避免長壽 DbContext 回傳舊的員工薪資（時薪/加給），導致薪資計算用到過期金額
         var employees = await _employeeService.GetAllWithDetailsNoTrackingAsync();
+        var activeEmps = employees.Where(e => !e.IsResigned).ToList();
         var scheduledEmpIds = schedule.Entries.Select(e => e.EmployeeId).ToHashSet();
-        var eligibleEmps = employees
-            .Where(e => !e.IsResigned && e.DefaultSalary is not null && scheduledEmpIds.Contains(e.Id))
+        var eligibleEmps = activeEmps
+            .Where(e => e.DefaultSalary is not null && scheduledEmpIds.Contains(e.Id))
             .ToList();
 
         // 取得國定假日清單（提供給 Config Dialog 顯示用）
@@ -186,14 +192,29 @@ public partial class SalaryViewModel : ObservableObject
 
         // 顯示計算設定對話框（預填上次的設定）
         var configVm = new SalaryCalculationConfigViewModel(
-            schedule, eligibleEmps, _shopClosedDaysOfWeek, _lastConfig);
+            schedule, eligibleEmps, activeEmps, _shopClosedDaysOfWeek, _lastConfig);
 
         var result = await DialogHost.Show(
             new SalaryCalculationConfigDialog(configVm), "RootDialog");
 
         if (result is not SalaryCalculationConfig config) return;
 
-        _lastConfig = config;   // 記住本次設定，下次開啟時預填
+        _lastConfig = config;   // 記住本次設定，下次開啟時預填（打卡資料不沿用，每次重新匯入）
+
+        if (config.ClockNameMappings.Count > 0)
+        {
+            await _employeeService.UpdateClockNamesAsync(config.ClockNameMappings);
+            foreach (var (id, name) in config.ClockNameMappings)
+                if (activeEmps.FirstOrDefault(e => e.Id == id) is { } emp) emp.ClockName = name;
+            _snackbar.ShowSuccess($"已記住 {config.ClockNameMappings.Count} 位員工的打卡名稱");
+        }
+
+        // 沒排班但有打卡的員工也要列出（差異區會顯示「沒排班有打卡」）
+        if (config.Attendance is not null)
+            eligibleEmps = activeEmps
+                .Where(e => e.DefaultSalary is not null
+                         && (scheduledEmpIds.Contains(e.Id) || config.Attendance.ContainsKey(e.Id)))
+                .ToList();
 
         IsLoading = true;
         try
@@ -217,15 +238,8 @@ public partial class SalaryViewModel : ObservableObject
 
         // 最低薪資驗證
         foreach (var empRec in record.EmployeeRecords)
-        {
-            empRec.IsUnderMinWage = empRec.SalaryType switch
-            {
-                SalaryType.Hourly  => empRec.WeekdayPay + empRec.HolidayPay
-                                      < (decimal)(empRec.WeekdayHours + empRec.HolidayHours) * _laborLaw.HourlyMinimumWage,
-                SalaryType.Monthly => empRec.BaseAmount < _laborLaw.MonthlyMinimumWage,
-                _ => false,
-            };
-        }
+            empRec.IsUnderMinWage = IsUnderMinWage(empRec.SalaryType,
+                empRec.WeekdayPay, empRec.HolidayPay, empRec.WeekdayHours, empRec.HolidayHours, empRec.BaseAmount);
 
         // 每日明細標籤
         var dailyByEmp = schedule.Entries
@@ -254,10 +268,10 @@ public partial class SalaryViewModel : ObservableObject
                        .OrderBy(x => x.Date)
                        .ToList());
 
-        // 保留既有 BonusItems
+        // 保留既有 BonusItems（出勤差異產生的項目除外：這次計算會重新列出差異，避免重複扣加）
         var existingBonus = EmployeeItems.ToDictionary(
             i => i.Employee.Id,
-            i => i.BonusItems.ToList());
+            i => i.BonusItems.Where(b => b.SelectedPreset.Type != BonusPresetType.AttendanceAdjust).ToList());
 
         EmployeeItems.Clear();
         foreach (var empRec in record.EmployeeRecords)
@@ -280,6 +294,8 @@ public partial class SalaryViewModel : ObservableObject
                 HolidayHourlyRate = empRec.HolidayHourlyRate,
                 MonthlyBase      = empRec.MonthlyBase,
                 IsUnderMinWage   = empRec.IsUnderMinWage,
+                ScheduledHours   = empRec.ScheduledHours,
+                ClockedHours     = empRec.ClockedHours,
             };
 
             var sourceBonuses = existingBonus.TryGetValue(empRec.Employee.Id, out var prev)
@@ -292,7 +308,9 @@ public partial class SalaryViewModel : ObservableObject
                     Amount      = b.Amount,
                 }).ToList();
 
-            item.OnGlobalChanged = () => { RefreshTotalCost(); ScheduleAutoSave(); };
+            item.OnGlobalChanged      = () => { RefreshTotalCost(); ScheduleAutoSave(); };
+            item.OnAttendanceAccepted = OnAttendanceAccepted;
+            item.AddIssues(empRec.AttendanceIssues);
 
             foreach (var bonus in sourceBonuses)
             {
@@ -310,8 +328,31 @@ public partial class SalaryViewModel : ObservableObject
         RefreshTotalCost();
     }
 
-    private void RefreshTotalCost() =>
+    private void RefreshTotalCost()
+    {
         TotalPersonnelCost = EmployeeItems.Sum(e => e.GrandTotal);
+        PendingIssueCount  = EmployeeItems.Sum(e => e.AttendanceIssues.Count);
+    }
+
+    private bool IsUnderMinWage(SalaryType type, decimal weekdayPay, decimal holidayPay,
+                                double weekdayHours, double holidayHours, decimal baseAmount)
+    {
+        if (_laborLaw is null) return false;
+        return type switch
+        {
+            SalaryType.Hourly  => weekdayPay + holidayPay < (decimal)(weekdayHours + holidayHours) * _laborLaw.HourlyMinimumWage,
+            SalaryType.Monthly => baseAmount < _laborLaw.MonthlyMinimumWage,
+            _ => false,
+        };
+    }
+
+    private void OnAttendanceAccepted(EmployeeSalaryItem item)
+    {
+        item.IsUnderMinWage = IsUnderMinWage(item.SalaryType,
+            item.WeekdayPay, item.HolidayPay, item.WeekdayHours, item.HolidayHours, item.BaseAmount);
+        RefreshTotalCost();
+        ScheduleAutoSave();
+    }
 
     private void ScheduleAutoSave()
     {
@@ -382,6 +423,9 @@ public partial class SalaryViewModel : ObservableObject
                     OT2Pay            = ui.OT2Pay,
                     OverridePay       = ui.OverridePay,
                     BaseAmount        = ui.BaseAmount,
+                    ScheduledHours    = ui.ScheduledHours,
+                    ClockedHours      = ui.ClockedHours,
+                    AttendanceIssues  = ui.AttendanceIssues.Select(i => i.Issue).ToList(),
                     BonusItems        = ui.BonusItems.Select(b => b.ToModel()).ToList(),
                 });
             }

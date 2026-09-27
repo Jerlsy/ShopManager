@@ -14,6 +14,29 @@ There is no test project and no lint config (no `.editorconfig`, no Cursor/Copil
 
 If the app is already running, `dotnet build` fails to copy the exe (file lock) even though compilation succeeded — check for `error CS`/`error MSB3027` specifically rather than treating any build failure as a compile error.
 
+Cloud sessions building here: this is a WPF project (`net10.0-windows`), so `dotnet build` on Linux needs `-p:EnableWindowsTargeting=true` (compiles fine; the app still can't actually run/show UI on Linux — no Windows Desktop runtime).
+
+## Git 分支作業標準（雲端／本機協作、與 main 同步）
+
+先判斷自己在哪一端：有 `CLAUDE_CODE_REMOTE_SESSION_ID` 環境變數 → 雲端；能跑 Windows 上的 VS/dotnet（實際建置+跑）→ 本機。兩端對「跟 main 同步」的職責不同，不要互相代勞。
+
+**雲端這邊（每次作業前）**
+1. `git fetch origin main`，比對 main 有沒有更新。
+   - 有更新 → 先確認本機（工作目錄）乾淨，`git merge origin/main` 合併回目前的開發分支。**不能用 `rebase` 或 force push 改寫已推送的歷史。**
+   - 沒更新 → 直接在開發分支繼續。
+2. 雲端**不可推 main**——雲端沒辦法建置測試（WPF 應用無法在 Linux 上實際執行/驗證 UI），併回 main 一律交給本機處理。
+
+**本機這邊（每次作業前）**
+1. 確認本機乾淨，`git fetch origin`。
+2. 看有沒有還沒併進 main 的開發分支：`git branch -r --no-merged origin/main`。
+3. 有的話：切過去、建置、跑測試。
+   - 失敗 → 在該開發分支上修，**不能併**。
+   - 通過 → 併入 main 前要先取得使用者明確同意，用 `git merge --no-ff --no-commit` 合併，且要 `git rm` 掉 `CloudTest/results/`（那是一次性測試結果，不併進 main）。
+
+**共通規則**
+- 大型二進位檔（例如給雲端編譯用的 .NET SDK tar 包）固定放在 `CloudTest/` 內，透過 Git LFS 追蹤（雲端環境需先 `apt-get install -y git-lfs && git lfs install && git lfs pull` 才能取得實際內容，否則只會拉到指標檔）。
+- 開發分支上任何動到 `CloudTest/` 的 commit，**一律不併回 main**（合併時用 `--no-ff --no-commit`，再手動 `git rm -r CloudTest/` 或至少 `CloudTest/results/` 後才 commit）。
+
 ## Architecture
 
 WPF (.NET 10) MVVM app: `CommunityToolkit.Mvvm` for ViewModels/commands, `Microsoft.Extensions.DependencyInjection` for DI (wired in `App.ConfigureServices`), EF Core + SQLite for storage. `NavigationService` caches pages by `Type`; `Loaded` fires again each time a cached page is reattached to the visual tree — this is deliberate (keeps cross-page edits fresh), not a bug to "fix" by adding a guard.
@@ -62,6 +85,14 @@ Rules are authored in ShopManager (`SystemSettingViewModel`'s rule editor) and u
 ### ibon cloud printing — reverse-engineered, single-file-per-pincode
 
 `IbonPrintService` reverse-engineers `print.ibon.com.tw`'s web upload flow (no official API available to individuals). One captured constraint: a single pincode can only carry one uploaded file — a second upload against the same pincode is rejected — so multi-page content (e.g. a month's schedule) must be merged into one PDF client-side before uploading, not uploaded as separate images. Upload calls deliberately don't pass `selectType` (paper/color/duplex) unless there's a specific reason to force one — letting the user choose at the kiosk avoids declaring a color mode that contradicts the document's actual content (schedules render shift blocks in color).
+
+### POS punch-record import in salary calculation (optional per run)
+
+The 計算薪資 panel can import a POS-exported punch xlsx (`AttendanceImportService`, parsed as raw zip+XML — no spreadsheet package). Without an import, calculation is exactly the old schedule-only behavior.
+- Punches are grouped **per calendar day: earliest = in, latest = out**, ignoring the POS's own in/out pairing. This deliberately repairs the real-world patterns in the export ("forgot to clock out, re-punched in+out at closing"; "pressed 下班 by mistake then 上班"). Doesn't handle overnight shifts (none exist today).
+- Pay basis when both schedule and a complete punch exist is the **schedule's** hours (early arrival / late leaving never add pay). Late/early beyond the per-run grace minutes, scheduled-but-no-punch, punch-but-no-schedule, and half punches become `AttendanceIssue`s that the owner must decide one by one before 接受. Until accepted, scheduled days without a complete punch are **not** paid.
+- Pending issues live as a JSON column on `SalaryEmployeeRecords` (with the pre-computed `IfCounted` day pay), so accepting needs no salary-setting lookup and backup/restore needs no ID remapping. Fixed-amount decisions become `BonusPresetType.AttendanceAdjust` bonus lines, which are **dropped on recalculation** (the issues are regenerated) to avoid double counting.
+- Name matching uses `Employee.ClockName` (falls back to `Name`); owner-picked mappings are written back from the salary page, so the employee page reads `ClockName` with `AsNoTracking` at edit start to avoid overwriting it with a stale tracked value.
 
 ### Drag-and-drop scheduling is optimistic, not batched
 

@@ -28,7 +28,7 @@
                                  VerticalAlignment="Center" Margin="0,0,10,0"/>
                     <StackPanel>
                         <TextBlock Text="設定 Cloudflare Worker" FontWeight="SemiBold" FontSize="15"/>
-                        <TextBlock Text="用於接收 LINE 好友追蹤事件，取代需認證帳號才能使用的 API" FontSize="11"
+                        <TextBlock Text="接收 LINE 好友/群組事件、暫存推播圖片，取代需認證帳號才能使用的 API" FontSize="11"
                                    Foreground="{DynamicResource AppSubtleForegroundBrush}" Margin="0,2,0,0"/>
                     </StackPanel>
                 </StackPanel>
@@ -192,10 +192,10 @@
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                                <TextBlock Text="建立 KV 命名空間並繫結" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <TextBlock Text="建立 KV 命名空間與 R2 儲存桶並繫結" FontWeight="SemiBold" Margin="0,0,0,4"/>
                                 <TextBox Style="{StaticResource SelectableTextStyle}" FontSize="12"
                                          Foreground="{DynamicResource AppSubtleForegroundBrush}"
-                                         Text="KV 用於儲存好友資料。先建立 KV namespace，再綁定到 Worker。"/>
+                                         Text="KV 存好友／群組資料；R2 暫存班表/薪資單圖片（LINE 圖片訊息需要一個公開網址）。兩個都要建立並繫結。"/>
                                 <Border Margin="0,8,0,0" CornerRadius="4" Padding="10,8"
                                         Background="{DynamicResource AppBackgroundBrush}"
                                         BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
@@ -210,7 +210,7 @@
                                                      Foreground="{DynamicResource AppSubtleForegroundBrush}"
                                                      Text="Workers &amp; Pages › KV › 建立 namespace"/>
                                         </StackPanel>
-                                        <StackPanel Orientation="Horizontal">
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                                             <Border CornerRadius="10" Width="18" Height="18"
                                                     Background="{DynamicResource PrimaryHueMidBrush}" Margin="0,0,6,0">
                                                 <TextBlock Text="b" FontSize="10" Foreground="White"
@@ -219,6 +219,26 @@
                                             <TextBox Style="{StaticResource SelectableTextStyle}" FontSize="12"
                                                      Foreground="{DynamicResource AppSubtleForegroundBrush}"
                                                      Text="Worker › 繫結 › 新增繫結 › KV 命名空間&#x0a;Variable name = FOLLOWERS_KV"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                            <Border CornerRadius="10" Width="18" Height="18"
+                                                    Background="{DynamicResource PrimaryHueMidBrush}" Margin="0,0,6,0">
+                                                <TextBlock Text="c" FontSize="10" Foreground="White"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBox Style="{StaticResource SelectableTextStyle}" FontSize="12"
+                                                     Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                                     Text="R2 › 建立儲存桶，並在儲存桶設定開啟「公開存取」，記下產生的公開網址"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Border CornerRadius="10" Width="18" Height="18"
+                                                    Background="{DynamicResource PrimaryHueMidBrush}" Margin="0,0,6,0">
+                                                <TextBlock Text="d" FontSize="10" Foreground="White"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <TextBox Style="{StaticResource SelectableTextStyle}" FontSize="12"
+                                                     Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                                     Text="Worker › 繫結 › 新增繫結 › R2 儲存桶&#x0a;Variable name = IMAGES_BUCKET"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
@@ -274,7 +294,7 @@
                                                      FontSize="11" Foreground="{DynamicResource AppSubtleForegroundBrush}"
                                                      Text="LINE Developers → Messaging API → Channel access token"/>
                                         </Grid>
-                                        <Grid>
+                                        <Grid Margin="0,0,0,6">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="*"/>
@@ -289,6 +309,9 @@
                                         </Grid>
                                     </StackPanel>
                                 </Border>
+                                <TextBox Style="{StaticResource SelectableTextStyle}" FontSize="11" Margin="0,8,0,0"
+                                         Foreground="{DynamicResource AppSubtleForegroundBrush}" TextWrapping="Wrap"
+                                         Text="R2 公開網址不是用變數帶入，直接寫死在程式碼裡 upload-image 那段的 imageUrl——貼上程式碼後記得把那行換成你自己 R2 儲存桶的公開網址。"/>
                             </StackPanel>
                         </Grid>
                     </Border>
@@ -335,6 +358,44 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <Border Grid.Column="0" Width="28" Height="28" CornerRadius="14"
+                                    Background="{DynamicResource PrimaryHueMidBrush}" VerticalAlignment="Top">
+                                <TextBlock Text="7" Foreground="White" FontWeight="Bold" FontSize="13"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                <TextBlock Text="設定排程 Trigger（選用，每天自動修復資料）" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <TextBox Style="{StaticResource SelectableTextStyle}" FontSize="12"
+                                         Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                                         Text="LINE 偶爾會在追蹤當下查詢個人資料失敗，程式碼裡的 scheduled 排程會每天自動補查。不設定也不影響好友/群組同步或推播，只是失敗的顯示名稱不會自動修好。"/>
+                                <Border Margin="0,8,0,0" CornerRadius="4" Padding="10,8"
+                                        Background="{DynamicResource AppBackgroundBrush}"
+                                        BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
+                                    <TextBlock FontSize="12" FontFamily="Consolas">
+                                        <Run Text="Worker" Foreground="{DynamicResource AppSubtleForegroundBrush}"/>
+                                        <Run Text=" › "/>
+                                        <Run Text="觸發事件" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                                        <Run Text=" › "/>
+                                        <Run Text="Cron Triggers" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                                        <Run Text=" › "/>
+                                        <Run Text="新增&#x0a;" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                                        <Run Text="例：" Foreground="{DynamicResource AppSubtleForegroundBrush}"/>
+                                        <Run Text="0 18 * * *" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                                        <Run Text="（每天台灣時間 02:00 執行一次）" Foreground="{DynamicResource AppSubtleForegroundBrush}"/>
+                                    </TextBlock>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Step 8 -->
+                    <Border Margin="0,0,0,10" CornerRadius="8" Background="{DynamicResource AppSurfaceBrush}"
+                            BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" Padding="14,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="36"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Width="28" Height="28" CornerRadius="14"
                                     Background="#4CAF50" VerticalAlignment="Top">
                                 <md:PackIcon Kind="Check" Width="16" Height="16" Foreground="White"
                                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -343,7 +404,7 @@
                                 <TextBlock Text="填入 ShopManager" FontWeight="SemiBold" Margin="0,0,0,4"/>
                                 <TextBox Style="{StaticResource SelectableTextStyle}" FontSize="12"
                                          Foreground="{DynamicResource AppSubtleForegroundBrush}"
-                                         Text="回到 ShopManager 店鋪設定，填入 Worker URL（不含 /webhook）與 API Key，儲存即完成。員工追蹤官方帳號後傳送訊息，好友清單就會自動更新。"/>
+                                         Text="回到 ShopManager 店鋪設定，填入 Worker URL（不含 /webhook）與 API Key，儲存即完成。員工追蹤官方帳號、或把官方帳號邀進群組/多人聊天室後，清單就會自動更新。"/>
                                 <Border Margin="0,8,0,0" CornerRadius="4" Padding="8,6"
                                         Background="{DynamicResource AppBackgroundBrush}"
                                         BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">

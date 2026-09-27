@@ -253,6 +253,12 @@ public partial class App : Application
                 ("ShopSettings",         "GoogleAccountEmail",       "TEXT"),
                 ("ShopSettings",         "GoogleDriveLastSyncedRemoteModifiedTime", "TEXT"),
                 ("ShopSettings",         "GmailForwardRules",        "TEXT NOT NULL DEFAULT '[]'"),
+                ("LineFollowers",        "TargetType",               "INTEGER NOT NULL DEFAULT 0"),
+                ("ShopSettings",         "GroupLineBindings",        "TEXT NOT NULL DEFAULT '[]'"),
+                ("Employees",            "ClockName",                "TEXT"),
+                ("SalaryEmployeeRecords", "ScheduledHours",          "REAL NOT NULL DEFAULT 0"),
+                ("SalaryEmployeeRecords", "ClockedHours",            "REAL"),
+                ("SalaryEmployeeRecords", "AttendanceIssues",        "TEXT NOT NULL DEFAULT '[]'"),
             };
             // 每個資料表只查一次現有欄位（PRAGMA table_info），只對真正缺少的欄位下 ALTER TABLE。
             // 舊作法是每個候選欄位都直接 ALTER、失敗（欄位已存在）就吃例外——在全新安裝或已升級過的資料庫上，

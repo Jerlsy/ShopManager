@@ -68,6 +68,23 @@ public class EmployeeService(AppDbContext db, ShopContext shopContext)
         }
     }
 
+    // 薪資頁匯入打卡時會用另一個 DbContext 寫入打卡名稱，員工頁的追蹤實體可能是舊值
+    public async Task<string?> GetClockNameNoTrackingAsync(int employeeId) =>
+        await db.Employees.AsNoTracking()
+            .Where(e => e.Id == employeeId)
+            .Select(e => e.ClockName)
+            .FirstOrDefaultAsync();
+
+    public async Task UpdateClockNamesAsync(IReadOnlyDictionary<int, string> clockNames)
+    {
+        if (clockNames.Count == 0) return;
+        var ids = clockNames.Keys.ToList();
+        var emps = await db.Employees.Where(e => ids.Contains(e.Id)).ToListAsync();
+        foreach (var emp in emps)
+            emp.ClockName = clockNames[emp.Id];
+        await db.SaveChangesAsync();
+    }
+
     public async Task DeleteAsync(int id)
     {
         var e = await db.Employees.FindAsync(id);

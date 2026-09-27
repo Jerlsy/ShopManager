@@ -1,3 +1,4 @@
+using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
 using ShopManager.Models;
@@ -78,9 +79,8 @@ public partial class ExportScheduleWindow : Window
         bool allSelected = _recipients.Where(r => r.IsEnabled).All(r => r.IsSelected);
         foreach (var r in _recipients.Where(r => r.IsEnabled))
             r.IsSelected = !allSelected;
-        RecipientList.ItemsSource = null;
-        RecipientList.ItemsSource = _recipients;
     }
+
 
     private async void PushLine_Click(object sender, RoutedEventArgs e)
     {
@@ -95,7 +95,7 @@ public partial class ExportScheduleWindow : Window
         }
 
         string confirmMsg = isPersonal
-            ? $"確定要推播個人班表給 {selected.Count} 位收件人？（業主會收到全部員工的個人班表，員工只收到自己的）"
+            ? $"確定要推播個人班表給 {selected.Count} 位收件人？（業主／群組會收到全部員工的個人班表，員工只收到自己的）"
             : $"確定要將本月完整班表圖片推播給 {selected.Count} 位收件人？";
         // 用 MessageBox：本視窗以 ShowDialog 開啟，MaterialDesign 的 RootDialog 掛在 MainWindow 會被壓在底下看不到
         var confirmResult = MessageBox.Show(confirmMsg, "確定推播", MessageBoxButton.YesNo, MessageBoxImage.Question);
@@ -118,14 +118,15 @@ public partial class ExportScheduleWindow : Window
             if (isPersonal)
             {
                 // 個人班表：
-                //   業主 → 無條件收到「全體員工」的個人班表（不受員工 LINE 綁定狀態影響）
+                //   業主／群組 → 無條件收到「全體員工」的個人班表（不受員工 LINE 綁定狀態影響）
                 //   員工 → 只收到自己的個人班表
                 // 圖片訊息可在 LINE 轉傳，且欄寬依內容自動撐開不裁切。
                 var keys = new List<string>();
 
-                // 只要有業主收件人，先把全體員工（_data.Rows）的個人班表各渲染／上傳一次，多位業主共用同一批 URL
+                // 只要有業主或群組收件人，先把全體員工（_data.Rows）的個人班表各渲染／上傳一次，多方共用同一批 URL
                 List<string>? allEmployeeUrls = null;
-                if (selected.Any(r => r.Recipient.IsOwner))
+                if (selected.Any(r => r.Recipient.Kind is ExportScheduleData.PushRecipientKind.Owner
+                                                        or ExportScheduleData.PushRecipientKind.Group))
                 {
                     allEmployeeUrls = new List<string>();
                     for (int i = 0; i < _data.Rows.Count; i++)
@@ -135,7 +136,7 @@ public partial class ExportScheduleWindow : Window
                         var row = _data.Rows[i];
                         var rec = new ExportScheduleData.PushRecipient(
                             UserId: string.Empty, DisplayName: row.Name, PictureUrl: null,
-                            IsOwner: false, ShiftIds: row.ShiftIds);
+                            Kind: ExportScheduleData.PushRecipientKind.Employee, ShiftIds: row.ShiftIds);
                         var uploaded = await lineService.UploadScheduleImageAsync(
                             _data.LineWorkerUrl!, _data.LineWorkerApiKey!,
                             EncodePng(RenderPersonalSchedule(_data, rec)));
@@ -150,16 +151,17 @@ public partial class ExportScheduleWindow : Window
                 {
                     if (token.IsCancellationRequested) break;
 
-                    if (t.Recipient.IsOwner)
+                    if (t.Recipient.Kind is ExportScheduleData.PushRecipientKind.Owner
+                                          or ExportScheduleData.PushRecipientKind.Group)
                     {
-                        // 業主：把全體員工的個人班表逐張推給他
+                        // 業主／群組：把全體員工的個人班表逐張推過去
                         bool allOk = allEmployeeUrls is { Count: > 0 };
                         if (allEmployeeUrls is not null)
                         {
+                            SetPushProgress("推播給業主／群組", done, selected.Count);
                             foreach (var url in allEmployeeUrls)
                             {
                                 if (token.IsCancellationRequested) break;
-                                SetPushProgress("推播給業主", done, selected.Count);
                                 if (!await lineService.PushImageAsync(
                                         _data.LineChannelAccessToken!, t.Recipient.UserId, url))
                                     allOk = false;
@@ -410,7 +412,7 @@ public partial class ExportScheduleWindow : Window
         {
             var rec = new ExportScheduleData.PushRecipient(
                 UserId: string.Empty, DisplayName: row.Name, PictureUrl: null,
-                IsOwner: false, ShiftIds: row.ShiftIds);
+                Kind: ExportScheduleData.PushRecipientKind.Employee, ShiftIds: row.ShiftIds);
             var safeName = string.Join("_", row.Name.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries));
             SavePng(RenderPersonalSchedule(_data, rec),
                 Path.Combine(dir, $"{_data.Year}_{_data.Month:D2}_{safeName}.png"));
@@ -438,7 +440,8 @@ public partial class ExportScheduleWindow : Window
         bool lineConfigured = !string.IsNullOrEmpty(_data.LineChannelAccessToken)
                            && !string.IsNullOrEmpty(_data.LineWorkerUrl)
                            && !string.IsNullOrEmpty(_data.LineWorkerApiKey);
-        bool hasOwner = _data.PushRecipients.Any(r => r.IsOwner && !string.IsNullOrEmpty(r.UserId));
+        bool hasOwner = _data.PushRecipients.Any(r =>
+            r.Kind == ExportScheduleData.PushRecipientKind.Owner && !string.IsNullOrEmpty(r.UserId));
         if (!lineConfigured || !hasOwner)
         {
             snackbar.ShowWarning(!lineConfigured
@@ -454,28 +457,43 @@ public partial class ExportScheduleWindow : Window
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
 
     // ── 收件人項目（供 ItemsControl DataTemplate 繫結）────────────────────────
-    public sealed class PushRecipientItem
+    // 一定要是 ObservableObject：IsSelected/IsEnabled 改了要讓畫面上的 CheckBox 即時反映，
+    // 不能只靠「把 ItemsSource 設 null 再設回去」逼 WPF 重新產生容器——那個做法不可靠，
+    // 曾經導致個人班表模式下已經停用的群組項目，畫面上還是顯示成可以勾選。
+    public sealed partial class PushRecipientItem : ObservableObject
     {
         private static readonly SolidColorBrush EmployeeBrush;
         private static readonly SolidColorBrush OwnerBrush;
+        private static readonly SolidColorBrush GroupBrush;
 
         static PushRecipientItem()
         {
             EmployeeBrush = new SolidColorBrush(Color.FromRgb(0x4A, 0x90, 0xD9)); EmployeeBrush.Freeze();
             OwnerBrush    = new SolidColorBrush(Color.FromRgb(0x3D, 0xAA, 0x70)); OwnerBrush.Freeze();
+            GroupBrush    = new SolidColorBrush(Color.FromRgb(0x9C, 0x7A, 0x3D)); GroupBrush.Freeze();
         }
 
         public PushRecipientItem(ExportScheduleData.PushRecipient r) => Recipient = r;
 
         public ExportScheduleData.PushRecipient Recipient { get; }
-        public bool IsSelected { get; set; } = true;
-        public bool IsEnabled  { get; set; } = true;
+        [ObservableProperty] private bool _isSelected = true;
+        [ObservableProperty] private bool _isEnabled = true;
 
         public string DisplayName => Recipient.DisplayName;
-        public string SourceLabel => Recipient.IsOwner ? "業主" : "員工";
+        public string SourceLabel => Recipient.Kind switch
+        {
+            ExportScheduleData.PushRecipientKind.Owner => "業主",
+            ExportScheduleData.PushRecipientKind.Group => "群組",
+            _ => "員工",
+        };
         public string Initial     => string.IsNullOrEmpty(Recipient.DisplayName)
                                      ? "?" : Recipient.DisplayName[0].ToString();
-        public SolidColorBrush CircleBrush => Recipient.IsOwner ? OwnerBrush : EmployeeBrush;
+        public SolidColorBrush CircleBrush => Recipient.Kind switch
+        {
+            ExportScheduleData.PushRecipientKind.Owner => OwnerBrush,
+            ExportScheduleData.PushRecipientKind.Group => GroupBrush,
+            _ => EmployeeBrush,
+        };
     }
 
     /// <summary>本月拆上／下半月的分界欄索引（上半月＝索引 [0, split)，下半月＝[split, 月天數)）。</summary>

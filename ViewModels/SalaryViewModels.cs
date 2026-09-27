@@ -27,10 +27,15 @@ public partial class BonusLineItem : ObservableObject
         new(BonusPresetType.Holiday,           "節日獎金"),
         new(BonusPresetType.YearEnd,           "年終獎金"),
         new(BonusPresetType.Deduction,         "扣款"),
+        new(BonusPresetType.AttendanceAdjust,  "出勤差異"),
     ];
+
+    // 這兩種類型的名稱由使用者／系統自訂（出勤差異會寫入「08/20 遲到 40 分」這類說明）
+    public bool UsesCustomLabel => SelectedPreset.Type is BonusPresetType.Custom or BonusPresetType.AttendanceAdjust;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(TotalChanged))]
+    [NotifyPropertyChangedFor(nameof(UsesCustomLabel))]
     private BonusPresetOption _selectedPreset = Presets[0];
 
     [ObservableProperty]
@@ -45,9 +50,7 @@ public partial class BonusLineItem : ObservableObject
 
     public bool TotalChanged => true;
 
-    public string Label => SelectedPreset.Type == BonusPresetType.Custom
-        ? CustomLabel
-        : SelectedPreset.Label;
+    public string Label => UsesCustomLabel ? CustomLabel : SelectedPreset.Label;
 
     public Action? OnChanged { get; set; }
     public Action? OnConfirm { get; set; }
@@ -61,7 +64,7 @@ public partial class BonusLineItem : ObservableObject
 
     partial void OnSelectedPresetChanged(BonusPresetOption value)
     {
-        if (value.Type != BonusPresetType.Custom)
+        if (!UsesCustomLabel)
             CustomLabel = value.Label;
         OnChanged?.Invoke();
     }
@@ -105,20 +108,25 @@ public partial class EmployeeSalaryItem : ObservableObject
     public Employee Employee { get; init; } = null!;
     public SalaryType SalaryType { get; init; }
 
-    // 工時
-    public double WeekdayHours { get; init; }
-    public double HolidayHours { get; init; }
-    public double OT1Hours     { get; init; }
-    public double OT2Hours     { get; init; }
+    // 工時（接受出勤差異時會加回，故可寫）
+    public double WeekdayHours { get; set; }
+    public double HolidayHours { get; set; }
+    public double OT1Hours     { get; set; }
+    public double OT2Hours     { get; set; }
     public double TotalHours   => WeekdayHours + HolidayHours;
 
+    // 打卡對照（ClockedHours 為 null＝未匯入打卡資料）
+    public double  ScheduledHours { get; init; }
+    public double? ClockedHours   { get; init; }
+    public bool    HasAttendance  => ClockedHours.HasValue;
+
     // 薪資明細
-    public decimal WeekdayPay  { get; init; }
-    public decimal HolidayPay  { get; init; }
-    public decimal OT1Pay      { get; init; }
-    public decimal OT2Pay      { get; init; }
+    public decimal WeekdayPay  { get; set; }
+    public decimal HolidayPay  { get; set; }
+    public decimal OT1Pay      { get; set; }
+    public decimal OT2Pay      { get; set; }
     public decimal OverridePay { get; init; }
-    public decimal BaseAmount  { get; init; }
+    public decimal BaseAmount  { get; set; }
 
     // 費率描述
     public decimal HourlyRate        { get; init; }
@@ -167,6 +175,146 @@ public partial class EmployeeSalaryItem : ObservableObject
         BonusItems.Remove(item);
         RefreshTotals();
         OnGlobalChanged?.Invoke();
+    }
+
+    // ── 出勤差異 ─────────────────────────────────────────────
+    public ObservableCollection<AttendanceIssueItem> AttendanceIssues { get; } = new();
+    public bool   HasPendingIssues  => AttendanceIssues.Count > 0;
+    public int    UndecidedCount    => AttendanceIssues.Count(i => !i.IsDecided);
+    public string PendingIssueLabel => $"{AttendanceIssues.Count} 筆差異待處理";
+    public string AcceptButtonText  => UndecidedCount > 0 ? $"尚有 {UndecidedCount} 筆未選擇" : "接受";
+
+    /// <summary>接受後由頁面重算最低薪資檢查、人事費用合計並自動存檔</summary>
+    public Action<EmployeeSalaryItem>? OnAttendanceAccepted { get; set; }
+
+    public void AddIssues(IEnumerable<AttendanceIssue> issues)
+    {
+        foreach (var issue in issues)
+            AttendanceIssues.Add(new AttendanceIssueItem(issue)
+            {
+                OnChanged = () =>
+                {
+                    OnPropertyChanged(nameof(UndecidedCount));
+                    OnPropertyChanged(nameof(AcceptButtonText));
+                    AcceptIssuesCommand.NotifyCanExecuteChanged();
+                    OnGlobalChanged?.Invoke();
+                },
+            });
+    }
+
+    private bool CanAcceptIssues() => AttendanceIssues.Count > 0 && UndecidedCount == 0;
+
+    [RelayCommand(CanExecute = nameof(CanAcceptIssues))]
+    private void AcceptIssues()
+    {
+        var adjustPreset = BonusLineItem.Presets.First(p => p.Type == BonusPresetType.AttendanceAdjust);
+
+        foreach (var item in AttendanceIssues)
+        {
+            var issue = item.Issue;
+            if (issue.Decision == AttendanceDecision.Count && issue.IfCounted is { } d)
+            {
+                WeekdayHours += d.WeekdayHours;
+                HolidayHours += d.HolidayHours;
+                OT1Hours     += d.OT1Hours;
+                OT2Hours     += d.OT2Hours;
+                WeekdayPay   += Math.Round(d.WeekdayPay, 0);
+                HolidayPay   += Math.Round(d.HolidayPay, 0);
+                OT1Pay       += Math.Round(d.OT1Pay,     0);
+                OT2Pay       += Math.Round(d.OT2Pay,     0);
+            }
+            else if (issue.Decision is AttendanceDecision.Deduct or AttendanceDecision.Add)
+            {
+                var bonus = new BonusLineItem
+                {
+                    SelectedPreset = adjustPreset,
+                    CustomLabel    = $"{issue.Date:MM/dd} {issue.ShortLabel}",
+                    Amount         = issue.Decision == AttendanceDecision.Deduct ? -issue.Amount : issue.Amount,
+                };
+                bonus.OnChanged = () => { RefreshTotals(); OnGlobalChanged?.Invoke(); };
+                BonusItems.Add(bonus);
+            }
+        }
+
+        WeekdayHours = Math.Round(WeekdayHours, 2);
+        HolidayHours = Math.Round(HolidayHours, 2);
+        OT1Hours     = Math.Round(OT1Hours,     2);
+        OT2Hours     = Math.Round(OT2Hours,     2);
+        BaseAmount   = WeekdayPay + HolidayPay + OT1Pay + OT2Pay + OverridePay;
+
+        AttendanceIssues.Clear();
+        OnAttendanceAccepted?.Invoke(this);
+        OnPropertyChanged(string.Empty);   // 工時、薪資、合計、差異區塊一次全部刷新
+        AcceptIssuesCommand.NotifyCanExecuteChanged();
+    }
+}
+
+/// <summary>差異處理區的一列：業主必須逐筆選擇處理方式</summary>
+public partial class AttendanceIssueItem : ObservableObject
+{
+    public AttendanceIssue Issue { get; }
+    public Action? OnChanged { get; set; }
+
+    public AttendanceIssueItem(AttendanceIssue issue)
+    {
+        Issue       = issue;
+        _decision   = issue.Decision;
+        _amountText = issue.Amount > 0 ? issue.Amount.ToString("0.##") : string.Empty;
+    }
+
+    public string DateLabel => $"{Issue.Date:MM/dd}（{"日一二三四五六"[(int)Issue.Date.DayOfWeek]}）";
+    public string Description => Issue.Description;
+    public string TypeLabel => Issue.Type switch
+    {
+        AttendanceIssueType.LateOrEarly => "遲到／早退",
+        AttendanceIssueType.NoPunch     => "有排班沒打卡",
+        AttendanceIssueType.Unscheduled => "沒排班有打卡",
+        _                               => "只打一半卡",
+    };
+
+    // 遲到早退已照班表計薪：只能忽略或扣／加錢；其他類型可選計入（有可計入的工時時）或不計
+    public bool ShowIgnore  => Issue.Type == AttendanceIssueType.LateOrEarly;
+    public bool ShowCount   => Issue.IfCounted is not null;
+    public bool ShowExclude => Issue.Type != AttendanceIssueType.LateOrEarly;
+    public string CountLabel => Issue.Type == AttendanceIssueType.Unscheduled ? "依打卡計入" : "照班表計入";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsIgnore), nameof(IsCount), nameof(IsExclude),
+                              nameof(IsDeduct), nameof(IsAdd), nameof(NeedsAmount), nameof(IsDecided))]
+    private AttendanceDecision _decision;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsDecided))]
+    private string _amountText;
+
+    public bool IsIgnore  { get => Decision == AttendanceDecision.Ignore;  set { if (value) Decision = AttendanceDecision.Ignore;  } }
+    public bool IsCount   { get => Decision == AttendanceDecision.Count;   set { if (value) Decision = AttendanceDecision.Count;   } }
+    public bool IsExclude { get => Decision == AttendanceDecision.Exclude; set { if (value) Decision = AttendanceDecision.Exclude; } }
+    public bool IsDeduct  { get => Decision == AttendanceDecision.Deduct;  set { if (value) Decision = AttendanceDecision.Deduct;  } }
+    public bool IsAdd     { get => Decision == AttendanceDecision.Add;     set { if (value) Decision = AttendanceDecision.Add;     } }
+
+    public bool NeedsAmount => Decision is AttendanceDecision.Deduct or AttendanceDecision.Add;
+
+    private decimal? ParsedAmount =>
+        decimal.TryParse(AmountText, out var a) && a > 0 ? a : null;
+
+    public bool IsDecided => Decision switch
+    {
+        AttendanceDecision.None => false,
+        AttendanceDecision.Deduct or AttendanceDecision.Add => ParsedAmount.HasValue,
+        _ => true,
+    };
+
+    partial void OnDecisionChanged(AttendanceDecision value)
+    {
+        Issue.Decision = value;
+        OnChanged?.Invoke();
+    }
+
+    partial void OnAmountTextChanged(string value)
+    {
+        Issue.Amount = ParsedAmount ?? 0;
+        OnChanged?.Invoke();
     }
 }
 

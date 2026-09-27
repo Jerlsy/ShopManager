@@ -14,6 +14,9 @@
             <TextBlock Text="設定後按「確定並計算」自動計算當月薪資"
                        Style="{StaticResource SubtleTextStyle}" Margin="0,0,0,20"/>
 
+            <ScrollViewer MaxHeight="560" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel>
+
             <!-- ── 假日設定 ────────────────────────────────── -->
             <TextBlock Text="假日設定" Style="{StaticResource FormSectionStyle}"/>
             <TextBlock Text="勾選以下星期幾，該日將以假日薪資計算（灰色＝店休日，無法勾選）"
@@ -41,6 +44,128 @@
             <CheckBox Content="國定假日是否併入假日"
                       IsChecked="{Binding IncludeNationalHolidays}"
                       Margin="0,6,0,0"/>
+
+            <!-- ── 打卡資料 ────────────────────────────────── -->
+            <Grid Margin="0,20,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="打卡資料（選填）" Style="{StaticResource FormSectionStyle}" Margin="0"/>
+                    <TextBlock Text="匯入 POS 打卡紀錄，比對排班並列出差異；不匯入則完全照班表計算"
+                               Style="{StaticResource CaptionTextStyle}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+                <Button Grid.Column="1"
+                        Command="{Binding ImportAttendanceCommand}"
+                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                        Height="32" Padding="12,0">
+                    <StackPanel Orientation="Horizontal">
+                        <md:PackIcon Kind="FileExcelOutline" Width="14" Height="14" Margin="0,0,4,0"/>
+                        <TextBlock Text="匯入打卡資料"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+
+            <TextBlock Text="{Binding ImportError}" TextWrapping="Wrap"
+                       Style="{StaticResource CaptionTextStyle}"
+                       Foreground="{DynamicResource MaterialDesign.Brush.ValidationError}"
+                       Visibility="{Binding ImportError, Converter={StaticResource NullToVisibilityConverter}}"
+                       Margin="0,0,0,6"/>
+
+            <Border CornerRadius="8" Padding="10,8" Margin="0,0,0,8"
+                    Background="{DynamicResource AppPanelAltBrush}"
+                    Visibility="{Binding HasAttendance, Converter={StaticResource BoolToVisibilityConverter}}">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                            <md:PackIcon Kind="FileCheckOutline" Width="16" Height="16" Margin="0,0,6,0"
+                                         Foreground="{DynamicResource PrimaryHueMidBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding ImportFileName}" Style="{StaticResource BodyTextStyle}"
+                                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Command="{Binding ClearAttendanceCommand}"
+                                Style="{StaticResource MaterialDesignIconForegroundButton}"
+                                Width="24" Height="24" Padding="0" ToolTip="移除打卡資料">
+                            <md:PackIcon Kind="Close" Width="14" Height="14"/>
+                        </Button>
+                    </Grid>
+                    <TextBlock Text="{Binding ImportSummary}" Style="{StaticResource CaptionTextStyle}" Margin="22,2,0,0"/>
+                    <TextBlock Text="{Binding SkippedNote}" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap"
+                               Margin="22,2,0,0"
+                               Visibility="{Binding SkippedNote, Converter={StaticResource NullToVisibilityConverter}}"/>
+
+                    <!-- 名字對不上：讓業主指定是哪位員工，計算後記到員工的打卡名稱 -->
+                    <StackPanel Margin="0,10,0,0"
+                                Visibility="{Binding UnmatchedNames.Count, Converter={StaticResource NonZeroToVisibilityConverter}}">
+                        <TextBlock Text="以下打卡名字找不到對應員工，請指定是哪一位（未指定＝略過此人）"
+                                   Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                        <ItemsControl ItemsSource="{Binding UnmatchedNames}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:ClockNameMappingItem}">
+                                    <Grid Margin="0,2,0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="180"/>
+                                            <ColumnDefinition Width="32"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" VerticalAlignment="Center" Style="{StaticResource BodyTextStyle}">
+                                            <Run Text="{Binding ClockName, Mode=OneWay}"/>
+                                            <Run Text="{Binding DayCount, Mode=OneWay, StringFormat='（{0} 天）'}"
+                                                 Foreground="{DynamicResource AppSubtleForegroundBrush}"/>
+                                        </TextBlock>
+                                        <md:PackIcon Grid.Column="1" Kind="ArrowRight" Width="16" Height="16"
+                                                     VerticalAlignment="Center" Margin="8,0"/>
+                                        <ComboBox Grid.Column="2"
+                                                  ItemsSource="{Binding Options}"
+                                                  SelectedItem="{Binding SelectedEmployee}"
+                                                  DisplayMemberPath="Name"
+                                                  md:HintAssist.Hint="略過"/>
+                                        <Button Grid.Column="3" Command="{Binding SkipCommand}"
+                                                Style="{StaticResource MaterialDesignIconForegroundButton}"
+                                                Width="28" Height="28" Padding="0" ToolTip="略過此人"
+                                                Visibility="{Binding SelectedEmployee, Converter={StaticResource NullToVisibilityConverter}}">
+                                            <md:PackIcon Kind="Close" Width="14" Height="14"/>
+                                        </Button>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- 寬限時間：匯入打卡資料後才有作用 -->
+            <Grid IsEnabled="{Binding HasAttendance}" Margin="0,4,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="64"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="24"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="64"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="遲到寬限時間" VerticalAlignment="Center" Margin="0,0,8,0"
+                           Style="{StaticResource BodyTextStyle}"/>
+                <TextBox   Grid.Column="1" Text="{Binding LateGraceMinutes, UpdateSourceTrigger=PropertyChanged}"
+                           HorizontalContentAlignment="Center"/>
+                <TextBlock Grid.Column="2" Text="分鐘" VerticalAlignment="Center" Margin="6,0,0,0"
+                           Style="{StaticResource SubtleTextStyle}"/>
+                <TextBlock Grid.Column="4" Text="早退寬限時間" VerticalAlignment="Center" Margin="0,0,8,0"
+                           Style="{StaticResource BodyTextStyle}"/>
+                <TextBox   Grid.Column="5" Text="{Binding EarlyLeaveGraceMinutes, UpdateSourceTrigger=PropertyChanged}"
+                           HorizontalContentAlignment="Center"/>
+                <TextBlock Grid.Column="6" Text="分鐘" VerticalAlignment="Center" Margin="6,0,0,0"
+                           Style="{StaticResource SubtleTextStyle}"/>
+            </Grid>
+            <TextBlock Text="寬限內的遲到／早退不列入差異；早到、晚走不另計薪（匯入打卡資料後才會套用）"
+                       Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" Margin="0,4,0,0"/>
 
             <!-- ── 額外設定 ────────────────────────────────── -->
             <Grid Margin="0,20,0,8">
@@ -133,6 +258,8 @@
                        Foreground="{DynamicResource AppSubtleForegroundBrush}"
                        Margin="0,4,0,0"
                        Visibility="{Binding Overrides.Count, Converter={StaticResource ZeroToVisibilityConverter}}"/>
+            </StackPanel>
+            </ScrollViewer>
 
             <!-- 按鈕列 -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">

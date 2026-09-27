@@ -340,6 +340,14 @@
                                 </StackPanel>
                             </Grid>
 
+                            <!-- 打卡名稱 -->
+                            <StackPanel Margin="80,0,0,12">
+                                <TextBlock Text="打卡名稱" Style="{StaticResource FieldLabelStyle}"/>
+                                <TextBox Text="{Binding EditClockName, UpdateSourceTrigger=PropertyChanged}"/>
+                                <TextBlock Text="需與 POS 打卡系統上的名字相同，匯入打卡紀錄時用來對應員工（預設同姓名）"
+                                           Style="{StaticResource CaptionTextStyle}" Margin="0,2,0,0"/>
+                            </StackPanel>
+
                             <!-- 代表顏色 -->
                             <StackPanel Margin="0,8,0,16">
                                 <TextBlock Text="代表顏色" Style="{StaticResource FieldLabelStyle}" Margin="0,0,0,6"/>

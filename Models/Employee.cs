@@ -10,6 +10,7 @@ public class Employee
     public Guid ShopId { get; set; }
     [Required] public string Name { get; set; } = string.Empty;
     public string? EnglishName { get; set; }
+    public string? ClockName { get; set; }                               // POS 打卡系統上的名字（空＝同姓名）
     public string IdNumber { get; set; } = string.Empty;
     public DateOnly? BirthDate { get; set; }
     public byte[]? AvatarPhotoData { get; set; }
@@ -53,6 +54,8 @@ public class Employee
     public string? BankCode { get; set; }                               // 銀行代碼（例：822）
     public string? BankAccount { get; set; }                            // 帳號（純數字）
     public string? BankAccountName { get; set; }                        // 戶名
+
+    public string EffectiveClockName => string.IsNullOrWhiteSpace(ClockName) ? Name.Trim() : ClockName.Trim();
 
     public bool IsResigned => ResignDate.HasValue && ResignDate.Value <= DateOnly.FromDateTime(DateTime.Today);
 

@@ -30,9 +30,9 @@ public class LineFollowerService(AppDbContext db, ShopContext shopContext, LineS
         db.LineFollowers.RemoveRange(toRemove);
         foreach (var r in toRemove) existing.Remove(r);
 
-        // 更新或新增當前好友
+        // 更新或新增當前好友／群組／多人聊天室
         var now = DateTime.UtcNow;
-        foreach (var (userId, displayName, pictureUrl) in workerFollowers)
+        foreach (var (userId, displayName, pictureUrl, targetType) in workerFollowers)
         {
             var follower = existing.FirstOrDefault(f => f.UserId == userId);
             if (follower == null)
@@ -43,14 +43,17 @@ public class LineFollowerService(AppDbContext db, ShopContext shopContext, LineS
             }
             follower.DisplayName = displayName;
             follower.PictureUrl = pictureUrl;
+            follower.TargetType = targetType;
             follower.LastSyncAt = now;
         }
 
-        // Worker 回傳的 displayName 可能因 re-follow 而遺失，用 LINE Profile API 補齊
+        // Worker 回傳的 displayName 可能因 re-follow 而遺失，用 LINE Profile API 補齊——
+        // 這支 API 只認得個人 userId，群組/多人聊天室的名稱由 Worker 端自己查（見 Cloudflare Worker 教學），
+        // 這裡不用管，也不能拿群組 id 去查會直接失敗。
         if (!string.IsNullOrEmpty(token))
         {
             var needProfile = existing
-                .Where(f => returnedIds.Contains(f.UserId) &&
+                .Where(f => f.TargetType == LineTargetType.User && returnedIds.Contains(f.UserId) &&
                             (string.IsNullOrWhiteSpace(f.DisplayName) || f.DisplayName == "未知"))
                 .ToList();
 
