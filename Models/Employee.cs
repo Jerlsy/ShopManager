@@ -63,7 +63,11 @@ public class Employee
     public bool IsEmployedDuring(int year, int month) =>
         !ResignDate.HasValue || ResignDate.Value >= new DateOnly(year, month, 1);
 
+    public bool HasResignDate => ResignDate.HasValue;
     public string ResignActionLabel => ResignDate.HasValue ? "復職" : "離職";
+    public string EmploymentPeriodLabel => ResignDate.HasValue
+        ? $"到職 {HireDate:yyyy/MM} · 離職 {ResignDate:yyyy/MM/dd}"
+        : HireDateLabel;
     public string ResignActionTooltip => ResignDate.HasValue
         ? $"已設定 {ResignDate:yyyy/MM/dd} 離職，點選可取消離職"
         : "設定離職日（保留所有排班與薪資紀錄）";

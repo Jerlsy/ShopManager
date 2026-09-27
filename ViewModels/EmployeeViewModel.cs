@@ -106,7 +106,15 @@ public partial class EmployeeViewModel : ObservableObject
     // ── 員工清單 ──────────────────────────────────────────
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowEmptyHint))]
+    [NotifyPropertyChangedFor(nameof(CurrentEmployees))]
+    [NotifyPropertyChangedFor(nameof(ResignedEmployees))]
+    [NotifyPropertyChangedFor(nameof(HasResignedEmployees))]
     private List<Employee> _employees = new();
+
+    // 卡片模式分兩區：離職日已到的移到下方「離職員工」；離職日還沒到的留在在職區（卡片上會顯示離職日）
+    public List<Employee> CurrentEmployees  => Employees.Where(e => !e.IsResigned).ToList();
+    public List<Employee> ResignedEmployees => Employees.Where(e => e.IsResigned).ToList();
+    public bool HasResignedEmployees => Employees.Any(e => e.IsResigned);
 
     [ObservableProperty] private Employee? _selectedEmployee;
 
@@ -308,7 +316,11 @@ public partial class EmployeeViewModel : ObservableObject
     // ══════════════════════════════════════════════════════
     public async Task LoadAsync()
     {
-        Employees = await _employeeService.GetAllAsync();
+        // 在職在前、離職在後（編輯模式左側清單也照這個順序）
+        Employees = (await _employeeService.GetAllAsync())
+            .OrderBy(e => e.IsResigned)
+            .ThenBy(e => e.Name)
+            .ToList();
         AvailableShifts = (await _shiftService.GetAllAsync()).Where(s => s.IsEnabled).ToList();
         AvailableSalaries = await _salaryService.GetAllAsync();
         var shopSetting = await _shopSettingService.GetAsync();
