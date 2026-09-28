@@ -147,6 +147,21 @@ public class BytesToImageConverter : IValueConverter
         throw new NotImplementedException();
 }
 
+/// <summary>
+/// LINE 大頭貼 URL（string?）→ ImageSource。群組/多人聊天室、抓不到 Profile 的好友都沒有
+/// PictureUrl；直接把這種 nullable string 綁到 Image.Source 會讓 WPF 的預設 ImageSourceConverter
+/// 對 null 值丟例外（灌爆 Debug 輸出，雖然不會讓程式當掉）。這裡回傳 null 讓 Image 顯示空白即可，
+/// 畫面上本來就有另一個 PackIcon 疊在後面當預設圖示。
+/// </summary>
+public class UrlToImageSourceConverter : IValueConverter
+{
+    public object? Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
+        value is string s && !string.IsNullOrWhiteSpace(s) ? new Uri(s, UriKind.RelativeOrAbsolute) : null;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
+        throw new NotImplementedException();
+}
+
 /// <summary>hex 色碼字串 → SolidColorBrush（供班別色塊顯示）</summary>
 [ValueConversion(typeof(string), typeof(System.Windows.Media.SolidColorBrush))]
 public class HexToBrushConverter : IValueConverter

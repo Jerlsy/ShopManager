@@ -556,7 +556,7 @@
                                                 ClipToBounds="True" Background="{DynamicResource AppBorderBrush}"
                                                 VerticalAlignment="Center" Margin="0,0,10,0">
                                             <Grid>
-                                                <Image Stretch="UniformToFill" Source="{Binding EditLinePictureUrl}"
+                                                <Image Stretch="UniformToFill" Source="{Binding EditLinePictureUrl, Converter={StaticResource UrlToImageSourceConverter}}"
                                                        Visibility="{Binding EditLinePictureUrl, Converter={StaticResource NullToVisibilityConverter}}"/>
                                                 <md:PackIcon Kind="Account" Width="20" Height="20"
                                                              HorizontalAlignment="Center" VerticalAlignment="Center"

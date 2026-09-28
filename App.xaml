@@ -127,6 +127,7 @@
             <helpers:HexToBrushConverter x:Key="HexToBrushConverter"/>
             <helpers:ColorMatchConverter x:Key="ColorMatchConverter"/>
             <helpers:BytesToImageConverter x:Key="BytesToImageConverter"/>
+            <helpers:UrlToImageSourceConverter x:Key="UrlToImageSourceConverter"/>
             <helpers:ConstraintTypeToLabelConverter x:Key="ConstraintTypeToLabelConverter"/>
             <helpers:BoolInverseConverter x:Key="BoolInverseConverter"/>
             <helpers:NonZeroToVisibilityConverter x:Key="NonZeroToVisibilityConverter"/>
