@@ -6,9 +6,8 @@
         Title="ShopManager"
         Icon="/Resources/app.ico"
         WindowStyle="None"
-        AllowsTransparency="True"
         ResizeMode="NoResize"
-        Background="Transparent"
+        Background="{DynamicResource AppShellBackgroundBrush}"
         WindowState="Maximized"
         WindowStartupLocation="CenterScreen">
 

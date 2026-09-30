@@ -172,6 +172,16 @@ public partial class SchedulePage : UserControl
         menu.IsOpen = true;
     }
 
+    // 右鍵選單在點擊時才建立：若在範本上直接指定 ContextMenu，每個頭像重建月曆時都會預先建立一整份選單
+    private void EntryAvatar_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not FrameworkElement fe || fe.FindResource("EntryItemContextMenu") is not ContextMenu menu) return;
+        menu.PlacementTarget = fe;
+        menu.Placement = PlacementMode.MousePoint;
+        menu.IsOpen = true;
+        e.Handled = true;
+    }
+
     // ── 觸控點選：待處理「移動／新增」時點擊目的班別完成操作 ─────────────
     private async void ShiftBlock_Click(object sender, MouseButtonEventArgs e)
     {
@@ -403,17 +413,6 @@ public partial class SchedulePage : UserControl
         if (e.Source == sender && DataContext is ScheduleViewModel vm)
         {
             vm.CloseDayDetailCommand.Execute(null);
-            e.Handled = true;
-        }
-    }
-
-    // ── 員工大頭貼點擊（日期詳情浮層中的 chip）→ 開啟員工資訊卡 ──
-    private void EntryAvatar_Click(object sender, MouseButtonEventArgs e)
-    {
-        if (sender is FrameworkElement fe && fe.DataContext is EntryItem entry
-            && DataContext is ScheduleViewModel vm)
-        {
-            vm.OpenEntryCardCommand.Execute(entry);
             e.Handled = true;
         }
     }

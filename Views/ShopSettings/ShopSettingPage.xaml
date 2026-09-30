@@ -1,13 +1,14 @@
 <UserControl x:Class="ShopManager.Views.ShopSettings.ShopSettingPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:helpers="clr-namespace:ShopManager.Helpers"
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:vm="clr-namespace:ShopManager.ViewModels"
              xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf">
 
     <StackPanel Margin="{DynamicResource PageMargin}">
             <!-- 頁面標題 -->
-            <Border Style="{StaticResource PageHeaderStyle}">
+            <helpers:ShadowBorder Style="{StaticResource PageHeaderStyle}">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <Border Width="27" Height="27" CornerRadius="6" ClipToBounds="True" Margin="0,0,10,0"
                             Visibility="{Binding DataContext.ShopLogoData, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NullToVisibilityConverter}}">
@@ -15,10 +16,10 @@
                     </Border>
                     <TextBlock Text="店鋪與環境設定" Style="{StaticResource PageTitleStyle}" VerticalAlignment="Center"/>
                 </StackPanel>
-            </Border>
+            </helpers:ShadowBorder>
 
             <!-- 店鋪資訊 -->
-            <Border Style="{StaticResource SectionCardStyle}" Margin="0,0,0,20">
+            <helpers:ShadowBorder Style="{StaticResource SectionCardStyle}" Margin="0,0,0,20">
                 <StackPanel>
                     <TextBlock Text="店鋪資訊" Style="{StaticResource SectionTitleStyle}"/>
 
@@ -85,10 +86,10 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </StackPanel>
-            </Border>
+            </helpers:ShadowBorder>
 
             <!-- 行事曆規則 -->
-            <Border Style="{StaticResource SectionCardStyle}" Margin="0,0,0,20">
+            <helpers:ShadowBorder Style="{StaticResource SectionCardStyle}" Margin="0,0,0,20">
                 <StackPanel>
                     <TextBlock Text="行事曆規則" Style="{StaticResource SectionTitleStyle}"/>
                     <Border Style="{StaticResource ItemCardStyle}" Margin="0,0,0,16">
@@ -119,10 +120,10 @@
                         </Grid>
                     </Border>
                 </StackPanel>
-            </Border>
+            </helpers:ShadowBorder>
 
             <!-- 系統介面風格與顯示設定 -->
-            <Border Style="{StaticResource SectionCardStyle}" Margin="0,0,0,20">
+            <helpers:ShadowBorder Style="{StaticResource SectionCardStyle}" Margin="0,0,0,20">
                 <StackPanel>
                     <TextBlock Text="系統介面風格與顯示設定" Style="{StaticResource SectionTitleStyle}"/>
 
@@ -201,10 +202,10 @@
                         </StackPanel>
                     </Border>
                 </StackPanel>
-            </Border>
+            </helpers:ShadowBorder>
 
             <!-- Google 雲端備份 -->
-            <Border Style="{StaticResource SectionCardStyle}" Margin="0,0,0,20">
+            <helpers:ShadowBorder Style="{StaticResource SectionCardStyle}" Margin="0,0,0,20">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                         <md:PackIcon Kind="GoogleDrive" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0"
@@ -310,10 +311,10 @@
                         </Button>
                     </StackPanel>
                 </StackPanel>
-            </Border>
+            </helpers:ShadowBorder>
 
             <!-- LINE 推播設定 -->
-            <Border Style="{StaticResource SectionCardStyle}" Margin="0,0,0,20">
+            <helpers:ShadowBorder Style="{StaticResource SectionCardStyle}" Margin="0,0,0,20">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                         <md:PackIcon Kind="MessageTextOutline" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0"
@@ -573,10 +574,10 @@
                         </Border>
                     </StackPanel>
                 </StackPanel>
-            </Border>
+            </helpers:ShadowBorder>
 
             <!-- Gmail轉Line推播 -->
-            <Border Style="{StaticResource SectionCardStyle}" Margin="0,0,0,20">
+            <helpers:ShadowBorder Style="{StaticResource SectionCardStyle}" Margin="0,0,0,20">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                         <md:PackIcon Kind="EmailFastOutline" Width="20" Height="20" VerticalAlignment="Center" Margin="0,0,8,0"
@@ -780,10 +781,10 @@
                         </Border>
                     </StackPanel>
                 </StackPanel>
-            </Border>
+            </helpers:ShadowBorder>
 
             <!-- 備註 -->
-            <Border Style="{StaticResource SectionCardStyle}" Margin="0,0,0,20"
+            <helpers:ShadowBorder Style="{StaticResource SectionCardStyle}" Margin="0,0,0,20"
                     PreviewMouseWheel="Section_PreviewMouseWheel">
                 <StackPanel>
                     <Grid Margin="0,0,0,4">
@@ -815,10 +816,10 @@
                         </Grid>
                     </Border>
                 </StackPanel>
-            </Border>
+            </helpers:ShadowBorder>
 
             <!-- 危險區 -->
-            <Border Style="{StaticResource SectionCardStyle}" BorderBrush="{DynamicResource MaterialDesign.Brush.ValidationError}" Margin="0,0,0,20">
+            <helpers:ShadowBorder Style="{StaticResource SectionCardStyle}" BorderBrush="{DynamicResource MaterialDesign.Brush.ValidationError}" Margin="0,0,0,20">
                 <StackPanel>
                     <TextBlock Text="危險區域" Style="{StaticResource SectionTitleStyle}" Foreground="{DynamicResource MaterialDesign.Brush.ValidationError}"/>
                     <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="{DynamicResource MaterialDesign.Brush.ValidationError}" Command="{Binding CloseShopCommand}" HorizontalAlignment="Left">
@@ -828,7 +829,7 @@
                         </StackPanel>
                     </Button>
                 </StackPanel>
-            </Border>
+            </helpers:ShadowBorder>
 
             <Button Style="{StaticResource MaterialDesignRaisedButton}" Command="{Binding SaveCommand}" Width="160" Height="48" Margin="0,16,0,32">
                 <StackPanel Orientation="Horizontal">

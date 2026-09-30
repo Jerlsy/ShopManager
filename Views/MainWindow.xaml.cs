@@ -8,8 +8,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Windows;
+using System.Windows.Interop;
 
 namespace ShopManager.Views;
 
@@ -151,6 +153,85 @@ public partial class MainWindow : Window
         var vm = (MainViewModel)DataContext;
         vm.ResetAfterShopChange();
         _ = vm.InitializeAsync();
+    }
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        HwndSource.FromHwnd(new WindowInteropHelper(this).Handle)?.AddHook(ConstrainMaximizeToWorkArea);
+    }
+
+    // WindowStyle=None 的視窗最大化時，Windows 預設給整個螢幕範圍而蓋住工作列；改成視窗所在螢幕的工作區
+    private static IntPtr ConstrainMaximizeToWorkArea(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        const int WM_GETMINMAXINFO = 0x0024;
+        if (msg != WM_GETMINMAXINFO) return IntPtr.Zero;
+
+        var monitor = NativeMethods.MonitorFromWindow(hwnd, NativeMethods.MONITOR_DEFAULTTONEAREST);
+        var info = new NativeMethods.MONITORINFO { cbSize = Marshal.SizeOf<NativeMethods.MONITORINFO>() };
+        if (monitor == IntPtr.Zero || !NativeMethods.GetMonitorInfo(monitor, ref info)) return IntPtr.Zero;
+
+        var work = info.rcWork;
+        // 工作列自動隱藏時工作區等於整個螢幕；保留工作列那一側 2px，滑鼠碰到邊緣時工作列才叫得出來
+        if (work.Equals(info.rcMonitor) && NativeMethods.TryGetAutoHideTaskbarEdge(out var edge))
+        {
+            switch (edge)
+            {
+                case NativeMethods.ABE_LEFT:   work.Left   += 2; break;
+                case NativeMethods.ABE_TOP:    work.Top    += 2; break;
+                case NativeMethods.ABE_RIGHT:  work.Right  -= 2; break;
+                case NativeMethods.ABE_BOTTOM: work.Bottom -= 2; break;
+            }
+        }
+
+        var mmi = Marshal.PtrToStructure<NativeMethods.MINMAXINFO>(lParam);
+        mmi.ptMaxPosition.X = work.Left - info.rcMonitor.Left;
+        mmi.ptMaxPosition.Y = work.Top - info.rcMonitor.Top;
+        mmi.ptMaxSize.X = work.Right - work.Left;
+        mmi.ptMaxSize.Y = work.Bottom - work.Top;
+        Marshal.StructureToPtr(mmi, lParam, true);
+        handled = true;
+        return IntPtr.Zero;
+    }
+
+    private static class NativeMethods
+    {
+        public const int MONITOR_DEFAULTTONEAREST = 2;
+        public const int ABE_LEFT = 0, ABE_TOP = 1, ABE_RIGHT = 2, ABE_BOTTOM = 3;
+        private const int ABM_GETSTATE = 4, ABM_GETTASKBARPOS = 5, ABS_AUTOHIDE = 1;
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct POINT { public int X, Y; }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct RECT { public int Left, Top, Right, Bottom; }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MINMAXINFO { public POINT ptReserved, ptMaxSize, ptMaxPosition, ptMinTrackSize, ptMaxTrackSize; }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MONITORINFO { public int cbSize; public RECT rcMonitor, rcWork; public int dwFlags; }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct APPBARDATA { public int cbSize; public IntPtr hWnd; public uint uCallbackMessage, uEdge; public RECT rc; public IntPtr lParam; }
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr MonitorFromWindow(IntPtr hwnd, int flags);
+
+        [DllImport("user32.dll")]
+        public static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
+
+        [DllImport("shell32.dll")]
+        private static extern UIntPtr SHAppBarMessage(uint dwMessage, ref APPBARDATA pData);
+
+        public static bool TryGetAutoHideTaskbarEdge(out int edge)
+        {
+            var data = new APPBARDATA { cbSize = Marshal.SizeOf<APPBARDATA>() };
+            edge = ABE_BOTTOM;
+            if (((uint)SHAppBarMessage(ABM_GETSTATE, ref data) & ABS_AUTOHIDE) == 0) return false;
+            if (SHAppBarMessage(ABM_GETTASKBARPOS, ref data) != UIntPtr.Zero) edge = (int)data.uEdge;
+            return true;
+        }
     }
 
     private void ForceRefreshTaskbarIcon()

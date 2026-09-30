@@ -1,6 +1,7 @@
 <UserControl x:Class="ShopManager.Views.SalarySettings.SalarySettingPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:helpers="clr-namespace:ShopManager.Helpers"
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:models="clr-namespace:ShopManager.Models">
 
@@ -10,7 +11,7 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Style="{StaticResource PageHeaderStyle}">
+        <helpers:ShadowBorder Grid.Row="0" Style="{StaticResource PageHeaderStyle}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -44,12 +45,12 @@
                     </Button>
                 </StackPanel>
             </Grid>
-        </Border>
+        </helpers:ShadowBorder>
 
         <Grid Grid.Row="1">
 
             <!-- ── 卡片模式（未展開編輯）：仿員工資料管理，全區展開 ── -->
-            <Border Style="{StaticResource SectionCardStyle}"
+            <helpers:ShadowBorder Style="{StaticResource SectionCardStyle}"
                     Visibility="{Binding ShowListCards, Converter={StaticResource BoolToVisibilityConverter}}">
                 <Grid>
                     <!-- 無資料提示 -->
@@ -103,7 +104,7 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </Grid>
-            </Border>
+            </helpers:ShadowBorder>
 
             <!-- ── 清單 + 編輯模式（展開編輯 / 勞基法設定，共用同一區塊） ── -->
             <Grid Visibility="{Binding ShowDetailPane, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -114,7 +115,7 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- 窄版薪資列表 -->
-                <Border Grid.Column="0" Style="{StaticResource SectionCardStyle}">
+                <helpers:ShadowBorder Grid.Column="0" Style="{StaticResource SectionCardStyle}">
                     <DockPanel>
                         <TextBlock DockPanel.Dock="Top" Text="方案清單" Style="{StaticResource SectionTitleStyle}"/>
                         <ListBox ItemsSource="{Binding Salaries}"
@@ -185,13 +186,13 @@
                         </ListBox.ItemTemplate>
                     </ListBox>
                 </DockPanel>
-            </Border>
+            </helpers:ShadowBorder>
 
             <!-- 右側詳細面板：薪資編輯表單 / 勞基法設定，二者互斥顯示，填滿整個欄位高度，內容過長時可滾動 -->
             <Grid Grid.Column="2">
 
                 <!-- 薪資編輯表單 -->
-                <Border Style="{StaticResource EditFormCardStyle}" HorizontalAlignment="Stretch"
+                <helpers:ShadowBorder Style="{StaticResource EditFormCardStyle}" HorizontalAlignment="Stretch"
                         VerticalAlignment="Stretch" Padding="0"
                         Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
@@ -295,10 +296,10 @@
                             </StackPanel>
                         </StackPanel>
                 </ScrollViewer>
-                    </Border>
+                    </helpers:ShadowBorder>
 
                 <!-- 勞基法設定：與薪資編輯表單共用同一右側面板區塊，內容維持易讀寬度並可滾動 -->
-                <Border Style="{StaticResource EditFormCardStyle}" HorizontalAlignment="Stretch"
+                <helpers:ShadowBorder Style="{StaticResource EditFormCardStyle}" HorizontalAlignment="Stretch"
                         VerticalAlignment="Stretch" Padding="0"
                         Visibility="{Binding ShowLaborLaw, Converter={StaticResource BoolToVisibilityConverter}}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
@@ -391,7 +392,7 @@
                 </StackPanel>
         </StackPanel>
         </ScrollViewer>
-        </Border>
+        </helpers:ShadowBorder>
             </Grid>
             </Grid>
         </Grid>

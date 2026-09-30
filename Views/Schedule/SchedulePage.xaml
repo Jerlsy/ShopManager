@@ -63,6 +63,49 @@
                 </MenuItem.Icon>
             </MenuItem>
         </ContextMenu>
+
+        <!-- 班別色塊提示內容：以範本提供，提示框真正顯示時才建立元素（月曆每個色塊都有一份提示框） -->
+        <DataTemplate x:Key="ShiftBlockToolTipTemplate" DataType="{x:Type vm:ShiftBlock}">
+            <Grid>
+                <StackPanel Orientation="Horizontal"
+                            Visibility="{Binding IsDisabled, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <md:PackIcon Kind="Cancel" Width="15" Height="15" Foreground="#C62828" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <TextBlock Text="{Binding DisabledReason}" Foreground="#C62828" FontWeight="SemiBold" FontSize="13"/>
+                </StackPanel>
+                <StackPanel MinWidth="120"
+                            Visibility="{Binding IsDisabled, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <Border CornerRadius="4" Padding="6,2" Margin="0,0,8,0"
+                                Background="{Binding ShiftSetting.Color, Converter={StaticResource HexToBrushConverter}}">
+                            <TextBlock Text="{Binding ShiftSetting.Alias}" FontSize="11" Foreground="White" FontWeight="Bold"/>
+                        </Border>
+                        <TextBlock Text="{Binding ShiftSetting.Name}" FontSize="12" FontWeight="Medium" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <ItemsControl ItemsSource="{Binding EntryItems}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:EntryItem}">
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                    <Border Width="22" Height="22" CornerRadius="11" ClipToBounds="True" Margin="0,0,6,0"
+                                            Background="{Binding Employee.ColorHex, Converter={StaticResource HexToBrushConverter}}">
+                                        <Grid>
+                                            <Image Source="{Binding Employee.AvatarPhotoData, Converter={StaticResource BytesToImageConverter}}" Stretch="UniformToFill"
+                                                   Visibility="{Binding Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                            <TextBlock Text="{Binding Employee.DisplayInitial}"
+                                                       FontSize="9" FontWeight="Bold" Foreground="White"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                       Visibility="{Binding Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                                        </Grid>
+                                    </Border>
+                                    <TextBlock Text="{Binding Employee.Name}" FontSize="12" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="（尚無排班）" FontSize="11" Foreground="{DynamicResource AppSubtleForegroundBrush}"
+                               Visibility="{Binding EntryItems.Count, Converter={StaticResource ZeroToVisibilityConverter}}"/>
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
     </UserControl.Resources>
 
     <Grid Margin="{DynamicResource PageMargin}">
@@ -73,7 +116,7 @@
 
         <!-- 頁面標題列：標題 cell + 分隔線 + 工具列 cell -->
         <!-- 工具列各元件統一 Height 以切齊框線 -->
-        <Border Grid.Row="0" Style="{StaticResource PageHeaderStyle}">
+        <helpers:ShadowBorder Grid.Row="0" Style="{StaticResource PageHeaderStyle}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -190,7 +233,7 @@
 
                 </StackPanel>
             </Grid>
-        </Border>
+        </helpers:ShadowBorder>
 
         <!-- 主排班區 -->
         <Grid Grid.Row="1">
@@ -201,16 +244,16 @@
             </Grid.ColumnDefinitions>
 
             <!-- 多選浮動工具列 -->
-            <Border Grid.ColumnSpan="3" Panel.ZIndex="50"
+            <helpers:ShadowBorder Grid.ColumnSpan="3" Panel.ZIndex="50"
                     HorizontalAlignment="Center" VerticalAlignment="Top"
                     Margin="0,12,0,0"
                     Background="{DynamicResource AppSurfaceBrush}"
                     BorderBrush="#1976D2" BorderThickness="1.5"
                     CornerRadius="20" Padding="14,8"
                     Visibility="{Binding HasSelection, Converter={StaticResource BoolToVisibilityConverter}}">
-                <Border.Effect>
+                <helpers:ShadowBorder.Shadow>
                     <DropShadowEffect ShadowDepth="2" BlurRadius="12" Opacity="0.25"/>
-                </Border.Effect>
+                </helpers:ShadowBorder.Shadow>
                 <StackPanel Orientation="Horizontal">
                     <md:PackIcon Kind="CheckCircle" Width="18" Height="18"
                                  Foreground="#1976D2" VerticalAlignment="Center" Margin="0,0,6,0"/>
@@ -234,19 +277,19 @@
                         <md:PackIcon Kind="Close" Width="15" Height="15"/>
                     </Button>
                 </StackPanel>
-            </Border>
+            </helpers:ShadowBorder>
 
             <!-- 觸控點選待處理提示（交換／移動／新增流程進行中）-->
-            <Border Grid.ColumnSpan="3" Panel.ZIndex="50"
+            <helpers:ShadowBorder Grid.ColumnSpan="3" Panel.ZIndex="50"
                     HorizontalAlignment="Center" VerticalAlignment="Top"
                     Margin="0,12,0,0"
                     Background="{DynamicResource AppSurfaceBrush}"
                     BorderBrush="#F57C00" BorderThickness="1.5"
                     CornerRadius="20" Padding="14,8"
                     Visibility="{Binding HasTouchPendingAction, Converter={StaticResource BoolToVisibilityConverter}}">
-                <Border.Effect>
+                <helpers:ShadowBorder.Shadow>
                     <DropShadowEffect ShadowDepth="2" BlurRadius="12" Opacity="0.25"/>
-                </Border.Effect>
+                </helpers:ShadowBorder.Shadow>
                 <StackPanel Orientation="Horizontal">
                     <md:PackIcon Kind="GestureTapHold" Width="18" Height="18"
                                  Foreground="#F57C00" VerticalAlignment="Center" Margin="0,0,6,0"/>
@@ -257,10 +300,10 @@
                         <md:PackIcon Kind="Close" Width="15" Height="15"/>
                     </Button>
                 </StackPanel>
-            </Border>
+            </helpers:ShadowBorder>
 
             <!-- 左側員工列表 (支援拖曳) -->
-            <Border Grid.Column="0" Style="{StaticResource SectionCardStyle}"
+            <helpers:ShadowBorder Grid.Column="0" Style="{StaticResource SectionCardStyle}"
                     PreviewMouseWheel="Section_PreviewMouseWheel">
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top" Text="員工清單" Style="{StaticResource SectionTitleStyle}"/>
@@ -328,7 +371,7 @@
                         </ListBox.ItemTemplate>
                     </ListBox>
                 </DockPanel>
-            </Border>
+            </helpers:ShadowBorder>
 
             <!-- 右側行事曆 -->
             <Border Grid.Column="2"
@@ -406,10 +449,10 @@
                                                     </ItemsControl.ItemsPanel>
                                                     <ItemsControl.ItemTemplate>
                                                         <DataTemplate DataType="{x:Type vm:CalendarDay}">
-                                                            <Border Margin="2,1" CornerRadius="8"
+                                                            <helpers:ShadowBorder Margin="2,1" CornerRadius="8"
                                                                     BorderThickness="1.2">
-                                                                <Border.Style>
-                                                                    <Style TargetType="Border">
+                                                                <helpers:ShadowBorder.Style>
+                                                                    <Style TargetType="helpers:ShadowBorder">
                                                                         <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}"/>
                                                                         <Setter Property="BorderBrush" Value="#55808080"/>
                                                                         <Setter Property="Cursor" Value="Arrow"/>
@@ -426,7 +469,7 @@
                                                                                 <Setter Property="BorderThickness" Value="2"/>
                                                                             </DataTrigger>
                                                                             <DataTrigger Binding="{Binding HasStaffingGap}" Value="True">
-                                                                                <Setter Property="Effect">
+                                                                                <Setter Property="Shadow">
                                                                                     <Setter.Value>
                                                                                         <DropShadowEffect Color="#FF9800" BlurRadius="10" ShadowDepth="0" Opacity="0.75"/>
                                                                                     </Setter.Value>
@@ -434,7 +477,7 @@
                                                                             </DataTrigger>
                                                                         </Style.Triggers>
                                                                     </Style>
-                                                                </Border.Style>
+                                                                </helpers:ShadowBorder.Style>
 
                                                                 <Grid Margin="5,4">
                                                                     <Grid.RowDefinitions>
@@ -491,47 +534,8 @@
                                                                                         </Style>
                                                                                     </Border.Style>
                                                                                     <Border.ToolTip>
-                                                                                        <ToolTip Style="{StaticResource SpeechBubbleToolTip}">
-                                                                                            <Grid>
-                                                                                                <StackPanel Orientation="Horizontal"
-                                                                                                            Visibility="{Binding IsDisabled, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                                                                    <md:PackIcon Kind="Cancel" Width="15" Height="15" Foreground="#C62828" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                                                                                    <TextBlock Text="{Binding DisabledReason}" Foreground="#C62828" FontWeight="SemiBold" FontSize="13"/>
-                                                                                                </StackPanel>
-                                                                                                <StackPanel MinWidth="120"
-                                                                                                            Visibility="{Binding IsDisabled, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
-                                                                                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                                                                                        <Border CornerRadius="4" Padding="6,2" Margin="0,0,8,0"
-                                                                                                                Background="{Binding ShiftSetting.Color, Converter={StaticResource HexToBrushConverter}}">
-                                                                                                            <TextBlock Text="{Binding ShiftSetting.Alias}" FontSize="11" Foreground="White" FontWeight="Bold"/>
-                                                                                                        </Border>
-                                                                                                        <TextBlock Text="{Binding ShiftSetting.Name}" FontSize="12" FontWeight="Medium" VerticalAlignment="Center"/>
-                                                                                                    </StackPanel>
-                                                                                                    <ItemsControl ItemsSource="{Binding EntryItems}">
-                                                                                                        <ItemsControl.ItemTemplate>
-                                                                                                            <DataTemplate DataType="{x:Type vm:EntryItem}">
-                                                                                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                                                                                                    <Border Width="22" Height="22" CornerRadius="11" ClipToBounds="True" Margin="0,0,6,0"
-                                                                                                                            Background="{Binding Employee.ColorHex, Converter={StaticResource HexToBrushConverter}}">
-                                                                                                                        <Grid>
-                                                                                                                            <Image Source="{Binding Employee.AvatarPhotoData, Converter={StaticResource BytesToImageConverter}}" Stretch="UniformToFill"
-                                                                                                                                   Visibility="{Binding Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}}"/>
-                                                                                                                            <TextBlock Text="{Binding Employee.DisplayInitial}"
-                                                                                                                                       FontSize="9" FontWeight="Bold" Foreground="White"
-                                                                                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                                                                                                       Visibility="{Binding Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Inverse}"/>
-                                                                                                                        </Grid>
-                                                                                                                    </Border>
-                                                                                                                    <TextBlock Text="{Binding Employee.Name}" FontSize="12" VerticalAlignment="Center"/>
-                                                                                                                </StackPanel>
-                                                                                                            </DataTemplate>
-                                                                                                        </ItemsControl.ItemTemplate>
-                                                                                                    </ItemsControl>
-                                                                                                    <TextBlock Text="（尚無排班）" FontSize="11" Foreground="{DynamicResource AppSubtleForegroundBrush}"
-                                                                                                               Visibility="{Binding EntryItems.Count, Converter={StaticResource ZeroToVisibilityConverter}}"/>
-                                                                                                </StackPanel>
-                                                                                            </Grid>
-                                                                                        </ToolTip>
+                                                                                        <ToolTip Style="{StaticResource SpeechBubbleToolTip}"
+                                                                                                 Content="{Binding}" ContentTemplate="{StaticResource ShiftBlockToolTipTemplate}"/>
                                                                                     </Border.ToolTip>
                                                                                     <Grid>
                                                                                         <Grid.ColumnDefinitions>
@@ -563,7 +567,7 @@
                                                                                                                 Drop="EntryChip_Drop"
                                                                                                                 ToolTip="{Binding Employee.Name}"
                                                                                                                 Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                                                                ContextMenu="{StaticResource EntryItemContextMenu}">
+                                                                                                                MouseRightButtonUp="EntryAvatar_MouseRightButtonUp">
                                                                                                             <Grid>
                                                                                                                 <Image Source="{Binding Employee.AvatarPhotoData, Converter={StaticResource BytesToImageConverter}}" Stretch="UniformToFill"
                                                                                                                        Visibility="{Binding Employee.AvatarPhotoData, Converter={StaticResource NullToVisibilityConverter}}"/>
@@ -673,7 +677,7 @@
                                                                         </TextBlock.ToolTip>
                                                                     </TextBlock>
                                                                 </Grid>
-                                                            </Border>
+                                                            </helpers:ShadowBorder>
                                                         </DataTemplate>
                                                     </ItemsControl.ItemTemplate>
                                                 </ItemsControl>
@@ -691,13 +695,13 @@
                             Visibility="{Binding IsConflictPanelOpen, Converter={StaticResource BoolToVisibilityConverter}}"
                             Background="#55000000" CornerRadius="20"
                             MouseLeftButtonDown="ConflictPanelOverlay_Click">
-                        <Border HorizontalAlignment="Right" VerticalAlignment="Stretch"
+                        <helpers:ShadowBorder HorizontalAlignment="Right" VerticalAlignment="Stretch"
                                 Width="440" Background="{DynamicResource AppSurfaceBrush}"
                                 BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1,0,0,0"
                                 CornerRadius="0,20,20,0" Padding="0">
-                            <Border.Effect>
+                            <helpers:ShadowBorder.Shadow>
                                 <DropShadowEffect ShadowDepth="0" BlurRadius="20" Opacity="0.2"/>
-                            </Border.Effect>
+                            </helpers:ShadowBorder.Shadow>
                             <DockPanel>
                                 <!-- 標題列 -->
                                 <Grid DockPanel.Dock="Top" Margin="24,20,24,12">
@@ -848,7 +852,7 @@
                                     </Button>
                                 </Border>
                             </DockPanel>
-                        </Border>
+                        </helpers:ShadowBorder>
                     </Border>
 
                     <!-- 員工資訊卡浮層 -->
@@ -856,14 +860,14 @@
                             Visibility="{Binding IsEntryCardOpen, Converter={StaticResource BoolToVisibilityConverter}}"
                             Background="#66000000" CornerRadius="20"
                             MouseLeftButtonDown="EntryCardOverlay_Click">
-                        <Border Background="{DynamicResource AppSurfaceBrush}"
+                        <helpers:ShadowBorder Background="{DynamicResource AppSurfaceBrush}"
                                 CornerRadius="20" Padding="24"
                                 BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
                                 MaxWidth="320"
                                 HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Border.Effect>
+                            <helpers:ShadowBorder.Shadow>
                                 <DropShadowEffect ShadowDepth="4" BlurRadius="20" Opacity="0.25"/>
-                            </Border.Effect>
+                            </helpers:ShadowBorder.Shadow>
                             <StackPanel>
                                 <!-- 關閉按鈕 -->
                                 <Button HorizontalAlignment="Right"
@@ -907,7 +911,7 @@
                                     </StackPanel>
                                 </Button>
                             </StackPanel>
-                        </Border>
+                        </helpers:ShadowBorder>
                     </Border>
 
                     <!-- 新增班表表單（建立模式） -->
@@ -1419,14 +1423,14 @@
                             Background="#88000000"
                             Visibility="{Binding IsDayDetailOpen, Converter={StaticResource BoolToVisibilityConverter}}"
                             MouseLeftButtonDown="DayDetailOverlay_Click">
-                        <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                        <helpers:ShadowBorder HorizontalAlignment="Center" VerticalAlignment="Center"
                                 MinWidth="360" MaxWidth="520"
                                 Background="{DynamicResource AppSurfaceBrush}"
                                 BorderBrush="{DynamicResource AppBorderBrush}"
                                 BorderThickness="1" CornerRadius="20" Padding="24">
-                            <Border.Effect>
+                            <helpers:ShadowBorder.Shadow>
                                 <DropShadowEffect ShadowDepth="6" BlurRadius="24" Opacity="0.3"/>
-                            </Border.Effect>
+                            </helpers:ShadowBorder.Shadow>
                             <DockPanel>
                                 <!-- 標題列 -->
                                 <Grid DockPanel.Dock="Top" Margin="0,0,0,16">
@@ -1564,7 +1568,7 @@
                                                                             MouseLeftButtonUp="EntryRow_MouseLeftButtonUp"
                                                                             Cursor="Hand"
                                                                             Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                            ContextMenu="{StaticResource EntryItemContextMenu}">
+                                                                            MouseRightButtonUp="EntryAvatar_MouseRightButtonUp">
                                                                         <Border.Style>
                                                                             <Style TargetType="Border">
                                                                                 <Setter Property="Background"  Value="{DynamicResource AppSurfaceBrush}"/>
@@ -1677,7 +1681,7 @@
                                     </StackPanel>
                                 </Border>
                             </DockPanel>
-                        </Border>
+                        </helpers:ShadowBorder>
                     </Border>
                 </Grid>
             </Border>
@@ -1687,13 +1691,13 @@
                     Visibility="{Binding IsRecommendPanelOpen, Converter={StaticResource BoolToVisibilityConverter}}"
                     Background="#88000000"
                     MouseLeftButtonDown="RecommendOverlay_Click">
-                <Border Background="{DynamicResource AppSurfaceBrush}"
+                <helpers:ShadowBorder Background="{DynamicResource AppSurfaceBrush}"
                         CornerRadius="16" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
                         MinWidth="520" MaxWidth="680" MaxHeight="520"
                         HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Border.Effect>
+                    <helpers:ShadowBorder.Shadow>
                         <DropShadowEffect ShadowDepth="4" BlurRadius="20" Opacity="0.25"/>
-                    </Border.Effect>
+                    </helpers:ShadowBorder.Shadow>
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -1806,7 +1810,7 @@
                             </StackPanel>
                         </ScrollViewer>
                     </Grid>
-                </Border>
+                </helpers:ShadowBorder>
             </Border>
 
             <!-- 員工本月排班詳情浮層 -->
@@ -1814,13 +1818,13 @@
                     Visibility="{Binding IsEmployeeDetailOpen, Converter={StaticResource BoolToVisibilityConverter}}"
                     Background="#66000000"
                     MouseLeftButtonDown="EmployeeDetailOverlay_Click">
-                <Border Background="{DynamicResource AppSurfaceBrush}"
+                <helpers:ShadowBorder Background="{DynamicResource AppSurfaceBrush}"
                         CornerRadius="20" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
                         MinWidth="600" MaxHeight="560"
                         HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Border.Effect>
+                    <helpers:ShadowBorder.Shadow>
                         <DropShadowEffect ShadowDepth="4" BlurRadius="20" Opacity="0.25"/>
-                    </Border.Effect>
+                    </helpers:ShadowBorder.Shadow>
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -2107,7 +2111,7 @@
                             </ScrollViewer>
                         </Grid>
                     </Grid>
-                </Border>
+                </helpers:ShadowBorder>
             </Border>
         </Grid>
     </Grid>

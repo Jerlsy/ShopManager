@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -12,6 +12,8 @@
     <ApplicationIcon>Resources\app.ico</ApplicationIcon>
     <UseWindowsForms>False</UseWindowsForms>
     <Version>1.0.24</Version>
+    <!-- 套件附帶的 API 說明 XML 只給 IDE 用，執行時用不到，不必打包進安裝檔 -->
+    <PublishReferencesDocumentationFiles>false</PublishReferencesDocumentationFiles>
   </PropertyGroup>
 
   <ItemGroup>
@@ -49,8 +51,6 @@
     <PackageReference Include="PDFsharp" Version="6.2.4" />
 
     <PackageReference Include="QRCoder" Version="1.6.0" />
-
-    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="9.0.0" />
 
   </ItemGroup>
 

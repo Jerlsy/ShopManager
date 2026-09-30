@@ -193,40 +193,40 @@
             </Style>
 
             <!-- Border 容器樣式（CardBorderStyle = 員工薪資卡片用，等同 SectionCardStyle + 較小 padding） -->
-            <Style x:Key="CardBorderStyle" TargetType="Border">
+            <Style x:Key="CardBorderStyle" TargetType="helpers:ShadowBorder">
                 <Setter Property="CornerRadius"    Value="12"/>
                 <Setter Property="Background"      Value="{DynamicResource AppSurfaceBrush}"/>
                 <Setter Property="BorderBrush"     Value="{DynamicResource AppBorderBrush}"/>
                 <Setter Property="BorderThickness" Value="1"/>
                 <Setter Property="Padding"         Value="16,12"/>
-                <Setter Property="Effect">
+                <Setter Property="Shadow">
                     <Setter.Value>
                         <DropShadowEffect ShadowDepth="2" BlurRadius="10" Opacity="0.16" Color="#000000" Direction="270"/>
                     </Setter.Value>
                 </Setter>
             </Style>
 
-            <Style x:Key="PageHeaderStyle" TargetType="Border">
+            <Style x:Key="PageHeaderStyle" TargetType="helpers:ShadowBorder">
                 <Setter Property="CornerRadius"    Value="14"/>
                 <Setter Property="Background"      Value="{DynamicResource AppSurfaceAltBrush}"/>
                 <Setter Property="BorderBrush"     Value="{DynamicResource AppBorderBrush}"/>
                 <Setter Property="BorderThickness" Value="1"/>
                 <Setter Property="Padding"         Value="9,6"/>
                 <Setter Property="Margin"          Value="0,0,0,6"/>
-                <Setter Property="Effect">
+                <Setter Property="Shadow">
                     <Setter.Value>
                         <DropShadowEffect ShadowDepth="2" BlurRadius="12" Opacity="0.14" Color="#000000" Direction="270"/>
                     </Setter.Value>
                 </Setter>
             </Style>
 
-            <Style x:Key="SectionCardStyle" TargetType="Border">
+            <Style x:Key="SectionCardStyle" TargetType="helpers:ShadowBorder">
                 <Setter Property="CornerRadius"    Value="14"/>
                 <Setter Property="Background"      Value="{DynamicResource AppSurfaceBrush}"/>
                 <Setter Property="BorderBrush"     Value="{DynamicResource AppBorderBrush}"/>
                 <Setter Property="BorderThickness" Value="1"/>
                 <Setter Property="Padding"         Value="10"/>
-                <Setter Property="Effect">
+                <Setter Property="Shadow">
                     <Setter.Value>
                         <DropShadowEffect ShadowDepth="2" BlurRadius="16" Opacity="0.18" Color="#000000" Direction="270"/>
                     </Setter.Value>
@@ -242,13 +242,13 @@
                 <Setter Property="Padding"         Value="12,10"/>
             </Style>
 
-            <Style x:Key="EditFormCardStyle" TargetType="Border">
+            <Style x:Key="EditFormCardStyle" TargetType="helpers:ShadowBorder">
                 <Setter Property="CornerRadius"    Value="16"/>
                 <Setter Property="Background"      Value="{DynamicResource AppSurfaceBrush}"/>
                 <Setter Property="BorderBrush"     Value="{DynamicResource AppBorderBrush}"/>
                 <Setter Property="BorderThickness" Value="1"/>
                 <Setter Property="Padding"         Value="20"/>
-                <Setter Property="Effect">
+                <Setter Property="Shadow">
                     <Setter.Value>
                         <DropShadowEffect ShadowDepth="2" BlurRadius="16" Opacity="0.18" Color="#000000" Direction="270"/>
                     </Setter.Value>

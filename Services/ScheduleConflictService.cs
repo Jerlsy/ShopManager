@@ -139,6 +139,8 @@ public class ScheduleConflictService(AppDbContext db, ShopContext shopContext)
         if (conflicts.Count > 0)
             db.ScheduleConflicts.AddRange(conflicts);
         await db.SaveChangesAsync();
+        // 此 DbContext 隨快取頁面長期存活且每次拖放後都會重算；不清掉的話已存檔的衝突實體會一路累積在追蹤器裡
+        db.ChangeTracker.Clear();
         return conflicts.Count;
     }
 

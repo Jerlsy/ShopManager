@@ -25,6 +25,10 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        // WPF 提示框預設要停 1 秒才出現，比 Windows 本身慢；改用系統的滑鼠停留時間（預設 400ms）
+        ToolTipService.InitialShowDelayProperty.OverrideMetadata(typeof(FrameworkElement),
+            new FrameworkPropertyMetadata((int)SystemParameters.MouseHoverTime.TotalMilliseconds));
+
         // 雙擊到看到第一個視窗之間，DI 建置／資料庫遷移／佈景主題套用都是同步工作，
         // 舊電腦上這段空白等待特別明顯。先秒開一個啟動畫面墊著，讓使用者知道程式有在動。
         var splash = new SplashWindow();

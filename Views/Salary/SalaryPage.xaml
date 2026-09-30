@@ -1,6 +1,7 @@
 <UserControl x:Class="ShopManager.Views.Salary.SalaryPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:helpers="clr-namespace:ShopManager.Helpers"
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:vm="clr-namespace:ShopManager.ViewModels"
              Loaded="UserControl_Loaded">
@@ -12,7 +13,7 @@
         </Grid.RowDefinitions>
 
         <!-- ── 頁首 ──────────────────────────────────────────────────── -->
-        <Border Grid.Row="0" Style="{StaticResource PageHeaderStyle}">
+        <helpers:ShadowBorder Grid.Row="0" Style="{StaticResource PageHeaderStyle}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -55,7 +56,7 @@
                     </Button>
                 </StackPanel>
             </Grid>
-        </Border>
+        </helpers:ShadowBorder>
 
         <!-- ── 主體 ──────────────────────────────────────────────────── -->
         <Grid Grid.Row="1" MinHeight="300">
@@ -119,7 +120,7 @@
             <ItemsControl ItemsSource="{Binding EmployeeItems}" Margin="0,4,0,0">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:EmployeeSalaryItem}">
-                        <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,12"
+                        <helpers:ShadowBorder Style="{StaticResource CardBorderStyle}" Margin="0,0,0,12"
                                 PreviewMouseWheel="EmployeeCard_PreviewMouseWheel">
                             <StackPanel>
 
@@ -595,13 +596,13 @@
                                     </StackPanel>
                                 </StackPanel>
                             </StackPanel>
-                        </Border>
+                        </helpers:ShadowBorder>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
             <!-- 當月人事費用合計 -->
-            <Border Style="{StaticResource SectionCardStyle}" Margin="0,0,0,12">
+            <helpers:ShadowBorder Style="{StaticResource SectionCardStyle}" Margin="0,0,0,12">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -621,7 +622,7 @@
                                FontWeight="Bold" VerticalAlignment="Center"
                                Foreground="{DynamicResource PrimaryHueMidBrush}"/>
                 </Grid>
-            </Border>
+            </helpers:ShadowBorder>
 
             </StackPanel>
 

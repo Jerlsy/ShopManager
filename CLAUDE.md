@@ -70,7 +70,7 @@ LINE's Flex Message type cannot be forwarded by the recipient (platform limitati
 
 `GoogleDriveSyncService` + `ShopDataPortabilityService` back up/restore **one shop's data only**, not the whole DB file, because each shop can bind a different Google account and a whole-file approach would leak/overwrite other shops' rows. Consequences worth knowing before touching this code:
 - Export/import walks the same shop-scoped table graph as `AppDbContext.DeleteShopDataAsync`/`DeleteShopContentAsync` (the latter preserves the `Shop` row itself; restore must never delete it or the shop disappears from the selection list).
-- Most tables use plain SQLite `INTEGER PRIMARY KEY` **without** `AUTOINCREMENT`, so IDs are not guaranteed never-reused across the whole DB. Restore therefore lets SQLite assign fresh IDs for every row and rewrites all FK columns *and* embedded JSON id-lists (e.g. `Employee.PreferredShiftIds`, `MonthlySchedule.ExcludeFromAutoAssignIds`) via an old-id→new-id map — never trust the backup JSON's original IDs when reinserting.
+- IDs are not guaranteed never-reused across the whole DB (tables created by `EnsureCreated()` on some historical schemas may lack `AUTOINCREMENT`, and IDs are per-machine anyway). Restore therefore lets SQLite assign fresh IDs for every row and rewrites all FK columns *and* embedded JSON id-lists (e.g. `Employee.PreferredShiftIds`, `MonthlySchedule.ExcludeFromAutoAssignIds`) via an old-id→new-id map — never trust the backup JSON's original IDs when reinserting.
 - Cloud files live in Drive's `appDataFolder` (`drive.appdata` scope) — a space that is isolated per requesting application/OAuth client, invisible even to the same Google account's other apps. This is why the Gmail-forward feature (below) cannot share this storage.
 
 ### Gmail → LINE forwarding — config lives in ShopManager, engine lives in Google Apps Script
@@ -100,6 +100,15 @@ The 計算薪資 panel can import a POS-exported punch xlsx (`AttendanceImportSe
 `Employee.IsResigned` compares against **today** and is only for the "已離職" badge. Anything month-scoped (salary eligibility, the schedule page's `ActiveEmployees`) must use `IsEmployedDuring(year, month)` — otherwise someone resigning mid-September vanishes from August payroll computed in late September. `ShiftRuleEngine`'s `ResignedRule` (#0, in both move and copy rule sets) blocks shifts after `ResignDate`, which also surfaces existing post-resignation shifts as conflicts.
 - Resign/reinstate side effects live in one place (`EmployeeViewModel.ApplyResignChangeAsync`), shared by the card's 離職/復職 chip, the 到職設定 form, and the delete dialog's "改為設定離職": disable/enable the LINE binding, optionally push `ShopSetting.LineResignMessage`, recheck conflicts. The edit-form save calls `LineFollowerService.BindAsync` (which re-enables the binding), so it re-disables it for resigned employees.
 - Deleting an employee DB-cascades their schedule entries **and all historical payroll rows** (past months' totals shrink), so delete first shows `EmployeeService.GetHistoryAsync` and steers to resignation. `EmployeeService.DeleteAsync` also clears the no-FK leftovers (`ScheduleConflicts`, `LineFollowers.BoundEmployeeId`) in the same transaction.
+
+### UI performance / size conventions
+
+- **Shadows use `helpers:ShadowBorder`, not `Border.Effect`.** A `DropShadowEffect` on a container re-blurs the whole subtree on any repaint inside it. `ShadowBorder` draws background/border on an internal plate that carries the shadow and overlays content on top; set the `Shadow` property instead of `Effect`. The shared card styles (`SectionCardStyle`, `PageHeaderStyle`, `EditFormCardStyle`, `CardBorderStyle`) already target it.
+- **Schedule page builds heavy UI lazily:** the avatar right-click menu is created on `MouseRightButtonUp` (`EntryAvatar_MouseRightButtonUp`), and the shift-block tooltip body is a `DataTemplate` (`ShiftBlockToolTipTemplate`). Don't put `ContextMenu=`/inline tooltip content on per-cell templates — the calendar rebuilds them all on every month change.
+- **`MainWindow` is not `AllowsTransparency`** (it forced software-composited full-screen repaints) and constrains maximize to the monitor work area via a `WM_GETMINMAXINFO` hook, so the custom-chrome window no longer covers the taskbar.
+- **Tooltip delay** follows the Windows hover time (`App.OnStartup`); WPF's own default is 1 s.
+- **Only the Noto Sans TC weights actually used are embedded** (Regular/Medium/SemiBold/Bold, ~28 MB). Before using `FontWeight` Light/ExtraBold/Black/Thin, add the matching `Fonts/*.ttf` back or WPF will synthesize it.
+- `ScheduleConflictService.RecheckAsync` clears the `ChangeTracker` after saving; its `DbContext` lives as long as the cached page and would otherwise accumulate tracked conflict rows.
 
 ### Drag-and-drop scheduling is optimistic, not batched
 
