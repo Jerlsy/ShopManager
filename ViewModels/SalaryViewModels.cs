@@ -410,8 +410,10 @@ public partial class PayrollEntryItem : ObservableObject
     // Set initial values without triggering OnIsPaidToggled callback
     public void SetInitialStatus(bool isPaid, DateTime? paidAt)
     {
+#pragma warning disable MVVMTK0034 // 刻意直接寫欄位：避免觸發 OnIsPaidChanged 造成重複寫入
         _isPaid = isPaid;
         _paidAt = paidAt;
+#pragma warning restore MVVMTK0034
     }
 
     partial void OnIsPaidChanged(bool value) => _ = HandlePaidAsync(value);

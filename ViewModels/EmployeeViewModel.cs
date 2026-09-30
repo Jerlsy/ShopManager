@@ -609,7 +609,8 @@ public partial class EmployeeViewModel : ObservableObject
             await _lineFollowerService.DisableBindingAsync(emp.Id);
 
         // 新綁定時發送歡迎訊息
-        bool isNewBinding = !string.IsNullOrEmpty(emp.LineUserId) && emp.LineUserId != oldLineUserId;
+        var newLineUserId = emp.LineUserId;
+        bool isNewBinding = !string.IsNullOrEmpty(newLineUserId) && newLineUserId != oldLineUserId;
         if (isNewBinding)
         {
             var shopSetting = await _shopSettingService.GetAsync();
@@ -619,7 +620,7 @@ public partial class EmployeeViewModel : ObservableObject
                 var welcomeMsg = string.IsNullOrWhiteSpace(shopSetting?.LineWelcomeMessage)
                     ? "✅ 綁定成功！您的 LINE 帳號已與店鋪排班系統連結，後續班表通知將透過此帳號發送。"
                     : shopSetting.LineWelcomeMessage.Replace("{name}", EditLineDisplayName ?? emp.Name);
-                await _lineService.PushMessageAsync(token, emp.LineUserId, welcomeMsg);
+                await _lineService.PushMessageAsync(token, newLineUserId!, welcomeMsg);
             }
         }
 

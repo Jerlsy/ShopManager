@@ -52,6 +52,9 @@
 
     <PackageReference Include="QRCoder" Version="1.6.0" />
 
+    <!-- EF Core Sqlite 帶入的 2.1.11 有已知高嚴重性弱點（GHSA-2m69-gcr7-jv3q），明確升到修補版 -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.12" />
+
   </ItemGroup>
 
 
