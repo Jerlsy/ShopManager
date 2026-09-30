@@ -1,4 +1,5 @@
 publish.ps1
+.claude/settings.local.json
 ## Visual Studio / .NET
 *.pubxml.user
 installer-out/
