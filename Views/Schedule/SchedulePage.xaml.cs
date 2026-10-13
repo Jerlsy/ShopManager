@@ -19,6 +19,22 @@ public partial class SchedulePage : UserControl
         DataContext = viewModel;
         Loaded += async (_, _) => await viewModel.LoadAsync();
         viewModel.PropertyChanged += OnOverlayPropertyChanged;
+
+        // Esc 取消點選流程：掛在視窗層級，焦點不在本頁元素上時也收得到。
+        // 頁面會被快取並重複掛載（Loaded／Unloaded 多次觸發），每次掛載重新訂閱、卸載時解除
+        Loaded   += (_, _) => { _hostWindow = Window.GetWindow(this); if (_hostWindow is not null) { _hostWindow.PreviewKeyDown -= HostWindow_PreviewKeyDown; _hostWindow.PreviewKeyDown += HostWindow_PreviewKeyDown; } };
+        Unloaded += (_, _) => { if (_hostWindow is not null) _hostWindow.PreviewKeyDown -= HostWindow_PreviewKeyDown; _hostWindow = null; };
+    }
+
+    private Window? _hostWindow;
+
+    private void HostWindow_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape && DataContext is ScheduleViewModel { HasTouchPendingAction: true } vm)
+        {
+            vm.CancelTouchPendingActionCommand.Execute(null);
+            e.Handled = true;
+        }
     }
 
     // 浮層關閉後清除鍵盤焦點，防止 WPF 焦點轉移到 ScrollViewer 內元素
@@ -81,6 +97,9 @@ public partial class SchedulePage : UserControl
             // （滑鼠使用者仍可用拖曳直接排入；員工排班資料改由右鍵選單「排班資料」開啟）
             vm.StartTouchAdd(item.Employee);
             e.Handled = true;
+            // ListBox 按下項目時會抓住滑鼠，原本靠它自己的 MouseLeftButtonUp 釋放；
+            // 這裡標記 Handled 讓它收不到，滑鼠會一直被清單抓著，下一次點擊（例如提示列的 X）就被吃掉
+            Mouse.Capture(null);
         }
     }
 
