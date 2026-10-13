@@ -50,6 +50,8 @@ public partial class ScheduleViewModel
                     block.DisabledReason        = v.Reason;
                     block.IsDisabledForCopy     = vCopy.IsBlocked;
                     block.DisabledReasonForCopy = vCopy.Reason;
+                    block.CanForce              = v.CanOverride;
+                    block.CanForceForCopy       = vCopy.CanOverride;
                 }
             }
         }
@@ -73,6 +75,8 @@ public partial class ScheduleViewModel
                     block.DisabledReason        = v.Reason;
                     block.IsDisabledForCopy     = vCopy.IsBlocked;
                     block.DisabledReasonForCopy = vCopy.Reason;
+                    block.CanForce              = v.CanOverride;
+                    block.CanForceForCopy       = vCopy.CanOverride;
                 }
             }
         }

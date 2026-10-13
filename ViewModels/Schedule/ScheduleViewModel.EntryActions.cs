@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ShopManager.Models;
+using ShopManager.Services;
 
 namespace ShopManager.ViewModels;
 
@@ -160,6 +161,14 @@ public partial class ScheduleViewModel
 
         await ExecuteAddOrMoveAsync(employee, date, shift, sourceEntryId, isCopy);
     }
+
+    /// <summary>規則擋下但可強制時，跳確認視窗並列出與拖曳提示相同的原因；回傳是否仍要排入</summary>
+    public Task<bool> ConfirmForceAsync(Employee employee, DateOnly date, ShiftSetting shift, string reason, string verb) =>
+        _dialogService.ShowConfirmAsync(
+            "違反排班規則",
+            $"「{employee.Name}」排入 {date:MM/dd}（{ShiftRuleEngine.DayText(date.DayOfWeek)}）{shift.Alias}，會違反以下規則：\n\n" +
+            $"{reason}\n\n仍要{verb}嗎？排入後會列在排班衝突清單中。",
+            $"仍要{verb}", "取消");
 
     // ── 操作①：由 EntryChip_Drop 呼叫（頭像對頭像交換）────────────────
     public async Task SwapEmployeeAsync(Employee dragEmployee, int sourceEntryId, EntryItem targetEntry)

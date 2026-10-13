@@ -77,8 +77,8 @@ public partial class SchedulePage : UserControl
 
         if (DataContext is ScheduleViewModel vm)
         {
-            // 觸控點選流程：點一下員工＝直接進入「待新增」，取代原本開員工詳情
-            // （滑鼠使用者仍可用拖曳直接排入；詳情可從月曆頭像的排班卡片查看）
+            // 觸控點選流程：點一下員工＝直接進入「待新增」
+            // （滑鼠使用者仍可用拖曳直接排入；員工排班資料改由右鍵選單「排班資料」開啟）
             vm.StartTouchAdd(item.Employee);
             e.Handled = true;
         }
@@ -257,28 +257,33 @@ public partial class SchedulePage : UserControl
         bool isMoveIntent = isEntryDrag && !ctrlHeld;
 
         bool isBlocked = false;
+        bool canForce  = false;
         string blockedReason = string.Empty;
         if (block is not null)
         {
             if (isCopyIntent)
             {
                 isBlocked     = block.IsDisabledForCopy;
+                canForce      = block.CanForceForCopy;
                 blockedReason = block.DisabledReasonForCopy;
             }
             else
             {
                 isBlocked     = block.IsDisabled;
+                canForce      = block.CanForce;
                 blockedReason = block.DisabledReason;
             }
         }
 
         if (isBlocked)
         {
-            e.Effects = DragDropEffects.None;
+            // 可強制的規則：仍允許放下，放開後由 Drop 跳確認；不可強制（時間重疊、已離職）維持禁止
+            e.Effects = !canForce ? DragDropEffects.None
+                      : isMoveIntent ? DragDropEffects.Move : DragDropEffects.Copy;
             e.Handled = true;
             if (!string.IsNullOrEmpty(blockedReason))
             {
-                DragTooltipText.Text = blockedReason;
+                DragTooltipText.Text = canForce ? $"{blockedReason}\n放開可選擇強制排入" : blockedReason;
                 DragTooltipPopup.IsOpen = true;
             }
             else
@@ -314,7 +319,24 @@ public partial class SchedulePage : UserControl
         if (block is null) return;
 
         bool isBlocked = isCopy ? block.IsDisabledForCopy : block.IsDisabled;
-        if (isBlocked) return;
+        if (isBlocked)
+        {
+            if (!(isCopy ? block.CanForceForCopy : block.CanForce)) return;
+
+            var reason = isCopy ? block.DisabledReasonForCopy : block.DisabledReason;
+            var verb   = isCopy ? "複製" : sourceEntryId.HasValue ? "移動" : "新增";
+            var date   = block.Date;
+            var shift  = block.ShiftSetting;
+            e.Handled = true;
+
+            // 等 DoDragDrop 的拖放訊息迴圈完全結束再開確認視窗，避免在拖放進行中顯示對話框
+            _ = Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, new Action(async () =>
+            {
+                if (await vm.ConfirmForceAsync(employee, date, shift, reason, verb))
+                    await vm.DropEmployeeAsync(employee, date, shift, sourceEntryId, isCopy);
+            }));
+            return;
+        }
 
         await vm.DropEmployeeAsync(employee, block.Date, block.ShiftSetting, sourceEntryId, isCopy);
         e.Handled = true;

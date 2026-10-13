@@ -79,11 +79,13 @@ public record ShiftValidationContext(
 
 // ── Result ────────────────────────────────────────────────────────────────
 
-/// <summary>單一規則或整體評估的結果：是否禁止，以及禁止原因。</summary>
-public record ShiftValidationResult(bool IsBlocked, string Reason)
+/// <summary>單一規則或整體評估的結果：是否禁止，以及禁止原因。
+/// CanOverride：業主可否確認後強制排入（時間重疊、已離職這類實際不可能成立的情況為 false）。</summary>
+public record ShiftValidationResult(bool IsBlocked, string Reason, bool CanOverride = true)
 {
     public static readonly ShiftValidationResult Allow = new(false, string.Empty);
     public static ShiftValidationResult Block(string reason) => new(true, reason);
+    public static ShiftValidationResult BlockHard(string reason) => new(true, reason, CanOverride: false);
 }
 
 // ── Rule contract ─────────────────────────────────────────────────────────
@@ -190,7 +192,7 @@ public sealed class ResignedRule : IShiftRule
 {
     public ShiftValidationResult Evaluate(ShiftValidationContext ctx) =>
         ctx.Employee.ResignDate is { } resign && ctx.Date > resign
-            ? ShiftValidationResult.Block($"已離職（{resign:yyyy/MM/dd}）")
+            ? ShiftValidationResult.BlockHard($"已離職（{resign:yyyy/MM/dd}）")
             : ShiftValidationResult.Allow;
 }
 
@@ -302,7 +304,7 @@ public sealed class TimeOverlapRule : IShiftRule
             if (ctx.TargetShift.StartTime < eShift.EndTime &&
                 eShift.StartTime          < ctx.TargetShift.EndTime)
             {
-                return ShiftValidationResult.Block(
+                return ShiftValidationResult.BlockHard(
                     $"與「{eShift.Alias}」班時間重疊" +
                     $"（{eShift.StartTime:HH\\:mm}–{eShift.EndTime:HH\\:mm}）");
             }
