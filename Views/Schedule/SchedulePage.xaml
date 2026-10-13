@@ -39,6 +39,17 @@
         </ContextMenu>
 
         <!-- 觸控點選操作選單：取代拖曳，點一下已排班頭像跳出（滑鼠拖曳功能不受影響、兩者並存） -->
+        <!-- 員工清單右鍵選單：左鍵點一下是「選取準備排班」，排班資料改由這裡開啟 -->
+        <ContextMenu x:Key="EmployeeListContextMenu" x:Shared="False">
+            <MenuItem Header="排班資料"
+                      Command="{Binding PlacementTarget.Tag.OpenEmployeeDetailCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                      CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                <MenuItem.Icon>
+                    <md:PackIcon Kind="CalendarAccount"/>
+                </MenuItem.Icon>
+            </MenuItem>
+        </ContextMenu>
+
         <ContextMenu x:Key="EntryTouchActionMenu" x:Shared="False">
             <MenuItem Header="交換"
                       Command="{Binding PlacementTarget.Tag.StartTouchSwapCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
@@ -328,6 +339,8 @@
                                         PreviewMouseLeftButtonDown="Employee_PreviewMouseLeftButtonDown"
                                         MouseMove="Employee_MouseMove"
                                         MouseLeftButtonUp="Employee_MouseLeftButtonUp"
+                                        Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        ContextMenu="{StaticResource EmployeeListContextMenu}"
                                         Cursor="Hand">
                                     <StackPanel Orientation="Horizontal">
                                         <Border Width="30" Height="30" CornerRadius="15" ClipToBounds="True" Margin="0,0,8,0"

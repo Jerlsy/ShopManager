@@ -113,3 +113,5 @@ The 計算薪資 panel can import a POS-exported punch xlsx (`AttendanceImportSe
 ### Drag-and-drop scheduling is optimistic, not batched
 
 Schedule drag/drop writes to SQLite immediately per-action (optimistic UI + immediate local write), not "edit in memory, save on demand." This is a deliberate choice, not an oversight — batching would require a client-side draft/undo/conflict model for limited benefit since dragging itself never touches the DB mid-gesture.
+
+Rule-blocked drops (drag or touch add/move/copy) are **overridable** after a confirm dialog showing the same reason as the drag tooltip; the forced entry then shows up in the conflict list. `ShiftValidationResult.CanOverride` (via `BlockHard`) marks the exceptions that can never be forced — `TimeOverlapRule` and `ResignedRule`. Swaps are not overridable. The confirm is deferred with `Dispatcher.BeginInvoke(ApplicationIdle)` so it opens after `DoDragDrop`'s modal loop ends. Left-click on the schedule page's employee list starts touch-add; the employee detail panel (排班資料) opens from the right-click menu.

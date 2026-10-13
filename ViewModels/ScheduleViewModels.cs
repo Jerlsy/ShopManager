@@ -77,6 +77,9 @@ public partial class ShiftBlock : ObservableObject
     // 複製模式：僅群組 C（#5 時間重疊 + #6 每日工時）
     [ObservableProperty] private bool _isDisabledForCopy;
     [ObservableProperty] private string _disabledReasonForCopy = string.Empty;
+    // 被擋時業主能否確認後強制排入（時間重疊、已離職不行）
+    [ObservableProperty] private bool _canForce = true;
+    [ObservableProperty] private bool _canForceForCopy = true;
     // 空班別狀態：EntryItems 為空時為 true（由 EntryItems CollectionChanged 驅動更新）
     [ObservableProperty] private bool _isEmpty = true;
     // 月視圖頭像水平放不下時為 true（由 CollapsingAvatarPanel 量測後回報）：

@@ -110,8 +110,12 @@ public partial class ScheduleViewModel
 
         if (v.IsBlocked)
         {
-            if (!string.IsNullOrEmpty(v.Reason)) _snackbarService.ShowWarning(v.Reason);
-            return;
+            if (!v.CanOverride)
+            {
+                if (!string.IsNullOrEmpty(v.Reason)) _snackbarService.ShowWarning(v.Reason);
+                return;
+            }
+            if (!await ConfirmForceAsync(employee, date, shift, v.Reason, isMove ? "移動" : "新增")) return;
         }
         await DropEmployeeAsync(employee, date, shift, sourceEntryId, isCopy: false);
     }

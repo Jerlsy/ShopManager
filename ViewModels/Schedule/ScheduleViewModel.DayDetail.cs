@@ -77,6 +77,8 @@ public partial class ScheduleViewModel
                 DisabledReason        = v.Reason,
                 IsDisabledForCopy     = vCopy.IsBlocked,
                 DisabledReasonForCopy = vCopy.Reason,
+                CanForce              = v.CanOverride,
+                CanForceForCopy       = vCopy.CanOverride,
             });
         }
     }
