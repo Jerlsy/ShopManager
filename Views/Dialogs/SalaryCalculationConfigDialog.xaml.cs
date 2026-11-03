@@ -16,5 +16,8 @@ public partial class SalaryCalculationConfigDialog : UserControl
     }
 
     private void OkButton_Click(object sender, System.Windows.RoutedEventArgs e)
-        => DialogHost.CloseDialogCommand.Execute(_vm.BuildConfig(), this);
+    {
+        if (!_vm.Validate()) return;   // 缺薪資／假日薪資設定：訊息顯示在按鈕上方，對話框不關閉
+        DialogHost.CloseDialogCommand.Execute(_vm.BuildConfig(), this);
+    }
 }

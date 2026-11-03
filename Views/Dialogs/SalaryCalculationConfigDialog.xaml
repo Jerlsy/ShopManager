@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:vm="clr-namespace:ShopManager.ViewModels"
+             xmlns:helpers="clr-namespace:ShopManager.Helpers"
              MinWidth="520" MaxWidth="640">
     <Border Background="{DynamicResource AppSurfaceBrush}"
             BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"
@@ -95,9 +96,6 @@
                         </Button>
                     </Grid>
                     <TextBlock Text="{Binding ImportSummary}" Style="{StaticResource CaptionTextStyle}" Margin="22,2,0,0"/>
-                    <TextBlock Text="{Binding SkippedNote}" Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap"
-                               Margin="22,2,0,0"
-                               Visibility="{Binding SkippedNote, Converter={StaticResource NullToVisibilityConverter}}"/>
 
                     <!-- 名字對不上：讓業主指定是哪位員工，計算後記到員工的打卡名稱 -->
                     <StackPanel Margin="0,10,0,0"
@@ -236,7 +234,8 @@
                             </ComboBox>
 
                             <TextBox Grid.Column="4"
-                                     Text="{Binding Amount, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:G}}"
+                                     Text="{Binding Amount, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0}}"
+                                     helpers:IntegerInput.Mode="Positive"
                                      md:HintAssist.Hint="金額"/>
 
                             <Button Grid.Column="5"
@@ -261,14 +260,21 @@
             </StackPanel>
             </ScrollViewer>
 
+            <!-- 薪資設定檢查（按「確定並計算」時才檢查，不論有無匯入打卡） -->
+            <TextBlock Text="{Binding ValidationMessage}" TextWrapping="Wrap"
+                       Style="{StaticResource CaptionTextStyle}"
+                       Foreground="{DynamicResource MaterialDesign.Brush.ValidationError}"
+                       Visibility="{Binding ValidationMessage, Converter={StaticResource NullToVisibilityConverter}}"
+                       Margin="0,16,0,0"/>
+
             <!-- 按鈕列 -->
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
                 <Button Content="取消"
                         Style="{StaticResource MaterialDesignFlatButton}"
                         Command="{x:Static md:DialogHost.CloseDialogCommand}"
                         CommandParameter="{x:Null}"
                         Margin="0,0,8,0"/>
-                <Button Content="確定並計算"
+                <Button Content="{Binding ConfirmText}"
                         Style="{StaticResource MaterialDesignRaisedButton}"
                         Click="OkButton_Click"/>
             </StackPanel>

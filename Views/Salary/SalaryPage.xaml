@@ -480,7 +480,8 @@
                                                                Visibility="{Binding SelectedPreset.Type, Converter={StaticResource BonusTypeToPresetLabelVisibilityConverter}}"/>
 
                                                     <TextBox Grid.Column="2"
-                                                             Text="{Binding Amount, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:G}}"
+                                                             Text="{Binding Amount, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0}}"
+                                                             helpers:IntegerInput.Mode="Signed"
                                                              md:HintAssist.Hint="金額（負數為扣款）"
                                                              Margin="0,0,6,0"/>
 
@@ -581,6 +582,7 @@
                                                                              VerticalAlignment="Center"/>
                                                                 <TextBox Width="80"
                                                                          Text="{Binding AmountText, UpdateSourceTrigger=PropertyChanged}"
+                                                                         helpers:IntegerInput.Mode="Positive"
                                                                          IsEnabled="{Binding NeedsAmount}"
                                                                          md:HintAssist.Hint="金額"
                                                                          HorizontalContentAlignment="Right"

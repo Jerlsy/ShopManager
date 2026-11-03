@@ -216,7 +216,10 @@ public class SalaryCalculationService(AppDbContext db)
             if (salary.Type == SalaryType.Monthly)
                 total.WeekdayPay = salary.MonthlyBase ?? 0;
 
-            decimal baseAmount = total.WeekdayPay + total.HolidayPay + total.OT1Pay + total.OT2Pay + overridePay;
+            // 小計＝各項四捨五入後相加，跟卡片上顯示的各項金額加總一致（先加總再取整可能差 1 元）
+            decimal baseAmount = RoundMoney(total.WeekdayPay) + RoundMoney(total.HolidayPay)
+                               + RoundMoney(total.OT1Pay)     + RoundMoney(total.OT2Pay)
+                               + RoundMoney(overridePay);
 
             var empRecord = new SalaryEmployeeRecord
             {
@@ -232,12 +235,12 @@ public class SalaryCalculationService(AppDbContext db)
                 HolidayHours     = Math.Round(total.HolidayHours, 2),
                 OT1Hours         = Math.Round(total.OT1Hours,     2),
                 OT2Hours         = Math.Round(total.OT2Hours,     2),
-                WeekdayPay       = Math.Round(total.WeekdayPay,   0),
-                HolidayPay       = Math.Round(total.HolidayPay,   0),
-                OT1Pay           = Math.Round(total.OT1Pay,       0),
-                OT2Pay           = Math.Round(total.OT2Pay,       0),
-                OverridePay      = Math.Round(overridePay,        0),
-                BaseAmount       = Math.Round(baseAmount,         0),
+                WeekdayPay       = RoundMoney(total.WeekdayPay),
+                HolidayPay       = RoundMoney(total.HolidayPay),
+                OT1Pay           = RoundMoney(total.OT1Pay),
+                OT2Pay           = RoundMoney(total.OT2Pay),
+                OverridePay      = RoundMoney(overridePay),
+                BaseAmount       = baseAmount,
                 ScheduledHours   = Math.Round(scheduledHours,     2),
                 ClockedHours     = clockedHours,
                 WeekdayScheduledHours = Math.Round(weekdayScheduledHours, 2),
@@ -323,6 +326,9 @@ public class SalaryCalculationService(AppDbContext db)
         }
         return d;
     }
+
+    /// <summary>金額取整到元：一般四捨五入（.5 進位），不用 .NET 預設的「四捨六入五成雙」</summary>
+    public static decimal RoundMoney(decimal amount) => Math.Round(amount, 0, MidpointRounding.AwayFromZero);
 
     private static void Accumulate(DayPay total, DayPay day)
     {

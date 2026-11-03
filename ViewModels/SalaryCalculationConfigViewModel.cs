@@ -26,7 +26,6 @@ public partial class SalaryCalculationConfigViewModel : ObservableObject
     [ObservableProperty] private string _importFileName = string.Empty;
     [ObservableProperty] private string _importSummary = string.Empty;
     [ObservableProperty] private string _importError = string.Empty;
-    [ObservableProperty] private string _skippedNote = string.Empty;
 
     /// <summary>打卡檔裡找不到對應員工的名字，讓業主手動指定</summary>
     public ObservableCollection<ClockNameMappingItem> UnmatchedNames { get; } = new();
@@ -128,14 +127,13 @@ public partial class SalaryCalculationConfigViewModel : ObservableObject
         var byClockName = _activeEmployees
             .GroupBy(e => e.EffectiveClockName)
             .ToDictionary(g => g.Key, g => g.First());
-        var mappable = _activeEmployees.Where(e => e.DefaultSalary is not null).OrderBy(e => e.Name).ToList();
-        var noSalary = new List<string>();
+        // 未設定薪資的員工也照常對應：是否缺薪資設定統一在按「確定並計算」時檢查（不匯入打卡也要檢查）
+        var mappable = _activeEmployees.OrderBy(e => e.Name).ToList();
 
         foreach (var person in inMonth)
         {
             if (byClockName.TryGetValue(person.Name, out var emp))
             {
-                if (emp.DefaultSalary is null) { noSalary.Add(emp.Name); continue; }
                 if (!_matchedPunches.TryGetValue(emp.Id, out var list))
                     _matchedPunches[emp.Id] = list = new();
                 list.AddRange(person.Punches);
@@ -155,9 +153,6 @@ public partial class SalaryCalculationConfigViewModel : ObservableObject
         ImportFileName = System.IO.Path.GetFileName(dlg.FileName);
         ImportSummary  = $"已對應 {_matchedPunches.Count} 位員工"
                        + (UnmatchedNames.Count > 0 ? $"，{UnmatchedNames.Count} 個名字待指定" : string.Empty);
-        SkippedNote    = noSalary.Count > 0
-            ? $"以下員工未設定薪資方案，打卡紀錄不列入計算：{string.Join("、", noSalary)}"
-            : string.Empty;
         HasAttendance  = true;
     }
 
@@ -170,7 +165,64 @@ public partial class SalaryCalculationConfigViewModel : ObservableObject
         ImportFileName = string.Empty;
         ImportSummary  = string.Empty;
         ImportError    = string.Empty;
-        SkippedNote    = string.Empty;
+    }
+
+    // ── 按「確定並計算」時的薪資設定檢查 ─────────────────────
+    private const string DefaultConfirmText = "確定並計算";
+
+    [ObservableProperty] private string _validationMessage = string.Empty;
+    [ObservableProperty] private string _confirmText = DefaultConfirmText;
+
+    // 已提醒過、業主選擇略過的「未設定薪資」名單；名單變了要重新提醒
+    private string? _acknowledgedNoSalaryKey;
+
+    /// <summary>
+    /// 本次會進入計算的員工（當月有排班，或匯入的打卡對應到的人）都要有薪資方案；
+    /// 有勾選任何假日（含國定假日）時，時薪制員工還要有假日薪資方案。
+    /// 缺假日薪資一律擋下；缺薪資方案提醒一次，再按一次則略過這些人照常計算。
+    /// </summary>
+    public bool Validate()
+    {
+        var attendanceIds = new HashSet<int>(_matchedPunches.Keys);
+        foreach (var m in UnmatchedNames)
+            if (m.SelectedEmployee is not null) attendanceIds.Add(m.SelectedEmployee.Id);
+
+        var participants = _activeEmployees
+            .Where(e => _employeeDates.ContainsKey(e.Id) || (HasAttendance && attendanceIds.Contains(e.Id)))
+            .OrderBy(e => e.Name)
+            .ToList();
+
+        bool anyHoliday = IncludeNationalHolidays || WeekdayItems.Any(w => w.IsChecked && !w.IsShopClosed);
+        var noHolidaySalary = anyHoliday
+            ? participants.Where(e => e.DefaultSalary?.Type == SalaryType.Hourly && e.HolidaySalaryId is null).ToList()
+            : new List<Employee>();
+
+        if (noHolidaySalary.Count > 0)
+        {
+            _acknowledgedNoSalaryKey = null;
+            ConfirmText       = DefaultConfirmText;
+            ValidationMessage = "已勾選假日，但以下時薪制員工尚未設定假日薪資，請先至員工管理設定後再計算："
+                              + string.Join("、", noHolidaySalary.Select(e => e.Name));
+            return false;
+        }
+
+        var noSalary = participants.Where(e => e.DefaultSalary is null).ToList();
+        if (noSalary.Count > 0)
+        {
+            var key = string.Join(",", noSalary.Select(e => e.Id));
+            if (_acknowledgedNoSalaryKey == key) return true;
+
+            _acknowledgedNoSalaryKey = key;
+            ConfirmText       = "略過並計算";
+            ValidationMessage = "以下員工尚未設定薪資方案，不會列入本次薪資計算："
+                              + string.Join("、", noSalary.Select(e => e.Name))
+                              + "。請先至員工管理設定，或按「略過並計算」繼續。";
+            return false;
+        }
+
+        ValidationMessage = string.Empty;
+        ConfirmText       = DefaultConfirmText;
+        return true;
     }
 
     private Dictionary<int, Dictionary<DateOnly, DayPunch>>? BuildAttendance()

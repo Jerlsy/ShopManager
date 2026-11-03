@@ -11,7 +11,7 @@
     <LangVersion>latest</LangVersion>
     <ApplicationIcon>Resources\app.ico</ApplicationIcon>
     <UseWindowsForms>False</UseWindowsForms>
-    <Version>1.0.24</Version>
+    <Version>1.0.26</Version>
     <!-- 套件附帶的 API 說明 XML 只給 IDE 用，執行時用不到，不必打包進安裝檔 -->
     <PublishReferencesDocumentationFiles>false</PublishReferencesDocumentationFiles>
   </PropertyGroup>

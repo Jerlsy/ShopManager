@@ -239,10 +239,10 @@ public partial class EmployeeSalaryItem : ObservableObject
                 HolidayHours += d.HolidayHours;
                 OT1Hours     += d.OT1Hours;
                 OT2Hours     += d.OT2Hours;
-                WeekdayPay   += Math.Round(d.WeekdayPay, 0);
-                HolidayPay   += Math.Round(d.HolidayPay, 0);
-                OT1Pay       += Math.Round(d.OT1Pay,     0);
-                OT2Pay       += Math.Round(d.OT2Pay,     0);
+                WeekdayPay   += Services.SalaryCalculationService.RoundMoney(d.WeekdayPay);
+                HolidayPay   += Services.SalaryCalculationService.RoundMoney(d.HolidayPay);
+                OT1Pay       += Services.SalaryCalculationService.RoundMoney(d.OT1Pay);
+                OT2Pay       += Services.SalaryCalculationService.RoundMoney(d.OT2Pay);
             }
             else if (issue.Decision is AttendanceDecision.Deduct or AttendanceDecision.Add)
             {
