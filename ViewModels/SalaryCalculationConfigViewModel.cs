@@ -105,8 +105,53 @@ public partial class SalaryCalculationConfigViewModel : ObservableObject
         Overrides.Remove(item);
     }
 
+    /// <summary>從 iCHEF 後台自動下載當月打卡檔；無法自動下載時改走手動選檔</summary>
     [RelayCommand]
-    private void ImportAttendance()
+    private void DownloadFromIchef()
+    {
+        var owner = System.Windows.Application.Current.Windows.OfType<System.Windows.Window>()
+                        .FirstOrDefault(w => w.IsActive)
+                    ?? System.Windows.Application.Current.MainWindow;
+        var win = new Views.Dialogs.IchefDownloadWindow(_shopId, _schedule.Year, _schedule.Month) { Owner = owner };
+        win.ShowDialog();
+        var result = win.Result;
+
+        switch (result.Status)
+        {
+            case Views.Dialogs.IchefDownloadStatus.Cancelled:
+                return;
+
+            case Views.Dialogs.IchefDownloadStatus.Empty:
+                ImportError = result.Message ?? string.Empty;
+                return;
+
+            case Views.Dialogs.IchefDownloadStatus.Success:
+                if (LoadAttendance(result.Content!, out var error))
+                {
+                    _pendingContent  = result.Content;
+                    _deleteStored    = false;
+                    ImportFileName   = $"iCHEF 打卡紀錄 {_schedule.Year}-{_schedule.Month:D2}.xlsx";
+                    ImportSourceText = _storedFile is null
+                        ? "剛從 iCHEF 後台下載，按「確定並計算」後保存"
+                        : "剛從 iCHEF 後台下載，按「確定並計算」後覆蓋已保存的檔案";
+                    return;
+                }
+                // 下載到了但內容用不了：當作自動下載失敗，往下走手動選檔
+                ImportError = $"自動下載的檔案無法使用（{error}），請手動選擇檔案";
+                break;
+
+            default:
+                ImportError = $"自動下載失敗：{result.Message}。請手動選擇打卡檔案";
+                break;
+        }
+
+        ImportFromFile(keepError: true);
+    }
+
+    [RelayCommand]
+    private void ImportAttendance() => ImportFromFile(keepError: false);
+
+    private void ImportFromFile(bool keepError)
     {
         var dlg = new Microsoft.Win32.OpenFileDialog
         {
@@ -114,6 +159,8 @@ public partial class SalaryCalculationConfigViewModel : ObservableObject
             Filter = "Excel 檔案 (*.xlsx)|*.xlsx",
         };
         if (dlg.ShowDialog() != true) return;
+
+        if (!keepError) ImportError = string.Empty;
 
         byte[] content;
         try

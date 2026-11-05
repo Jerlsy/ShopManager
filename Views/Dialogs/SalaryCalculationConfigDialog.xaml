@@ -48,74 +48,78 @@
 
             <!-- ── 打卡資料 ────────────────────────────────── -->
             <TextBlock Text="打卡資料（選填）" Style="{StaticResource FormSectionStyle}" Margin="0,20,0,0"/>
-            <TextBlock Text="匯入 POS 打卡紀錄，比對排班並列出差異；不匯入則完全照班表計算。匯入的檔案會保存起來，之後重新計算同月薪資自動沿用"
+            <TextBlock Text="從 iCHEF 後台自動下載（或自行選擇 POS 匯出的檔案），比對排班並列出差異；不使用則完全照班表計算。取得的檔案會保存起來，之後重新計算同月薪資自動沿用"
                        Style="{StaticResource CaptionTextStyle}" TextWrapping="Wrap" Margin="0,2,0,8"/>
 
             <Border CornerRadius="10" Padding="14,12"
                     Background="{DynamicResource AppPanelAltBrush}"
                     BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1">
                 <StackPanel>
-                    <!-- 尚無打卡資料 -->
-                    <Grid Visibility="{Binding HasAttendance, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
+                    <!-- 目前狀態 -->
+                    <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
+
+                        <!-- 尚無打卡資料 -->
                         <md:PackIcon Grid.Column="0" Kind="FileExcelOutline" Width="28" Height="28"
                                      Foreground="{DynamicResource AppSubtleForegroundBrush}"
-                                     VerticalAlignment="Center" Margin="0,0,12,0"/>
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                            <TextBlock Text="尚未匯入打卡資料" Style="{StaticResource BodyTextStyle}"/>
+                                     VerticalAlignment="Center" Margin="0,0,12,0"
+                                     Visibility="{Binding HasAttendance, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}"/>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center"
+                                    Visibility="{Binding HasAttendance, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}">
+                            <TextBlock Text="尚未取得打卡資料" Style="{StaticResource BodyTextStyle}"/>
                             <TextBlock Text="本次將完全照班表計算" Style="{StaticResource CaptionTextStyle}" Margin="0,2,0,0"/>
                         </StackPanel>
-                        <Button Grid.Column="2" Command="{Binding ImportAttendanceCommand}"
-                                Style="{StaticResource MaterialDesignOutlinedButton}"
-                                Height="34" Padding="14,0" Margin="12,0,0,0" VerticalAlignment="Center">
-                            <StackPanel Orientation="Horizontal">
-                                <md:PackIcon Kind="FileImportOutline" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="匯入打卡資料" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                    </Grid>
 
-                    <!-- 已有打卡資料（已保存或新匯入） -->
-                    <Grid Visibility="{Binding HasAttendance, Converter={StaticResource BoolToVisibilityConverter}}">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
+                        <!-- 已有打卡資料（已保存或新取得） -->
                         <md:PackIcon Grid.Column="0" Kind="FileCheckOutline" Width="28" Height="28"
                                      Foreground="{DynamicResource PrimaryHueMidBrush}"
-                                     VerticalAlignment="Center" Margin="0,0,12,0"/>
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                     VerticalAlignment="Center" Margin="0,0,12,0"
+                                     Visibility="{Binding HasAttendance, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center"
+                                    Visibility="{Binding HasAttendance, Converter={StaticResource BoolToVisibilityConverter}}">
                             <TextBlock Text="{Binding ImportFileName}" Style="{StaticResource BodyTextStyle}"
                                        FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
                                        ToolTip="{Binding ImportFileName}"/>
                             <TextBlock Text="{Binding ImportSourceText}" Style="{StaticResource CaptionTextStyle}" Margin="0,2,0,0"/>
                             <TextBlock Text="{Binding ImportSummary}" Style="{StaticResource CaptionTextStyle}" Margin="0,1,0,0"/>
                         </StackPanel>
-                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
-                            <Button Command="{Binding ImportAttendanceCommand}"
-                                    Style="{StaticResource MaterialDesignOutlinedButton}"
-                                    Height="34" Padding="12,0" ToolTip="選擇新的打卡檔，取代目前這份">
-                                <StackPanel Orientation="Horizontal">
-                                    <md:PackIcon Kind="FileReplaceOutline" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                    <TextBlock Text="重新匯入" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </Button>
-                            <Button Command="{Binding DeleteAttendanceCommand}"
-                                    Style="{StaticResource MaterialDesignFlatButton}"
-                                    Foreground="{DynamicResource MaterialDesign.Brush.ValidationError}"
-                                    Height="34" Padding="10,0" Margin="6,0,0,0" ToolTip="本次不使用打卡資料，並刪除已保存的檔案">
-                                <StackPanel Orientation="Horizontal">
-                                    <md:PackIcon Kind="DeleteOutline" Width="16" Height="16" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                    <TextBlock Text="刪除" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </Button>
-                        </StackPanel>
                     </Grid>
+
+                    <!-- 操作按鈕 -->
+                    <StackPanel Orientation="Horizontal" Margin="40,12,0,0">
+                        <Button Command="{Binding DownloadFromIchefCommand}"
+                                Style="{StaticResource MaterialDesignRaisedButton}"
+                                Height="34" Padding="14,0"
+                                ToolTip="開啟 iCHEF 後台登入後，自動下載當月打卡紀錄（已有資料時會取代）">
+                            <StackPanel Orientation="Horizontal">
+                                <md:PackIcon Kind="CloudDownloadOutline" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="從 iCHEF 下載" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding ImportAttendanceCommand}"
+                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                Height="34" Padding="14,0" Margin="8,0,0,0"
+                                ToolTip="自行選擇 POS 匯出的打卡 xlsx（已有資料時會取代）">
+                            <StackPanel Orientation="Horizontal">
+                                <md:PackIcon Kind="FileImportOutline" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="選擇檔案匯入" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding DeleteAttendanceCommand}"
+                                Style="{StaticResource MaterialDesignFlatButton}"
+                                Foreground="{DynamicResource MaterialDesign.Brush.ValidationError}"
+                                Height="34" Padding="10,0" Margin="8,0,0,0"
+                                ToolTip="本次不使用打卡資料，並刪除已保存的檔案"
+                                Visibility="{Binding HasAttendance, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <StackPanel Orientation="Horizontal">
+                                <md:PackIcon Kind="DeleteOutline" Width="16" Height="16" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="刪除" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
 
                     <TextBlock Text="{Binding PendingDeleteNote}" TextWrapping="Wrap"
                                Style="{StaticResource CaptionTextStyle}"
