@@ -32,6 +32,23 @@ public class DayPay
     public decimal OT2Pay       { get; set; }
 }
 
+/// <summary>
+/// 某員工某天的計薪費率快照：差異選「指定工時」時，接受當下用它換算任意時數的當日薪資，
+/// 不必再讀薪資設定（跟 IfCounted 預先算好的道理相同，只是時數由業主決定）。
+/// </summary>
+public class DayRates
+{
+    public SalaryType SalaryType { get; set; }
+    public bool    IsHoliday         { get; set; }
+    /// <summary>時薪制：當天適用的時薪（假日用假日方案）；月薪制：底薪 ÷ 240 的換算時薪</summary>
+    public decimal HourlyRate        { get; set; }
+    public decimal OT1Rate           { get; set; }
+    public decimal OT2Rate           { get; set; }
+    /// <summary>月薪制假日加班倍率</summary>
+    public decimal HolidayMultiplier { get; set; }
+    public double  DailyNormalHours  { get; set; }
+}
+
 public enum AttendanceIssueType
 {
     LateOrEarly = 0,   // 遲到／早退超過寬限
@@ -48,6 +65,7 @@ public enum AttendanceDecision
     Exclude = 3,   // 不計
     Deduct  = 4,   // 扣固定金額（不計工時；遲到早退則照班表計薪再扣）
     Add     = 5,   // 加固定金額（同上）
+    SetHours = 6,  // 指定工時：當天改以業主輸入的時數計薪（取代原本計入的部分）
 }
 
 /// <summary>待業主確認的出勤差異（隨薪資記錄存檔，未接受前可關閉程式後繼續處理）</summary>
@@ -61,4 +79,11 @@ public class AttendanceIssue
     public DayPay? IfCounted { get; set; }
     public AttendanceDecision Decision { get; set; }
     public decimal Amount { get; set; }   // 一律正數，扣或加由 Decision 決定
+
+    /// <summary>當天費率快照；null＝舊版資料，不提供「指定工時」</summary>
+    public DayRates? Rates { get; set; }
+    /// <summary>計算時當天已計入的薪資（遲到早退照班表計入的那份）；null＝當天原本沒有計入</summary>
+    public DayPay? Baseline { get; set; }
+    /// <summary>選「指定工時」時輸入的時數</summary>
+    public double? SetHours { get; set; }
 }

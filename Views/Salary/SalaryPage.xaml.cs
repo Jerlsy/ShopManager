@@ -32,6 +32,12 @@ public partial class SalaryPage : UserControl
     private void ShowDailyDetail_Click(object sender, RoutedEventArgs e)
     {
         if ((sender as FrameworkElement)?.DataContext is not EmployeeSalaryItem item) return;
+        // 已接受的差異：在當天的差異標籤後面標出處理結果（例如「有排班未打卡・不計薪資」）
+        var resolved = item.ResolvedIssues
+            .GroupBy(i => i.Date)
+            .ToDictionary(g => g.Key, g => string.Join("、", g.Select(EmployeeSalaryItem.ResolutionText)));
+        foreach (var d in item.DailyEntries)
+            d.ResolutionLabel = d.IssueLabel is not null && resolved.TryGetValue(d.Date, out var r) ? r : null;
         var win = new SalaryDailyDetailWindow(item.Employee.Name, item.DailyEntries) { Owner = Window.GetWindow(this) };
         win.ShowDialog();
     }

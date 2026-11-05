@@ -126,6 +126,7 @@ public class AppDbContext : DbContext
         // SalaryRecord
         modelBuilder.Entity<SalaryEmployeeRecord>().Property(e => e.AttendanceIssues).HasConversion(JsonConv<AttendanceIssue>());
         modelBuilder.Entity<SalaryEmployeeRecord>().Property(e => e.DailyEntries).HasConversion(JsonConv<SalaryDailyEntry>());
+        modelBuilder.Entity<SalaryEmployeeRecord>().Property(e => e.ResolvedIssues).HasConversion(JsonConv<AttendanceIssue>());
 
         // SalaryRecord 關聯（Cascade：班表刪除時一併移除薪資紀錄）
         modelBuilder.Entity<SalaryRecord>()

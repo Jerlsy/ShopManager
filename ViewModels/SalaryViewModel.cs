@@ -149,6 +149,7 @@ public partial class SalaryViewModel : ObservableObject
                 item.OnGlobalChanged      = () => { RefreshTotalCost(); ScheduleAutoSave(); };
                 item.OnAttendanceAccepted = OnAttendanceAccepted;
                 item.AddIssues(empRec.AttendanceIssues);
+                item.ResolvedIssues.AddRange(empRec.ResolvedIssues);
                 foreach (var e in empRec.DailyEntries) item.DailyEntries.Add(e);
 
                 foreach (var b in empRec.BonusItems)
@@ -200,14 +201,14 @@ public partial class SalaryViewModel : ObservableObject
 
         // 顯示計算設定對話框（預填上次的設定）
         var configVm = new SalaryCalculationConfigViewModel(
-            schedule, eligibleEmps, activeEmps, _shopClosedDaysOfWeek, _lastConfig);
+            _shopContext.ShopId, schedule, eligibleEmps, activeEmps, _shopClosedDaysOfWeek, _lastConfig);
 
         var result = await DialogHost.Show(
             new SalaryCalculationConfigDialog(configVm), "RootDialog");
 
         if (result is not SalaryCalculationConfig config) return;
 
-        _lastConfig = config;   // 記住本次設定，下次開啟時預填（打卡資料不沿用，每次重新匯入）
+        _lastConfig = config;   // 記住本次設定，下次開啟時預填（打卡資料另存成檔案，依月份自動沿用）
 
         if (config.ClockNameMappings.Count > 0)
         {
@@ -419,6 +420,7 @@ public partial class SalaryViewModel : ObservableObject
                     HolidayClockedHours   = ui.HolidayClockedHours,
                     DailyEntries      = ui.DailyEntries,
                     AttendanceIssues  = ui.AttendanceIssues.Select(i => i.Issue).ToList(),
+                    ResolvedIssues    = ui.ResolvedIssues.ToList(),
                     BonusItems        = ui.BonusItems.Select(b => b.ToModel()).ToList(),
                 });
             }

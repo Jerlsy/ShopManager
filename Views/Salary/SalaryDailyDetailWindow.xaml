@@ -151,7 +151,7 @@
                                                     </Style.Triggers>
                                                 </Style>
                                             </Border.Style>
-                                            <TextBlock Text="{Binding IssueLabel}" FontSize="{DynamicResource FontSizeSmall}">
+                                            <TextBlock Text="{Binding IssueDisplayText}" FontSize="{DynamicResource FontSizeSmall}">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
                                                         <Setter Property="Foreground" Value="#E65100"/>

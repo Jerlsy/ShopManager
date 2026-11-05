@@ -92,7 +92,8 @@ public class SalaryCalculationService(AppDbContext db)
                     continue;
                 }
 
-                var dayPay = ComputeDay(emp, salary, laborLaw, hours, isHoliday);
+                var rates  = RatesFor(emp, salary, laborLaw, isHoliday);
+                var dayPay = ComputeDay(rates, hours);
                 var typeTag = isHoliday ? "假日" : "平日";
 
                 if (punches is null)
@@ -116,7 +117,7 @@ public class SalaryCalculationService(AppDbContext db)
                 {
                     issues.Add(new AttendanceIssue
                     {
-                        Date = date, Type = AttendanceIssueType.NoPunch, IfCounted = dayPay,
+                        Date = date, Type = AttendanceIssueType.NoPunch, IfCounted = dayPay, Rates = rates,
                         Description = $"有排班 {shiftLabel}，沒有打卡紀錄",
                         ShortLabel  = "有排班未打卡",
                     });
@@ -127,7 +128,7 @@ public class SalaryCalculationService(AppDbContext db)
                 {
                     issues.Add(new AttendanceIssue
                     {
-                        Date = date, Type = AttendanceIssueType.HalfPunch, IfCounted = dayPay,
+                        Date = date, Type = AttendanceIssueType.HalfPunch, IfCounted = dayPay, Rates = rates,
                         Description = $"有排班 {shiftLabel}，{HalfPunchText(p)}",
                         ShortLabel  = "打卡不完整",
                     });
@@ -152,7 +153,7 @@ public class SalaryCalculationService(AppDbContext db)
                     {
                         issues.Add(new AttendanceIssue
                         {
-                            Date = date, Type = AttendanceIssueType.LateOrEarly,
+                            Date = date, Type = AttendanceIssueType.LateOrEarly, Rates = rates, Baseline = dayPay,
                             Description = $"排班 {shiftLabel}，打卡 {p.In:HH:mm}–{p.Out:HH:mm}（{string.Join("、", parts)}）",
                             ShortLabel  = string.Join("、", parts),
                         });
@@ -175,13 +176,14 @@ public class SalaryCalculationService(AppDbContext db)
                 foreach (var (date, p) in punches.Where(kv => !shiftsByDate.ContainsKey(kv.Key)))
                 {
                     bool isHoliday = config.IsHoliday(date, nationalHolidays);
+                    var rates = RatesFor(emp, salary, laborLaw, isHoliday);
                     if (p.IsComplete)
                     {
                         var hrs = Math.Round(p.Hours, 2);
                         issues.Add(new AttendanceIssue
                         {
-                            Date = date, Type = AttendanceIssueType.Unscheduled,
-                            IfCounted   = ComputeDay(emp, salary, laborLaw, hrs, isHoliday),
+                            Date = date, Type = AttendanceIssueType.Unscheduled, Rates = rates,
+                            IfCounted   = ComputeDay(rates, hrs),
                             Description = $"沒有排班，打卡 {p.In:HH:mm}–{p.Out:HH:mm}（{hrs:0.##} 小時）",
                             ShortLabel  = "未排班出勤",
                         });
@@ -197,7 +199,7 @@ public class SalaryCalculationService(AppDbContext db)
                     {
                         issues.Add(new AttendanceIssue
                         {
-                            Date = date, Type = AttendanceIssueType.HalfPunch,
+                            Date = date, Type = AttendanceIssueType.HalfPunch, Rates = rates,
                             Description = $"沒有排班，{HalfPunchText(p)}",
                             ShortLabel  = "未排班打卡",
                         });
@@ -266,64 +268,67 @@ public class SalaryCalculationService(AppDbContext db)
         return record;
     }
 
+    /// <summary>某天適用的費率快照（時薪制假日用假日方案；月薪制換算時薪＝底薪 ÷ 240）</summary>
+    public static DayRates RatesFor(Employee emp, SalarySetting salary, LaborLawSetting laborLaw, bool isHoliday)
+    {
+        if (salary.Type == SalaryType.Hourly)
+            return new DayRates
+            {
+                SalaryType       = SalaryType.Hourly,
+                IsHoliday        = isHoliday,
+                // 假日：使用員工的假日薪資方案費率（無設定則回退到平日費率）
+                HourlyRate       = isHoliday
+                                   ? emp.HolidaySalary?.HourlyRate ?? salary.HourlyRate ?? 0
+                                   : salary.HourlyRate ?? 0,
+                OT1Rate          = salary.OT1Rate ?? laborLaw.HourlyOT1Rate,
+                OT2Rate          = salary.OT2Rate ?? laborLaw.HourlyOT2Rate,
+                DailyNormalHours = laborLaw.DailyNormalHours,
+            };
+
+        decimal monthlyBase = salary.MonthlyBase ?? 0;
+        return new DayRates
+        {
+            SalaryType        = SalaryType.Monthly,
+            IsHoliday         = isHoliday,
+            HourlyRate        = monthlyBase > 0 ? monthlyBase / 240m : 0,
+            OT1Rate           = salary.OT1Rate ?? laborLaw.MonthlyOT1Rate,
+            OT2Rate           = salary.OT2Rate ?? laborLaw.MonthlyOT2Rate,
+            HolidayMultiplier = salary.HolidayRate ?? laborLaw.HolidayOTRate,
+            DailyNormalHours  = laborLaw.DailyNormalHours,
+        };
+    }
+
     /// <summary>單日工時 → 薪資（平日含加班分段；月薪制平日只算加班補貼，底薪另計）</summary>
-    public static DayPay ComputeDay(Employee emp, SalarySetting salary, LaborLawSetting laborLaw, double hours, bool isHoliday)
+    public static DayPay ComputeDay(DayRates r, double hours)
     {
         var d = new DayPay();
-        double dailyNormal = laborLaw.DailyNormalHours;
 
-        if (salary.Type == SalaryType.Hourly)
+        if (r.IsHoliday)
         {
-            if (isHoliday)
-            {
-                // 假日：使用員工的假日薪資方案費率（無設定則回退到平日費率）
-                decimal hRate  = emp.HolidaySalary?.HourlyRate ?? salary.HourlyRate ?? 0;
-                d.HolidayPay   = hRate * (decimal)hours;
-                d.HolidayHours = hours;
-            }
-            else
-            {
-                decimal wRate   = salary.HourlyRate ?? 0;
-                decimal ot1Rate = salary.OT1Rate ?? laborLaw.HourlyOT1Rate;
-                decimal ot2Rate = salary.OT2Rate ?? laborLaw.HourlyOT2Rate;
-                double normal   = Math.Min(hours, dailyNormal);
-                double ot       = Math.Max(hours - dailyNormal, 0);
-                double ot1      = Math.Min(ot, 2);
-                double ot2      = Math.Max(ot - 2, 0);
-
-                d.WeekdayPay   = wRate * (decimal)normal
-                               + wRate * ot1Rate * (decimal)ot1
-                               + wRate * ot2Rate * (decimal)ot2;
-                d.WeekdayHours = hours;
-                d.OT1Hours     = ot1;
-                d.OT2Hours     = ot2;
-            }
+            d.HolidayPay   = r.SalaryType == SalaryType.Hourly
+                ? r.HourlyRate * (decimal)hours
+                : r.HourlyRate * r.HolidayMultiplier * (decimal)hours;
+            d.HolidayHours = hours;
+            return d;
         }
-        else // Monthly
+
+        double normal = Math.Min(hours, r.DailyNormalHours);
+        double ot     = Math.Max(hours - r.DailyNormalHours, 0);
+        double ot1    = Math.Min(ot, 2);
+        double ot2    = Math.Max(ot - 2, 0);
+
+        if (r.SalaryType == SalaryType.Hourly)
+            d.WeekdayPay = r.HourlyRate * (decimal)normal
+                         + r.HourlyRate * r.OT1Rate * (decimal)ot1
+                         + r.HourlyRate * r.OT2Rate * (decimal)ot2;
+        else
         {
-            decimal monthlyBase = salary.MonthlyBase ?? 0;
-            decimal hourlyEquiv = monthlyBase > 0 ? monthlyBase / 240m : 0;
-            decimal ot1Rate     = salary.OT1Rate ?? laborLaw.MonthlyOT1Rate;
-            decimal ot2Rate     = salary.OT2Rate ?? laborLaw.MonthlyOT2Rate;
-            decimal holRate     = salary.HolidayRate ?? laborLaw.HolidayOTRate;
-
-            if (isHoliday)
-            {
-                d.HolidayPay   = hourlyEquiv * holRate * (decimal)hours;
-                d.HolidayHours = hours;
-            }
-            else
-            {
-                double ot  = Math.Max(hours - dailyNormal, 0);
-                double ot1 = Math.Min(ot, 2);
-                double ot2 = Math.Max(ot - 2, 0);
-                d.OT1Pay       = hourlyEquiv * ot1Rate * (decimal)ot1;
-                d.OT2Pay       = hourlyEquiv * ot2Rate * (decimal)ot2;
-                d.WeekdayHours = hours;
-                d.OT1Hours     = ot1;
-                d.OT2Hours     = ot2;
-            }
+            d.OT1Pay = r.HourlyRate * r.OT1Rate * (decimal)ot1;
+            d.OT2Pay = r.HourlyRate * r.OT2Rate * (decimal)ot2;
         }
+        d.WeekdayHours = hours;
+        d.OT1Hours     = ot1;
+        d.OT2Hours     = ot2;
         return d;
     }
 

@@ -827,6 +827,8 @@ public partial class SystemSettingViewModel(
         if (!confirmed) return;
 
         await db.DeleteShopDataAsync(shopContext.ShopId);
+        try { Services.AttendanceFileStore.DeleteShop(shopContext.ShopId); }
+        catch { /* 打卡檔只是本機保存的副本，刪不掉不影響關閉店鋪 */ }
         WeakReferenceMessenger.Default.Send(new ShopClosedMessage());
     }
 

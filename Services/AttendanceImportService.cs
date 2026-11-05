@@ -17,9 +17,9 @@ public static class AttendanceImportService
     // 同一天所有打卡都擠在這個時間內，視為只打了一次卡（例如按錯鍵後立刻補按）
     private static readonly TimeSpan MinWorkSpan = TimeSpan.FromMinutes(5);
 
-    public static List<ClockPerson> Parse(string path)
+    public static List<ClockPerson> Parse(byte[] content)
     {
-        using var zip = ZipFile.OpenRead(path);
+        using var zip = new ZipArchive(new MemoryStream(content), ZipArchiveMode.Read);
 
         var shared = new List<string>();
         var ssEntry = zip.GetEntry("xl/sharedStrings.xml");

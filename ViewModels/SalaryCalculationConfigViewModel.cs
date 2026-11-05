@@ -1,7 +1,9 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ShopManager.Models;
+using ShopManager.Services;
 using System.Collections.ObjectModel;
+using System.IO;
 
 namespace ShopManager.ViewModels;
 
@@ -24,8 +26,16 @@ public partial class SalaryCalculationConfigViewModel : ObservableObject
 
     [ObservableProperty] private bool _hasAttendance;
     [ObservableProperty] private string _importFileName = string.Empty;
+    /// <summary>資料來源說明：已保存的匯入時間，或新匯入待保存</summary>
+    [ObservableProperty] private string _importSourceText = string.Empty;
     [ObservableProperty] private string _importSummary = string.Empty;
     [ObservableProperty] private string _importError = string.Empty;
+    [ObservableProperty] private string _pendingDeleteNote = string.Empty;
+
+    private readonly Guid _shopId;
+    private StoredAttendanceFile? _storedFile;   // 開啟對話框時該月已保存的打卡檔
+    private byte[]? _pendingContent;              // 本次新匯入、尚未保存的檔案內容
+    private bool _deleteStored;                   // 本次按了刪除，確定時移除已保存的檔案
 
     /// <summary>打卡檔裡找不到對應員工的名字，讓業主手動指定</summary>
     public ObservableCollection<ClockNameMappingItem> UnmatchedNames { get; } = new();
@@ -34,12 +44,14 @@ public partial class SalaryCalculationConfigViewModel : ObservableObject
     private Dictionary<int, List<ClockPunch>> _matchedPunches = new();
 
     public SalaryCalculationConfigViewModel(
+        Guid shopId,
         MonthlySchedule schedule,
         List<Employee> employees,
         List<Employee> activeEmployees,
         List<int> shopClosedDaysOfWeek,
         SalaryCalculationConfig? lastConfig = null)
     {
+        _shopId          = shopId;
         _schedule        = schedule;
         _activeEmployees = activeEmployees;
 
@@ -76,6 +88,9 @@ public partial class SalaryCalculationConfigViewModel : ObservableObject
             .Where(e => _employeeDates.ContainsKey(e.Id))
             .OrderBy(e => e.Name)
             .ToList();
+
+        // 該月之前匯入過打卡檔就自動沿用
+        TryLoadStored();
     }
 
     [RelayCommand]
@@ -100,17 +115,83 @@ public partial class SalaryCalculationConfigViewModel : ObservableObject
         };
         if (dlg.ShowDialog() != true) return;
 
-        ClearAttendance();
-
-        List<ClockPerson> people;
+        byte[] content;
         try
         {
-            people = Services.AttendanceImportService.Parse(dlg.FileName);
+            // 允許讀取 Excel 正開著的檔案；整份讀進記憶體，按「確定並計算」時再另存
+            using var fs = new FileStream(dlg.FileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using var ms = new MemoryStream();
+            fs.CopyTo(ms);
+            content = ms.ToArray();
         }
         catch (Exception ex)
         {
             ImportError = $"無法讀取檔案：{ex.Message}";
             return;
+        }
+
+        if (!LoadAttendance(content, out var error))
+        {
+            ImportError = error;
+            return;
+        }
+
+        _pendingContent  = content;
+        _deleteStored    = false;
+        ImportFileName   = Path.GetFileName(dlg.FileName);
+        ImportSourceText = _storedFile is null
+            ? "新匯入，按「確定並計算」後保存"
+            : "新匯入，按「確定並計算」後覆蓋已保存的檔案";
+    }
+
+    /// <summary>刪除打卡資料：本次改為完全照班表計算；已保存的檔案在按「確定並計算」時才真的刪掉，按取消則保留</summary>
+    [RelayCommand]
+    private void DeleteAttendance()
+    {
+        ResetAttendance();
+        ImportError     = string.Empty;
+        _pendingContent = null;
+        _deleteStored   = _storedFile is not null;
+        PendingDeleteNote = _deleteStored
+            ? $"已保存的「{_storedFile!.OriginalFileName}」將在按「確定並計算」後刪除；按取消則保留"
+            : string.Empty;
+    }
+
+    private void TryLoadStored()
+    {
+        _storedFile = AttendanceFileStore.Get(_shopId, _schedule.Year, _schedule.Month);
+        if (_storedFile is null) return;
+
+        byte[] content;
+        try { content = File.ReadAllBytes(_storedFile.FilePath); }
+        catch (Exception ex)
+        {
+            ImportError = $"已保存的打卡資料無法讀取：{ex.Message}";
+            return;
+        }
+
+        if (!LoadAttendance(content, out var error))
+        {
+            ImportError = $"已保存的打卡資料無法使用：{error}";
+            return;
+        }
+        ImportFileName   = _storedFile.OriginalFileName;
+        ImportSourceText = $"{_storedFile.ImportedAt:yyyy/MM/dd HH:mm} 匯入，本次沿用";
+    }
+
+    /// <summary>解析打卡檔並對應員工；失敗時不動目前已載入的資料</summary>
+    private bool LoadAttendance(byte[] content, out string error)
+    {
+        error = string.Empty;
+        List<ClockPerson> people;
+        try
+        {
+            people = AttendanceImportService.Parse(content);
+        }
+        catch (Exception ex)
+        {
+            error = $"無法讀取檔案：{ex.Message}";
+            return false;
         }
 
         // 只取班表當月的打卡
@@ -120,9 +201,11 @@ public partial class SalaryCalculationConfigViewModel : ObservableObject
 
         if (inMonth.Count == 0)
         {
-            ImportError = $"檔案中沒有 {_schedule.Year} 年 {_schedule.Month} 月的打卡紀錄";
-            return;
+            error = $"檔案中沒有 {_schedule.Year} 年 {_schedule.Month} 月的打卡紀錄";
+            return false;
         }
+
+        ResetAttendance();
 
         var byClockName = _activeEmployees
             .GroupBy(e => e.EffectiveClockName)
@@ -150,21 +233,41 @@ public partial class SalaryCalculationConfigViewModel : ObservableObject
             }
         }
 
-        ImportFileName = System.IO.Path.GetFileName(dlg.FileName);
-        ImportSummary  = $"已對應 {_matchedPunches.Count} 位員工"
-                       + (UnmatchedNames.Count > 0 ? $"，{UnmatchedNames.Count} 個名字待指定" : string.Empty);
-        HasAttendance  = true;
+        ImportSummary = $"已對應 {_matchedPunches.Count} 位員工"
+                      + (UnmatchedNames.Count > 0 ? $"，{UnmatchedNames.Count} 個名字待指定" : string.Empty);
+        ImportError   = string.Empty;
+        HasAttendance = true;
+        return true;
     }
 
-    [RelayCommand]
-    private void ClearAttendance()
+    private void ResetAttendance()
     {
         _matchedPunches = new();
         UnmatchedNames.Clear();
-        HasAttendance  = false;
-        ImportFileName = string.Empty;
-        ImportSummary  = string.Empty;
-        ImportError    = string.Empty;
+        HasAttendance     = false;
+        ImportFileName    = string.Empty;
+        ImportSourceText  = string.Empty;
+        ImportSummary     = string.Empty;
+        PendingDeleteNote = string.Empty;
+    }
+
+    /// <summary>按「確定並計算」時才寫入：新匯入的覆蓋保存、按過刪除的移除</summary>
+    public bool PersistAttendanceFile()
+    {
+        try
+        {
+            if (_pendingContent is not null)
+                AttendanceFileStore.Save(_shopId, _schedule.Year, _schedule.Month,
+                    _pendingContent, ImportFileName, DateTime.Now);
+            else if (_deleteStored)
+                AttendanceFileStore.Delete(_shopId, _schedule.Year, _schedule.Month);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            ValidationMessage = $"打卡資料存檔失敗：{ex.Message}";
+            return false;
+        }
     }
 
     // ── 按「確定並計算」時的薪資設定檢查 ─────────────────────
@@ -236,7 +339,7 @@ public partial class SalaryCalculationConfigViewModel : ObservableObject
                 all[m.SelectedEmployee.Id] = list = new();
             list.AddRange(m.Punches);
         }
-        return all.ToDictionary(kv => kv.Key, kv => Services.AttendanceImportService.BuildDays(kv.Value));
+        return all.ToDictionary(kv => kv.Key, kv => AttendanceImportService.BuildDays(kv.Value));
     }
 
     public SalaryCalculationConfig BuildConfig() => new()

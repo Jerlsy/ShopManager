@@ -233,23 +233,16 @@ public partial class EmployeeSalaryItem : ObservableObject
         foreach (var item in AttendanceIssues)
         {
             var issue = item.Issue;
-            if (issue.Decision == AttendanceDecision.Count && issue.IfCounted is { } d)
+            if (issue.Decision is AttendanceDecision.Count or AttendanceDecision.SetHours)
             {
-                WeekdayHours += d.WeekdayHours;
-                HolidayHours += d.HolidayHours;
-                OT1Hours     += d.OT1Hours;
-                OT2Hours     += d.OT2Hours;
-                WeekdayPay   += Services.SalaryCalculationService.RoundMoney(d.WeekdayPay);
-                HolidayPay   += Services.SalaryCalculationService.RoundMoney(d.HolidayPay);
-                OT1Pay       += Services.SalaryCalculationService.RoundMoney(d.OT1Pay);
-                OT2Pay       += Services.SalaryCalculationService.RoundMoney(d.OT2Pay);
+                ApplyPayChange(issue, +1);
             }
             else if (issue.Decision is AttendanceDecision.Deduct or AttendanceDecision.Add)
             {
                 var bonus = new BonusLineItem
                 {
                     SelectedPreset = adjustPreset,
-                    CustomLabel    = $"{issue.Date:MM/dd} {issue.ShortLabel}",
+                    CustomLabel    = AdjustLabel(issue),
                     Amount         = issue.Decision == AttendanceDecision.Deduct ? -issue.Amount : issue.Amount,
                 };
                 bonus.OnChanged = () => { RefreshTotals(); OnGlobalChanged?.Invoke(); };
@@ -263,9 +256,96 @@ public partial class EmployeeSalaryItem : ObservableObject
         OT2Hours     = Math.Round(OT2Hours,     2);
         BaseAmount   = WeekdayPay + HolidayPay + OT1Pay + OT2Pay + OverridePay;
 
+        // 記下已接受的差異與當時的選擇：供「還原差異處理」與每日明細標示處理結果
+        ResolvedIssues.AddRange(AttendanceIssues.Select(i => i.Issue));
         AttendanceIssues.Clear();
         OnAttendanceAccepted?.Invoke(this);
         OnPropertyChanged(string.Empty);   // 工時、薪資、合計、差異區塊一次全部刷新
+        AcceptIssuesCommand.NotifyCanExecuteChanged();
+    }
+
+    // ── 已接受的差異（可還原）──────────────────────────────
+    public List<AttendanceIssue> ResolvedIssues { get; } = new();
+    public bool   HasResolvedIssues  => ResolvedIssues.Count > 0;
+    public string ResolvedIssueLabel => $"已處理 {ResolvedIssues.Count} 筆出勤差異";
+
+    /// <summary>
+    /// 「計入」「指定工時」對工時與薪資的增減；sign = +1 接受、-1 還原（兩邊用同一套算法才倒得回來）。
+    /// 指定工時＝以輸入時數重算當天薪資，取代當天原本已計入的部分（遲到早退照班表計入的那份）。
+    /// </summary>
+    private void ApplyPayChange(AttendanceIssue issue, int sign)
+    {
+        if (issue.Decision == AttendanceDecision.Count && issue.IfCounted is { } counted)
+            AddPay(counted, sign);
+        else if (issue.Decision == AttendanceDecision.SetHours && issue.Rates is { } rates && issue.SetHours is { } hours)
+        {
+            AddPay(Services.SalaryCalculationService.ComputeDay(rates, hours), sign);
+            if (issue.Baseline is { } baseline) AddPay(baseline, -sign);
+        }
+    }
+
+    private void AddPay(DayPay d, int sign)
+    {
+        WeekdayHours += sign * d.WeekdayHours;
+        HolidayHours += sign * d.HolidayHours;
+        OT1Hours     += sign * d.OT1Hours;
+        OT2Hours     += sign * d.OT2Hours;
+        WeekdayPay   += sign * Services.SalaryCalculationService.RoundMoney(d.WeekdayPay);
+        HolidayPay   += sign * Services.SalaryCalculationService.RoundMoney(d.HolidayPay);
+        OT1Pay       += sign * Services.SalaryCalculationService.RoundMoney(d.OT1Pay);
+        OT2Pay       += sign * Services.SalaryCalculationService.RoundMoney(d.OT2Pay);
+    }
+
+    public static string AdjustLabel(AttendanceIssue issue) => $"{issue.Date:MM/dd} {issue.ShortLabel}";
+
+    public static string ResolutionText(AttendanceIssue issue) => issue.Decision switch
+    {
+        AttendanceDecision.Ignore  => "已忽略",
+        AttendanceDecision.Count   => issue.Type == AttendanceIssueType.Unscheduled ? "依打卡計入" : "照班表計入",
+        AttendanceDecision.Exclude => "不計薪資",
+        AttendanceDecision.Deduct  => $"扣 {issue.Amount:N0} 元",
+        AttendanceDecision.Add     => $"加給 {issue.Amount:N0} 元",
+        AttendanceDecision.SetHours => $"指定 {issue.SetHours:0.##} 小時",
+        _                          => "未處理",
+    };
+
+    /// <summary>
+    /// 還原這位員工的差異處理：倒回「計入」加上的工時與薪資、移除「扣款／加給」寫入的額外項目，
+    /// 差異連同當時的選擇放回差異處理區，可修改後重新接受，不必整份重算。
+    /// </summary>
+    [RelayCommand]
+    private void RevertIssues()
+    {
+        if (ResolvedIssues.Count == 0) return;
+
+        foreach (var issue in ResolvedIssues)
+        {
+            if (issue.Decision is AttendanceDecision.Count or AttendanceDecision.SetHours)
+            {
+                ApplyPayChange(issue, -1);
+            }
+            else if (issue.Decision is AttendanceDecision.Deduct or AttendanceDecision.Add)
+            {
+                // 只移除接受時產生的那一筆（業主手動新增的出勤差異項目不動）
+                var label = AdjustLabel(issue);
+                var bonus = BonusItems.FirstOrDefault(b =>
+                    b.SelectedPreset.Type == BonusPresetType.AttendanceAdjust && b.CustomLabel == label);
+                if (bonus is not null) BonusItems.Remove(bonus);
+            }
+        }
+
+        WeekdayHours = Math.Round(WeekdayHours, 2);
+        HolidayHours = Math.Round(HolidayHours, 2);
+        OT1Hours     = Math.Round(OT1Hours,     2);
+        OT2Hours     = Math.Round(OT2Hours,     2);
+        BaseAmount   = WeekdayPay + HolidayPay + OT1Pay + OT2Pay + OverridePay;
+
+        var restored = ResolvedIssues.ToList();
+        ResolvedIssues.Clear();
+        AddIssues(restored);   // 保留當時的選擇，只需改要改的那幾筆
+
+        OnAttendanceAccepted?.Invoke(this);
+        OnPropertyChanged(string.Empty);
         AcceptIssuesCommand.NotifyCanExecuteChanged();
     }
 }
@@ -281,6 +361,7 @@ public partial class AttendanceIssueItem : ObservableObject
         Issue       = issue;
         _decision   = issue.Decision;
         _amountText = issue.Amount > 0 ? issue.Amount.ToString("0.##") : string.Empty;
+        _hoursText  = issue.SetHours is > 0 ? issue.SetHours.Value.ToString("0.##") : string.Empty;
     }
 
     public string DateLabel => $"{Issue.Date:MM/dd}（{"日一二三四五六"[(int)Issue.Date.DayOfWeek]}）";
@@ -297,16 +378,23 @@ public partial class AttendanceIssueItem : ObservableObject
     public bool ShowIgnore  => Issue.Type == AttendanceIssueType.LateOrEarly;
     public bool ShowCount   => Issue.IfCounted is not null;
     public bool ShowExclude => Issue.Type != AttendanceIssueType.LateOrEarly;
+    // 指定工時：需要當天費率快照（此功能加入前算出的舊差異沒有，就不提供）
+    public bool ShowSetHours => Issue.Rates is not null;
     public string CountLabel => Issue.Type == AttendanceIssueType.Unscheduled ? "依打卡計入" : "照班表計入";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsIgnore), nameof(IsCount), nameof(IsExclude),
-                              nameof(IsDeduct), nameof(IsAdd), nameof(NeedsAmount), nameof(IsDecided))]
+                              nameof(IsDeduct), nameof(IsAdd), nameof(NeedsAmount), nameof(IsDecided),
+                              nameof(IsSetHours), nameof(NeedsHours))]
     private AttendanceDecision _decision;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsDecided))]
     private string _amountText;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsDecided))]
+    private string _hoursText;
 
     public bool IsIgnore  { get => Decision == AttendanceDecision.Ignore;  set { if (value) Decision = AttendanceDecision.Ignore;  } }
     public bool IsCount   { get => Decision == AttendanceDecision.Count;   set { if (value) Decision = AttendanceDecision.Count;   } }
@@ -314,7 +402,14 @@ public partial class AttendanceIssueItem : ObservableObject
     public bool IsDeduct  { get => Decision == AttendanceDecision.Deduct;  set { if (value) Decision = AttendanceDecision.Deduct;  } }
     public bool IsAdd     { get => Decision == AttendanceDecision.Add;     set { if (value) Decision = AttendanceDecision.Add;     } }
 
+    public bool IsSetHours { get => Decision == AttendanceDecision.SetHours; set { if (value) Decision = AttendanceDecision.SetHours; } }
+
     public bool NeedsAmount => Decision is AttendanceDecision.Deduct or AttendanceDecision.Add;
+    public bool NeedsHours  => Decision == AttendanceDecision.SetHours;
+
+    // 時數可有小數（例如 6.5），上限一天 24 小時
+    private double? ParsedHours =>
+        double.TryParse(HoursText, out var h) && h > 0 && h <= 24 ? Math.Round(h, 2) : null;
 
     private decimal? ParsedAmount =>
         decimal.TryParse(AmountText, out var a) && a > 0 ? a : null;
@@ -323,12 +418,19 @@ public partial class AttendanceIssueItem : ObservableObject
     {
         AttendanceDecision.None => false,
         AttendanceDecision.Deduct or AttendanceDecision.Add => ParsedAmount.HasValue,
+        AttendanceDecision.SetHours => ParsedHours.HasValue,
         _ => true,
     };
 
     partial void OnDecisionChanged(AttendanceDecision value)
     {
         Issue.Decision = value;
+        OnChanged?.Invoke();
+    }
+
+    partial void OnHoursTextChanged(string value)
+    {
+        Issue.SetHours = ParsedHours;
         OnChanged?.Invoke();
     }
 

@@ -58,6 +58,11 @@ public class SalaryEmployeeRecord
     public double? HolidayClockedHours   { get; set; }
 
     public List<AttendanceIssue>  AttendanceIssues { get; set; } = new();
+    /// <summary>
+    /// 已按「接受」的差異（含當時的選擇）：用來還原差異處理，以及在每日明細標示處理結果。
+    /// 此欄位加入前就已接受的舊資料為空，無法還原（需重新計算）。
+    /// </summary>
+    public List<AttendanceIssue>  ResolvedIssues   { get; set; } = new();
     /// <summary>每日排班／打卡對照，供「每日出勤明細」視窗顯示；隨記錄存檔，重新載入也看得到</summary>
     public List<SalaryDailyEntry> DailyEntries     { get; set; } = new();
 
@@ -90,6 +95,9 @@ public class SalaryDailyEntry
     public DateTime? ClockOut      { get; init; }
     public double?   ClockedHours  { get; init; }
     public string?   IssueLabel    { get; init; }
+    /// <summary>差異已接受時的處理結果（例如「不計薪資」「扣 206 元」），開啟明細視窗前由 ResolvedIssues 填入，不存檔</summary>
+    [JsonIgnore] public string? ResolutionLabel { get; set; }
+    public string? IssueDisplayText => ResolutionLabel is null ? IssueLabel : $"{IssueLabel}・{ResolutionLabel}";
     /// <summary>搭配 IssueLabel 決定標籤顏色（遲到早退／缺打卡／未排班各自一色，一眼分辨嚴重程度）</summary>
     public AttendanceIssueType? IssueType { get; init; }
     /// <summary>
