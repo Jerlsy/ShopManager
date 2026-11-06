@@ -63,8 +63,8 @@ public partial class SalaryCalculationConfigViewModel : ObservableObject
             new() { Day = DayOfWeek.Wednesday, Label = "週三", IsShopClosed = shopClosedDaysOfWeek.Contains(3) },
             new() { Day = DayOfWeek.Thursday,  Label = "週四", IsShopClosed = shopClosedDaysOfWeek.Contains(4) },
             new() { Day = DayOfWeek.Friday,    Label = "週五", IsShopClosed = shopClosedDaysOfWeek.Contains(5) },
-            new() { Day = DayOfWeek.Saturday,  Label = "週六", IsShopClosed = shopClosedDaysOfWeek.Contains(6) },
-            new() { Day = DayOfWeek.Sunday,    Label = "週日", IsShopClosed = shopClosedDaysOfWeek.Contains(0) },
+            new() { Day = DayOfWeek.Saturday,  Label = "週六", IsChecked=true, IsShopClosed = shopClosedDaysOfWeek.Contains(6) },
+            new() { Day = DayOfWeek.Sunday,    Label = "週日", IsChecked=true, IsShopClosed = shopClosedDaysOfWeek.Contains(0) },
         };
 
         if (lastConfig is not null)

@@ -7,7 +7,7 @@ public class SalaryCalculationConfig
     public List<DailyOverride> DailyOverrides { get; set; } = new();
 
     public int LateGraceMinutes       { get; set; } = 10;
-    public int EarlyLeaveGraceMinutes { get; set; } = 10;
+    public int EarlyLeaveGraceMinutes { get; set; } = 20;
 
     /// <summary>員工 Id → 當月每日打卡；null＝未匯入打卡資料，完全照班表計算</summary>
     public Dictionary<int, Dictionary<DateOnly, DayPunch>>? Attendance { get; set; }
